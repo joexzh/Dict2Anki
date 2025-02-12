@@ -3,10 +3,10 @@ import logging
 import requests
 from urllib3 import Retry
 from itertools import chain
-from .misc import ThreadPool
+from .misc import ThreadPool, AbstractDictionary, AbstractQueryAPI
 from requests.adapters import HTTPAdapter
-from .constants import VERSION, VERSION_CHECK_API
-from PyQt5.QtCore import QObject, pyqtSignal, QThread
+from .constants import *
+from PyQt6.QtCore import QObject, pyqtSignal, QThread
 import aqt
 import os
 
@@ -60,13 +60,15 @@ class RemoteWordFetchingWorker(QObject):
     doneThisGroup = pyqtSignal(list)
     logger = logging.getLogger('dict2Anki.workers.RemoteWordFetchingWorker')
 
-    def __init__(self, selectedDict, selectedGroups: [tuple]):
+    def __init__(self, selectedDict: AbstractDictionary, groups: list[tuple[str, int]]):
         super().__init__()
         self.selectedDict = selectedDict
-        self.selectedGroups = selectedGroups
+        self.groups = groups
 
     def run(self):
         currentThread = QThread.currentThread()
+        if currentThread is None:
+            raise RuntimeError
 
         def _pull(*args):
             if currentThread.isInterruptionRequested():
@@ -75,7 +77,7 @@ class RemoteWordFetchingWorker(QObject):
             self.tick.emit()
             return wordPerPage
 
-        for groupName, groupId in self.selectedGroups:
+        for groupName, groupId in self.groups:
             totalPage = self.selectedDict.getTotalPage(groupName, groupId)
             self.setProgress.emit(totalPage)
             with ThreadPool(max_workers=3) as executor:
@@ -95,13 +97,15 @@ class QueryWorker(QObject):
     allQueryDone = pyqtSignal()
     logger = logging.getLogger('dict2Anki.workers.QueryWorker')
 
-    def __init__(self, wordList: [dict], api):
+    def __init__(self, wordList: list[dict], api: AbstractQueryAPI):
         super().__init__()
         self.wordList = wordList
         self.api = api
 
     def run(self):
         currentThread = QThread.currentThread()
+        if currentThread is None:
+            raise RuntimeError
 
         def _query(word, row):
             if currentThread.isInterruptionRequested():
@@ -109,17 +113,17 @@ class QueryWorker(QObject):
             queryResult = self.api.query(word)
             if queryResult:
                 self.logger.info(f'查询成功: {word} -- {queryResult}')
-                self.thisRowDone.emit(row, queryResult)
+                self.thisRowDone.emit(word, row, queryResult)
             else:
                 self.logger.warning(f'查询失败: {word}')
-                self.thisRowFailed.emit(row)
+                self.thisRowFailed.emit(word, row)
 
             self.tick.emit()
             return queryResult
 
         with ThreadPool(max_workers=3) as executor:
             for word in self.wordList:
-                executor.submit(_query, word['term'], word['row'])
+                executor.submit(_query, word[F_TERM], word['row'])
 
         self.allQueryDone.emit()
 
@@ -133,14 +137,16 @@ class AudioDownloadWorker(QObject):
     session = requests.Session()
     session.mount('http://', HTTPAdapter(max_retries=retries))
     session.mount('https://', HTTPAdapter(max_retries=retries))
-    session.headers.update({'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'})
+    session.headers.update({'User-Agent': USER_AGENT})
 
-    def __init__(self, audios: [tuple]):
+    def __init__(self, audios: list[tuple]):
         super().__init__()
         self.audios = audios
 
     def run(self):
         currentThread = QThread.currentThread()
+        if currentThread is None:
+            raise RuntimeError
 
         def __download(fileName, url):
             try:
@@ -152,7 +158,7 @@ class AudioDownloadWorker(QObject):
                         if chunk:
                             f.write(chunk)
                 self.logger.info(f'{fileName} 下载完成')
-                aqt.mw.col.media.add_file(fileName)
+                aqt.mw.col.media.add_file(fileName) # type: ignore
                 os.remove(fileName)
                 self.logger.info(f"{fileName} 添加到媒体库,临时文件已删除")
             except Exception as e:

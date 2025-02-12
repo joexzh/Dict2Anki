@@ -3,43 +3,52 @@ import requests
 from urllib3 import Retry
 from requests.adapters import HTTPAdapter
 from ..misc import AbstractQueryAPI
+from ..constants import *
+from ..__typing import QueryWordData
 from bs4 import BeautifulSoup
 logger = logging.getLogger('dict2Anki.queryApi.eudict')
 __all__ = ['API']
 
 
 class Parser:
-    def __init__(self, html, term):
+    def __init__(self, html: str, term: str):
         self._soap = BeautifulSoup(html, 'html.parser')
         self.term = term
+        self._pronunciations = None
 
     @staticmethod
     def __fix_url_without_http(url):
-        if url[0:2] == '//':
+        if len(url) > 1 and url[0:2] == '//':
             return 'https:' + url
         else:
             return url
+        
+    @staticmethod
+    def __make_pron_url(url):
+        if not url or 'http' in url:
+            return url
+        else:
+            return 'https://api.frdic.com/api/v2/speech/speakweb?' + url
 
     @property
-    def definition(self) -> list:
+    def definition(self) -> list[str]:
         ret = []
-        div = self._soap.select('div #ExpFCChild')
+        div = self._soap.select_one('div #ExpFCChild')
         if not div:
             return ret
 
-        div = div[0]
         els = div.select('li') # 多词性
         if not els: # 单一词性
             els = div.select('.exp')
-        if not els: # 还有一奇怪的情况，不在任何的标签里面
-            trans = div.find(id='trans')
-            trans.replace_with('') if trans else ''
+        if not els: # 还有一奇怪的情况，不在任何的标签里面，比如 https://dict.eudic.net/dicts/en/encyclopedia
+            # 移除一些干扰text
+            els_rm = div.select('#trans') # 时态text
+            els_rm.extend(div.select('script'))
+            els_rm.extend(div.select('a')) # 赞踩这些字样
+            for el_rm in els_rm:
+                if not el_rm.decomposed:
+                    el_rm.decompose()
 
-            script = div.find('script')
-            script.replace_with('') if script else ''
-
-            for atag in div.find_all('a'): # 赞踩这些字样
-                atag.replace_with('')
             els = [div]
 
         for el in els:
@@ -48,130 +57,116 @@ class Parser:
         return ret
 
     @property
-    def pronunciations(self) -> dict:
-        url = 'https://api.frdic.com/api/v2/speech/speakweb?'
+    def pronunciations(self) -> dict[str, str]:
+        if self._pronunciations:
+            return self._pronunciations
+
         pron = {
-            'AmEPhonetic': None,
-            'AmEUrl': None,
-            'BrEPhonetic': None,
-            'BrEUrl': None
+            F_BREPHONETIC: '',
+            F_BREPRON: '',
+            F_AMEPHONETIC: '',
+            F_AMEPRON: ''
         }
 
-        els = self._soap.select('.phonitic-line')
-        if not els:
-            return pron
-
-        el = els[0]
-        links = el.select('a')
-        phons = el.select('.Phonitic')
-
-        if not links:
-            # 可能是只有一个发音的情况
-            links = self._soap.select('div .gv_details .voice-button')
-            # 返回两个相同的。下载只会按照用户选择下载一个，这样至少可以保证总是有发音
-            links = [links[0], links[0]] if links else ''
+        el_phon_line = self._soap.select_one('.phonitic-line')
 
         try:
-            pron['BrEPhonetic'] = phons[0].get_text(strip=True)
-        except (KeyError, IndexError):
-            pass
+            if el_phon_line:
+                links = el_phon_line.select('a')
+                phons = el_phon_line.select('.Phonitic')
 
-        try:
-            pron['BrEUrl'] = "{}{}".format('' if 'http' in links[0]['data-rel'] else url, links[0]['data-rel'])
+                if len(links) == 1: # 存在<a>标签，1个发音，例如 https://dict.eudic.net/dicts/en/hyperplane
+                    pron[F_BREPRON] = self.__make_pron_url(links[0]['data-rel'])
+                    pron[F_AMEPRON] = self.__make_pron_url(links[0]['data-rel'])
+                    pron[F_BREPHONETIC] = phons[0].get_text(strip=True)
+                    pron[F_AMEPHONETIC] = phons[0].get_text(strip=True)
+                elif len(links) > 1: # 存在<a>标签，2个发音
+                    pron[F_BREPRON] = self.__make_pron_url(links[0]['data-rel'])
+                    pron[F_AMEPRON] = self.__make_pron_url(links[1]['data-rel'])
+                    pron[F_BREPHONETIC] = phons[0].get_text(strip=True)
+                    pron[F_AMEPHONETIC] = phons[0].get_text(strip=True) if len(phons) == 1 else phons[1].get_text(strip=True)
+            else:
+                link = self._soap.select_one('div .gv_details .voice-button')
+                if link: # 只有全球发音，没有音标
+                    pron[F_BREPRON] = self.__make_pron_url(link['data-rel'])
+                    pron[F_AMEPRON] = self.__make_pron_url(link['data-rel'])
         except (TypeError, KeyError, IndexError):
             pass
 
-        try:
-            pron['AmEPhonetic'] = phons[1].get_text(strip=True)
-        except (KeyError, IndexError):
-            pass
-
-        try:
-            pron['AmEUrl'] = "{}{}".format('' if 'http' in links[1]['data-rel'] else url, links[1]['data-rel'])
-        except (TypeError, KeyError, IndexError):
-            pass
-
+        self._pronunciations = pron
         return pron
 
     @property
     def BrEPhonetic(self) -> str:
         """英式音标"""
-        return self.pronunciations['BrEPhonetic']
+        return self.pronunciations[F_BREPHONETIC]
 
     @property
     def AmEPhonetic(self) -> str:
         """美式音标"""
-        return self.pronunciations['AmEPhonetic']
+        return self.pronunciations[F_AMEPHONETIC]
 
     @property
     def BrEPron(self) -> str:
         """英式发音url"""
-        return self.pronunciations['BrEUrl']
+        return self.pronunciations[F_BREPRON]
 
     @property
     def AmEPron(self) -> str:
         """美式发音url"""
-        return self.pronunciations['AmEUrl']
+        return self.pronunciations[F_AMEPRON]
 
     @property
-    def sentence(self) -> list:
+    def sentence(self) -> list[tuple[str, str]]:
         els = self._soap.select('div #ExpLJChild .lj_item')
         ret = []
         for el in els:
-            try:
-                line = el.select('p')
-                sentence = "".join([ str(c) for c in line[0].contents])
-                sentence_translation = line[1].get_text(strip=True)
-                ret.append((sentence, sentence_translation))
-            except KeyError as e:
-                pass
+            el_line = el.select_one('p.line')
+            if el_line:
+                el_index = el_line.select_one('.index')
+                el_index.extract() if el_index else None
+                el_ext = el.select_one('p.exp')
+                ret.append((el_line.get_text(), el_ext.get_text(strip=True) if el_ext else ''))
         return ret
 
     @property
     def image(self) -> str:
-        els = self._soap.select('div .word-thumbnail-container img')
-        ret = None
-        if els:
-            try:
-                img = els[0]
-                if 'title' not in img.attrs:
-                    ret = self.__fix_url_without_http(img['src'])
-            except KeyError:
-                pass
+        el = self._soap.select_one('div .word-thumbnail-container img')
+        ret = ''
+        if el and 'title' not in el.attrs and 'src' in el.attrs:
+            ret = self.__fix_url_without_http(el['src'])
         return ret
 
     @property
-    def phrase(self) -> list:
+    def phrase(self) -> list[tuple[str, str]]:
         els = self._soap.select('div #ExpSPECChild #phrase')
         ret = []
         for el in els:
-            try:
-                phrase = el.find('i').get_text(strip=True)
-                exp = el.find(class_='exp').get_text(strip=True)
-                ret.append((phrase, exp))
-            except AttributeError:
-                pass
+            el_phrase = el.find('i')
+            el_exp = el.find(class_='exp')
+            if el_phrase:
+                ret.append((el_phrase.get_text(strip=True), el_exp.get_text(strip=True) if el_exp else ''))
         return ret
 
     @property
     def result(self):
-        return {
-            'term': self.term,
-            'definition': self.definition,
-            'phrase': self.phrase,
-            'image': self.image,
-            'sentence': self.sentence,
-            'BrEPhonetic': self.BrEPhonetic,
-            'AmEPhonetic': self.AmEPhonetic,
-            'BrEPron': self.BrEPron,
-            'AmEPron': self.AmEPron
-        }
+        return QueryWordData(
+            term=self.term,
+            definition=self.definition,
+            phrase=self.phrase,
+            image=self.image,
+            sentence=self.sentence,
+            BrEPhonetic=self.BrEPhonetic,
+            AmEPhonetic=self.AmEPhonetic,
+            BrEPron=self.BrEPron,
+            AmEPron=self.AmEPron
+        )
 
 
 class API(AbstractQueryAPI):
     name = '欧陆词典 API'
     timeout = 10
-    headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36'}
+    headers = {'User-Agent': USER_AGENT}
     retries = Retry(total=5, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
     session = requests.Session()
     session.mount('http://', HTTPAdapter(max_retries=retries))
@@ -180,7 +175,7 @@ class API(AbstractQueryAPI):
     parser = Parser
 
     @classmethod
-    def query(cls, word) -> dict:
+    def query(cls, word: str) -> QueryWordData | None:
         queryResult = None
         try:
             rsp = cls.session.get(cls.url.format(word), timeout=cls.timeout)

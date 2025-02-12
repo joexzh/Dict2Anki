@@ -2,11 +2,17 @@ import logging
 from queue import Queue
 from threading import Thread
 from abc import ABC, abstractmethod
+from bs4 import BeautifulSoup
+from .__typing import QueryWordData
 
 logger = logging.getLogger('dict2Anki.misc')
 
 
 class AbstractDictionary(ABC):
+    name: str
+    loginUrl: str
+    timeout: int
+    headers: dict[str, str]
 
     @staticmethod
     @abstractmethod
@@ -14,11 +20,16 @@ class AbstractDictionary(ABC):
         pass
 
     @abstractmethod
-    def checkCookie(self, cookie: dict):
+    def __init__(self):
+        self.groups: list[tuple[str, int]] = []
+        self.indexSoup: BeautifulSoup | None = None
+
+    @abstractmethod
+    def checkCookie(self, cookie: dict) -> bool:
         pass
 
     @abstractmethod
-    def getGroups(self) -> [(str, int)]:
+    def getGroups(self) -> list[tuple[str, int]]:
         pass
 
     @abstractmethod
@@ -26,14 +37,14 @@ class AbstractDictionary(ABC):
         pass
 
     @abstractmethod
-    def getWordsByPage(self, pageNo: int, groupName: str, groupId: str) -> [str]:
+    def getWordsByPage(self, pageNo: int, groupName: str, groupId: str) -> list[str]:
         pass
 
 
 class AbstractQueryAPI(ABC):
     @classmethod
     @abstractmethod
-    def query(cls, word) -> dict:
+    def query(cls, word: str) -> QueryWordData | None:
         """
         查询
         :param word: 单词

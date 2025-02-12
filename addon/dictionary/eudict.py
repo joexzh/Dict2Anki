@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 from urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
 from ..misc import AbstractDictionary
+from ..constants import USER_AGENT
 
 logger = logging.getLogger('dict2Anki.dictionary.eudict')
 
@@ -15,7 +16,7 @@ class Eudict(AbstractDictionary):
     loginUrl = 'https://dict.eudic.net/account/login'
     timeout = 10
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',
+        'User-Agent': USER_AGENT,
     }
     retries = Retry(total=5, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
     session = requests.Session()
@@ -23,8 +24,8 @@ class Eudict(AbstractDictionary):
     session.mount('https://', HTTPAdapter(max_retries=retries))
 
     def __init__(self):
-        self.groups = []
-        self.indexSoup = None
+        self.groups: list[tuple[str, int]] = []
+        self.indexSoup: BeautifulSoup | None = None
 
     def checkCookie(self, cookie: dict) -> bool:
         """
@@ -48,18 +49,21 @@ class Eudict(AbstractDictionary):
             return True
         return False
 
-    def getGroups(self) -> [(str, int)]:
+    def getGroups(self) -> list[tuple[str, int]]:
         """
         获取单词本分组
         :return: [(group_name,group_id)]
         """
-        elements = self.indexSoup.find_all('a', class_='media_heading_a new_cateitem_click')
+        if self.indexSoup is None:
+            return []
+        elements = self.indexSoup.select('a[class=media_heading_a new_cateitem_click]')
         groups = []
         if elements:
-            groups = [(el.string, el['data-id']) for el in elements]
+            groups = [(el.get_text(',', True), int(str(el['data-id']))) for el in elements]
 
         logger.info(f'单词本分组:{groups}')
         self.groups = groups
+        return groups
 
     def getTotalPage(self, groupName: str, groupId: int) -> int:
         """
@@ -82,7 +86,7 @@ class Eudict(AbstractDictionary):
             logger.exception(f'网络异常{error}')
             return 0
 
-    def getWordsByPage(self, pageNo: int, groupName: str, groupId: int) -> [str]:
+    def getWordsByPage(self, pageNo: int, groupName: str, groupId: int) -> list[str]:
         wordList = []
         data = {
             'columns[2][data]': 'word',

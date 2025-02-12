@@ -1,7 +1,7 @@
 try:
     from aqt import mw
     from .addon.addonWindow import Windows
-    from PyQt5.QtWidgets import QAction
+    from PyQt6.QtGui import QAction
 
 
     def showWindow():
@@ -15,7 +15,7 @@ try:
 
 except ImportError:
     import os
-    from PyQt5.QtWidgets import QApplication
+    from PyQt6.QtWidgets import QApplication
     from addon.addonWindow import Windows
     import sys
     if os.environ.get('DEVDICT2ANKI'):

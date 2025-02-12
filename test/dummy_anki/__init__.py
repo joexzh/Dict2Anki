@@ -1,3 +1,2 @@
-from . import dummy_notes
-
-notes = dummy_notes
+from . import dummy_notes as notes
+from . import dummy_models as models

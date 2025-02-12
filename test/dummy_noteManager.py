@@ -1,20 +1,24 @@
-def getDeckList():
+from ..addon.__typing import Config, QueryWordData
+from ..addon.constants import *
+from .dummy_anki import models
+
+def getDeckNames():
     return ['deck1', 'deck2']
 
 
-def getOrCreateDeck(deck_name):
+def getOrCreateDeck(deck_name, model):
     return deck_name
 
 
-def getOrCreateModel(modelName):
-    return modelName
+def getOrCreateModel() -> models.NoteType:
+    return models.NoteType()
 
 
-def getOrCreateModelCardTemplate(modelObject, cardTemplateName):
+def getOrCreateModelCardTemplate(modelObject):
     pass
 
 
-def addNoteToDeck(deckObject, modelObject, currentConfig: dict, oneQueryResult: dict):
+def addNoteToDeck(deckObject, modelObject, currentConfig: Config, oneQueryResult: QueryWordData):
     pass
 
 
@@ -22,5 +26,9 @@ def getWordsByDeck(*args, **kwargs):
     return []
 
 
-def getNotes(*args, **kwargs):
+def getNoteIds(*args, **kwargs):
     return []
+
+
+def removeNotes(noteIds):
+    pass

@@ -5,9 +5,9 @@ import json
 from copy import deepcopy
 from tempfile import gettempdir
 
-from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QPlainTextEdit, QDialog, QListWidgetItem, QVBoxLayout, QPushButton
-from PyQt5.QtCore import pyqtSlot, QThread, Qt
+from PyQt6.QtGui import QIcon
+from PyQt6.QtWidgets import QPlainTextEdit, QDialog, QListWidgetItem, QVBoxLayout, QPushButton
+from PyQt6.QtCore import pyqtSlot, QThread, Qt
 
 from .queryApi import apis
 from .UIForm import wordGroup, mainUI, icons_rc
@@ -15,16 +15,17 @@ from .workers import LoginStateCheckWorker, VersionCheckWorker, RemoteWordFetchi
 from .dictionary import dictionaries
 from .logger import Handler
 from .loginDialog import LoginDialog
-from .misc import Mask
-from .constants import BASIC_OPTION, EXTRA_OPTION, MODEL_NAME, RELEASE_URL
+from .misc import Mask, AbstractDictionary
+from .constants import *
+from .__typing import Config, QueryWordData
 
 try:
     from aqt import mw
     from aqt.utils import askUser, showCritical, showInfo, tooltip, openLink
-    from .noteManager import getOrCreateDeck, getDeckList, getOrCreateModel, getOrCreateModelCardTemplate, addNoteToDeck, getWordsByDeck, getNotes
+    from . import noteManager
 except ImportError:
     from test.dummy_aqt import mw, askUser, showCritical, showInfo, tooltip, openLink
-    from test.dummy_noteManager import getOrCreateDeck, getDeckList, getOrCreateModel, getOrCreateModelCardTemplate, addNoteToDeck, getWordsByDeck, getNotes
+    from ..test import dummy_noteManager as noteManager
 
 logger = logging.getLogger('dict2Anki')
 
@@ -42,10 +43,12 @@ class Windows(QDialog, mainUI.Ui_Dialog):
 
     def __init__(self, parent=None):
         super(Windows, self).__init__(parent)
-        self.selectedDict = None
-        self.currentConfig = dict()
+        self.selectedDict: AbstractDictionary
+        self.currentConfig: Config
         self.localWords = []
-        self.selectedGroups = []
+        self.remoteWords = []
+        self.selectedGroups: list[list[str]] = []
+        self.queryFailedWords: list[str] = []
 
         self.workerThread = QThread(self)
         self.workerThread.start()
@@ -103,7 +106,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         logging.basicConfig(handlers=[logging.FileHandler(logFile, 'w', 'utf-8')], level=logging.DEBUG, format='[%(asctime)s][%(levelname)8s] -- %(message)s - (%(name)s)')
 
         logTextBox = QPlainTextEdit(self)
-        logTextBox.setLineWrapMode(QPlainTextEdit.NoWrap)
+        logTextBox.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
         layout = QVBoxLayout()
         layout.addWidget(logTextBox)
         self.logTab.setLayout(layout)
@@ -116,21 +119,23 @@ class Windows(QDialog, mainUI.Ui_Dialog):
 
     def setupGUIByConfig(self):
         config = mw.addonManager.getConfig(__name__)
+        if not config:
+            raise FileNotFoundError()
         self.deckComboBox.setCurrentText(config['deck'])
         self.dictionaryComboBox.setCurrentIndex(config['selectedDict'])
         self.apiComboBox.setCurrentIndex(config['selectedApi'])
         self.usernameLineEdit.setText(config['credential'][config['selectedDict']]['username'])
         self.passwordLineEdit.setText(config['credential'][config['selectedDict']]['password'])
         self.cookieLineEdit.setText(config['credential'][config['selectedDict']]['cookie'])
-        self.definitionCheckBox.setChecked(config['definition'])
-        self.imageCheckBox.setChecked(config['image'])
-        self.sentenceCheckBox.setChecked(config['sentence'])
-        self.phraseCheckBox.setChecked(config['phrase'])
-        self.AmEPhoneticCheckBox.setChecked(config['AmEPhonetic'])
-        self.BrEPhoneticCheckBox.setChecked(config['BrEPhonetic'])
-        self.BrEPronRadioButton.setChecked(config['BrEPron'])
-        self.AmEPronRadioButton.setChecked(config['AmEPron'])
-        self.noPronRadioButton.setChecked(config['noPron'])
+        self.definitionCheckBox.setChecked(config[F_DEFINITION])
+        self.imageCheckBox.setChecked(config[F_IMAGE])
+        self.sentenceCheckBox.setChecked(config[F_SENTENCE])
+        self.phraseCheckBox.setChecked(config[F_PHRASE])
+        self.AmEPhoneticCheckBox.setChecked(config[F_AMEPHONETIC])
+        self.BrEPhoneticCheckBox.setChecked(config[F_BREPHONETIC])
+        self.BrEPronRadioButton.setChecked(config[F_BREPRON])
+        self.AmEPronRadioButton.setChecked(config[F_AMEPRON])
+        self.noPronRadioButton.setChecked(config[F_NOPRON])
         self.selectedGroups = config['selectedGroup']
 
     def initCore(self):
@@ -140,12 +145,12 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         self.passwordLineEdit.hide()
         self.dictionaryComboBox.addItems([d.name for d in dictionaries])
         self.apiComboBox.addItems([d.name for d in apis])
-        self.deckComboBox.addItems(getDeckList())
+        self.deckComboBox.addItems(noteManager.getDeckNames())
         self.setupGUIByConfig()
 
-    def getAndSaveCurrentConfig(self) -> dict:
+    def getAndSaveCurrentConfig(self) -> Config:
         """获取当前设置"""
-        currentConfig = dict(
+        currentConfig: Config = Config(
             selectedDict=self.dictionaryComboBox.currentIndex(),
             selectedApi=self.apiComboBox.currentIndex(),
             selectedGroup=self.selectedGroups,
@@ -206,6 +211,8 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         """词典候选框改变事件"""
         self.currentDictionaryLabel.setText(f'当前选择词典: {self.dictionaryComboBox.currentText()}')
         config = mw.addonManager.getConfig(__name__)
+        if config is None:
+            raise FileNotFoundError()
         self.cookieLineEdit.setText(config['credential'][index]['cookie'])
 
     @pyqtSlot()
@@ -258,17 +265,17 @@ class Windows(QDialog, mainUI.Ui_Dialog):
 
         for groupName in [str(group_name) for group_name, _ in self.selectedDict.groups]:
             item = QListWidgetItem()
-            item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
+            item.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled)
             item.setText(groupName)
-            item.setCheckState(Qt.Unchecked)
+            item.setCheckState(Qt.CheckState.Unchecked)
             group.wordGroupListWidget.addItem(item)
 
         # 恢复上次选择的单词本分组
         if self.selectedGroups:
             for groupName in self.selectedGroups[self.currentConfig['selectedDict']]:
-                items = group.wordGroupListWidget.findItems(groupName, Qt.MatchExactly)
+                items = group.wordGroupListWidget.findItems(groupName, Qt.MatchFlag.MatchExactly)
                 for item in items:
-                    item.setCheckState(Qt.Checked)
+                    item.setCheckState(Qt.CheckState.Checked)
         else:
             self.selectedGroups = [list()] * len(dictionaries)
 
@@ -279,14 +286,14 @@ class Windows(QDialog, mainUI.Ui_Dialog):
             self.needDeleteWordListWidget.clear()
             self.mainTab.setEnabled(False)
 
-            selectedGroups = [group.wordGroupListWidget.item(index).text() for index in range(group.wordGroupListWidget.count()) if
-                              group.wordGroupListWidget.item(index).checkState() == Qt.Checked]
+            groupNames: list[str] = [group.wordGroupListWidget.item(index).text() for index in range(group.wordGroupListWidget.count()) if # type: ignore
+                              group.wordGroupListWidget.item(index).checkState() == Qt.CheckState.Checked] # type: ignore
             # 保存分组记录
-            self.selectedGroups[self.currentConfig['selectedDict']] = selectedGroups
+            self.selectedGroups[self.currentConfig['selectedDict']] = groupNames
             self.progressBar.setValue(0)
             self.progressBar.setMaximum(1)
-            logger.info(f'选中单词本{selectedGroups}')
-            self.getRemoteWordList(selectedGroups)
+            logger.info(f'选中单词本{groupNames}')
+            self.getRemoteWordList(groupNames)
 
         def onRejected():
             """选择单词本弹窗取消事件"""
@@ -298,39 +305,40 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         group.buttonBox.rejected.connect(onRejected)
         container.exec()
 
-    def getRemoteWordList(self, selected_groups: [str]):
-        """根据选中到分组获取分组下到全部单词，并添加到 newWordListWidget"""
-        group_map = dict(self.selectedDict.groups)
-        self.localWords = getWordsByDeck(self.deckComboBox.currentText())
-
+    def getRemoteWordList(self, groupNames: list[str]):
+        """根据选中到分组获取分组下到全部单词，并保存到self.remoteWords"""
+        groupMap = dict(self.selectedDict.groups)
+        
         # 启动单词获取线程
-        self.pullWorker = RemoteWordFetchingWorker(self.selectedDict, [(group_name, group_map[group_name],) for group_name in selected_groups])
+        self.pullWorker = RemoteWordFetchingWorker(self.selectedDict, [(groupName, groupMap[groupName],) for groupName in groupNames])
         self.pullWorker.moveToThread(self.workerThread)
         self.pullWorker.start.connect(self.pullWorker.run)
         self.pullWorker.tick.connect(lambda: self.progressBar.setValue(self.progressBar.value() + 1))
         self.pullWorker.setProgress.connect(self.progressBar.setMaximum)
-        self.pullWorker.doneThisGroup.connect(self.insertWordToListWidget)
+        self.pullWorker.doneThisGroup.connect(self.on_getRemoteWords_groupDone)
         self.pullWorker.done.connect(self.on_allPullWork_done)
         self.pullWorker.start.emit()
 
+        # 同时获取本地单词
+        self.localWords = noteManager.getWordsByDeck(self.deckComboBox.currentText())
+
     @pyqtSlot(list)
-    def insertWordToListWidget(self, words: list):
-        """一个分组获取完毕事件"""
-        for word in words:
-            wordItem = QListWidgetItem(word, self.newWordListWidget)
-            wordItem.setData(Qt.UserRole, None)
-        self.newWordListWidget.clearSelection()
+    def on_getRemoteWords_groupDone(self, words: list[str]):
+        """一个分组（单词本）获取完毕事件"""
+        self.remoteWords.extend(words)
 
     @pyqtSlot()
     def on_allPullWork_done(self):
         """全部分组获取完毕事件"""
-        localWordList = set(getWordsByDeck(self.deckComboBox.currentText()))
-        remoteWordList = set([self.newWordListWidget.item(row).text() for row in range(self.newWordListWidget.count())])
+        localWordSet = set(self.localWords)
+        remoteWordSet = set(self.remoteWords)
+        self.localWords.clear()
+        self.remoteWords.clear()
 
-        newWords = remoteWordList - localWordList  # 新单词
-        needToDeleteWords = localWordList - remoteWordList  # 需要删除的单词
-        logger.info(f'本地: {localWordList}')
-        logger.info(f'远程: {remoteWordList}')
+        newWords = remoteWordSet - localWordSet  # 新单词
+        needToDeleteWords = localWordSet - remoteWordSet  # 需要删除的单词
+        logger.info(f'本地: {localWordSet}')
+        logger.info(f'远程: {remoteWordSet}')
         logger.info(f'待查: {newWords}')
         logger.info(f'待删: {needToDeleteWords}')
         waitIcon = QIcon(':/icons/wait.png')
@@ -340,7 +348,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
 
         for word in needToDeleteWords:
             item = QListWidgetItem(word)
-            item.setCheckState(Qt.Checked)
+            item.setCheckState(Qt.CheckState.Checked)
             item.setIcon(delIcon)
             self.needDeleteWordListWidget.addItem(item)
 
@@ -369,27 +377,19 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         self.pullRemoteWordsBtn.setEnabled(False)
         self.syncBtn.setEnabled(False)
 
+        wordItems = self.newWordListWidget.selectedItems()
+        if wordItems: # 如果没有选中单词，则查询所有单词
+            wordItems = [self.newWordListWidget.item(row) for row in range(self.newWordListWidget.count())]
+
         wordList = []
-        selectedWords = self.newWordListWidget.selectedItems()
-        if selectedWords:
-            # 如果选中单词则只查询选中的单词
-            for wordItem in selectedWords:
-                wordBundle = dict()
-                row = self.newWordListWidget.row(wordItem)
-                wordBundle['term'] = wordItem.text()
-                for configName in BASIC_OPTION + EXTRA_OPTION:
-                    wordBundle[configName] = currentConfig[configName]
-                    wordBundle['row'] = row
-                wordList.append(wordBundle)
-        else:  # 没有选择则查询全部
-            for row in range(self.newWordListWidget.count()):
-                wordBundle = dict()
-                wordItem = self.newWordListWidget.item(row)
-                wordBundle['term'] = wordItem.text()
-                for configName in BASIC_OPTION + EXTRA_OPTION:
-                    wordBundle[configName] = currentConfig[configName]
-                    wordBundle['row'] = row
-                wordList.append(wordBundle)
+        for wordItem in wordItems:
+            wordBundle = dict()
+            row = self.newWordListWidget.row(wordItem)
+            wordBundle[F_TERM] = wordItem.text() # type: ignore
+            wordBundle['row'] = row # 保存单词在列表中的位置
+            for configName in BASIC_OPTION + EXTRA_OPTION:
+                wordBundle[configName] = currentConfig[configName]
+            wordList.append(wordBundle)
 
         logger.info(f'待查询单词{wordList}')
         # 查询线程
@@ -403,31 +403,26 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         self.queryWorker.start.connect(self.queryWorker.run)
         self.queryWorker.start.emit()
 
-    @pyqtSlot(int, dict)
-    def on_thisRowDone(self, row, result):
+    @pyqtSlot(str, int, QueryWordData)
+    def on_thisRowDone(self, word, row, result):
         """该行单词查询完毕"""
         doneIcon = QIcon(':/icons/done.png')
         wordItem = self.newWordListWidget.item(row)
-        wordItem.setIcon(doneIcon)
-        wordItem.setData(Qt.UserRole, result)
+        wordItem.setIcon(doneIcon) # type: ignore
+        wordItem.setData(Qt.ItemDataRole.UserRole, result) # type: ignore
 
-    @pyqtSlot(int)
-    def on_thisRowFailed(self, row):
+    @pyqtSlot(str, int)
+    def on_thisRowFailed(self, word, row):
         failedIcon = QIcon(':/icons/failed.png')
         failedWordItem = self.newWordListWidget.item(row)
-        failedWordItem.setIcon(failedIcon)
+        failedWordItem.setIcon(failedIcon) # type: ignore
+        self.queryFailedWords.append(word)
 
     @pyqtSlot()
     def on_allQueryDone(self):
-        failed = []
-
-        for i in range(self.newWordListWidget.count()):
-            wordItem = self.newWordListWidget.item(i)
-            if not wordItem.data(Qt.UserRole):
-                failed.append(wordItem.text())
-
-        if failed:
-            logger.warning(f'查询失败或未查询:{failed}')
+        if self.queryFailedWords:
+            logger.warning(f'查询失败:{self.queryFailedWords}')
+            self.queryFailedWords.clear()
 
         self.pullRemoteWordsBtn.setEnabled(True)
         self.queryBtn.setEnabled(True)
@@ -436,41 +431,40 @@ class Windows(QDialog, mainUI.Ui_Dialog):
     @pyqtSlot()
     def on_syncBtn_clicked(self):
 
-        failedGenerator = (self.newWordListWidget.item(row).data(Qt.UserRole) is None for row in range(self.newWordListWidget.count()))
-        if any(failedGenerator):
-            if not askUser('存在未查询或失败的单词，确定要加入单词本吗？\n 你可以选择失败的单词点击 "查询按钮" 来重试。'):
-                return
+        for i in range(self.newWordListWidget.count()):
+            if not self.newWordListWidget.item(i).data(Qt.ItemDataRole.UserRole): # type: ignore
+                if not askUser('存在未查询或失败的单词，确定要加入单词本吗？\n 你可以选择失败的单词点击 "查询按钮" 来重试。'):
+                    return
+                break
 
         currentConfig = self.getAndSaveCurrentConfig()
-        model = getOrCreateModel(MODEL_NAME)
-        getOrCreateModelCardTemplate(model, 'default')
-        deck = getOrCreateDeck(self.deckComboBox.currentText(), model=model)
+        model = noteManager.getOrCreateModel()
+        noteManager.getOrCreateModelCardTemplate(model)
+        deck = noteManager.getOrCreateDeck(self.deckComboBox.currentText(), model)
 
         logger.info('同步点击')
         audiosDownloadTasks = []
-        newWordCount = self.newWordListWidget.count()
 
         # 判断是否需要下载发音
-        if currentConfig['noPron']:
+        if currentConfig[F_NOPRON]:
             logger.info('不下载发音')
             whichPron = None
         else:
-            whichPron = 'AmEPron' if self.AmEPronRadioButton.isChecked() else 'BrEPron'
+            whichPron = F_AMEPRON if self.AmEPronRadioButton.isChecked() else F_BREPRON
             logger.info(f'下载发音{whichPron}')
 
         added = 0
-        for row in range(newWordCount):
-            wordItem = self.newWordListWidget.item(row)
-            wordItemData = wordItem.data(Qt.UserRole)
+        for i in range(self.newWordListWidget.count()):
+            wordItem = self.newWordListWidget.item(i)
+            wordItemData: QueryWordData | None = wordItem.data(Qt.ItemDataRole.UserRole) # type: ignore
             if wordItemData:
-                addNoteToDeck(deck, model, currentConfig, wordItemData)
+                noteManager.addNoteToDeck(deck, model, currentConfig, wordItemData)
                 added += 1
                 # 添加发音任务
                 if whichPron and wordItemData.get(whichPron):
-                    media_dir = mw.col.media.dir()
-                    fpath = os.path.join(media_dir, f"{whichPron}_{wordItemData['term']}.mp3")
+                    media_dir = mw.col.media.dir() # type: ignore
+                    fpath = os.path.join(media_dir, f"{whichPron}_{wordItemData[F_TERM]}.mp3")
                     audiosDownloadTasks.append((fpath, wordItemData[whichPron],))
-        mw.reset()
 
         logger.info(f'发音下载任务:{audiosDownloadTasks}')
 
@@ -495,24 +489,26 @@ class Windows(QDialog, mainUI.Ui_Dialog):
 
         self.newWordListWidget.clear()
 
-        needToDeleteWordItems = [
-            self.needDeleteWordListWidget.item(row)
-            for row in range(self.needDeleteWordListWidget.count())
-            if self.needDeleteWordListWidget.item(row).checkState() == Qt.Checked
-        ]
+        needToDeleteWordItems = []
+        for i in range(self.needDeleteWordListWidget.count()):
+            item = self.needDeleteWordListWidget.item(i)
+            if item and item.checkState() == Qt.CheckState.Checked:
+                needToDeleteWordItems.append(item)
+
         needToDeleteWords = [i.text() for i in needToDeleteWordItems]
 
         deleted = 0
 
-        if needToDeleteWords and askUser(f'确定要删除这些单词吗:{needToDeleteWords[:3]}...({len(needToDeleteWords)}个)', title='Dict2Anki', parent=self):
-            needToDeleteWordNoteIds = getNotes(needToDeleteWords, currentConfig['deck'])
-            mw.col.remNotes(needToDeleteWordNoteIds)
+        if needToDeleteWords and askUser(f'确定要删除这些单词吗:{needToDeleteWords[:3]}...({len(needToDeleteWords)}个)', title=MODEL_NAME, parent=self):
+            noteIds = noteManager.getNoteIds(needToDeleteWords, currentConfig['deck'])
+            noteManager.removeNotes(noteIds)
             deleted += 1
-            mw.col.reset()
-            mw.reset()
             for item in needToDeleteWordItems:
                 self.needDeleteWordListWidget.takeItem(self.needDeleteWordListWidget.row(item))
             logger.info('删除完成')
+
+        mw.reset()
+
         logger.info('完成')
 
         if not audiosDownloadTasks:

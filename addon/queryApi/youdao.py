@@ -4,17 +4,20 @@ from urllib3 import Retry
 from urllib.parse import urlencode
 from requests.adapters import HTTPAdapter
 from ..misc import AbstractQueryAPI
+from ..constants import *
+from ..__typing import QueryWordData
 logger = logging.getLogger('dict2Anki.queryApi.youdao')
 __all__ = ['API']
 
 
 class Parser:
-    def __init__(self, json_obj, term):
+    def __init__(self, json_obj, term: str):
         self._result = json_obj
         self.term = term
+        self._pronunciations = None
 
     @property
-    def definition(self) -> list:
+    def definition(self) -> list[str]:
         try:
             ec = [d['tr'][0]['l']['i'][0] for d in self._result['ec']['word'][0]['trs']][:3]
         except KeyError:
@@ -34,48 +37,52 @@ class Parser:
         return ec if ec else web_trans
 
     @property
-    def pronunciations(self) -> dict:
+    def pronunciations(self) -> dict[str, str]:
+        if self._pronunciations:
+            return self._pronunciations
+
         url = 'http://dict.youdao.com/dictvoice?audio='
         pron = {
-            'AmEPhonetic': None,
-            'AmEUrl': None,
-            'BrEPhonetic': None,
-            'BrEUrl': None
+            F_AMEPHONETIC: '',
+            F_AMEPRON: '',
+            F_BREPHONETIC: '',
+            F_BREPRON: ''
         }
         try:
-            pron['AmEPhonetic'] = self._result['simple']['word'][0]['usphone']
+            pron[F_AMEPHONETIC] = self._result['simple']['word'][0]['usphone']
         except KeyError:
             pass
 
         try:
-            pron['BrEPhonetic'] = self._result['simple']['word'][0]['ukphone']
+            pron[F_BREPHONETIC] = self._result['simple']['word'][0]['ukphone']
         except KeyError:
             pass
 
         try:
-            pron['AmEUrl'] = url + self._result['simple']['word'][0]['usspeech']
+            pron[F_AMEPRON] = url + self._result['simple']['word'][0]['usspeech']
         except (TypeError, KeyError):
             pass
 
         try:
-            pron['BrEUrl'] = url + self._result['simple']['word'][0]['ukspeech']
+            pron[F_BREPRON] = url + self._result['simple']['word'][0]['ukspeech']
         except (TypeError, KeyError):
             pass
 
+        self._pronunciations = pron
         return pron
 
     @property
-    def BrEPhonetic(self)->str:
+    def BrEPhonetic(self) -> str:
         """英式音标"""
         return self.pronunciations['BrEPhonetic']
 
     @property
-    def AmEPhonetic(self)->str:
+    def AmEPhonetic(self) -> str:
         """美式音标"""
         return self.pronunciations['AmEPhonetic']
 
     @property
-    def BrEPron(self)->str:
+    def BrEPron(self) -> str:
         """英式发音url"""
         return self.pronunciations['BrEUrl']
 
@@ -85,21 +92,21 @@ class Parser:
         return self.pronunciations['AmEUrl']
 
     @property
-    def sentence(self) -> list:
+    def sentence(self) -> list[tuple[str, str]]:
         try:
             return [(s['sentence'], s['sentence-translation'],) for s in self._result['blng_sents_part']['sentence-pair']]
         except KeyError:
             return []
 
     @property
-    def image(self)->str:
+    def image(self)-> str:
         try:
             return [i['image'] for i in self._result['pic_dict']['pic']][0]
         except (KeyError, IndexError):
-            return None
+            return ''
 
     @property
-    def phrase(self) -> list:
+    def phrase(self) -> list[tuple[str, str]]:
         phrase = self._result.get('phrs', dict()).get('phrs', [])
         return [
             (
@@ -111,23 +118,23 @@ class Parser:
 
     @property
     def result(self):
-        return {
-            'term': self.term,
-            'definition': self.definition,
-            'phrase': self.phrase,
-            'image': self.image,
-            'sentence': self.sentence,
-            'BrEPhonetic': self.BrEPhonetic,
-            'AmEPhonetic': self.AmEPhonetic,
-            'BrEPron': self.BrEPron,
-            'AmEPron': self.AmEPron
-        }
+        return QueryWordData(
+            term=self.term,
+            definition=self.definition,
+            phrase=self.phrase,
+            image=self.image,
+            sentence=self.sentence,
+            BrEPhonetic=self.BrEPhonetic,
+            AmEPhonetic=self.AmEPhonetic,
+            BrEPron=self.BrEPron,
+            AmEPron=self.AmEPron
+        )
 
 
 class API(AbstractQueryAPI):
     name = '有道 API'
     timeout = 10
-    headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36'}
+    headers = {'User-Agent': USER_AGENT}
     retries = Retry(total=5, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
     session = requests.Session()
     session.mount('http://', HTTPAdapter(max_retries=retries))
@@ -137,7 +144,7 @@ class API(AbstractQueryAPI):
     parser = Parser
 
     @classmethod
-    def query(cls, word) -> dict:
+    def query(cls, word) -> QueryWordData | None:
         queryResult = None
         try:
             rsp = cls.session.get(cls.url, params=urlencode(dict(cls.params, **{'q': word})), timeout=cls.timeout)

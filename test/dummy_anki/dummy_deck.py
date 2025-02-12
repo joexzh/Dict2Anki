@@ -1,3 +1,8 @@
+from typing import Any
+
+DeckDict = dict[str, Any]
+
+
 class Deck:
     @staticmethod
     def id(*args, **kwargs):
@@ -14,3 +19,7 @@ class Deck:
     @staticmethod
     def save(*args, **kwargs):
         pass
+
+    @staticmethod
+    def all() -> list[DeckDict]:
+        return []

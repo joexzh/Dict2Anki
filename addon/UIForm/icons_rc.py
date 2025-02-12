@@ -6,7 +6,7 @@
 #
 # WARNING! All changes made in this file will be lost!
 
-from PyQt5 import QtCore
+from PyQt6 import QtCore
 
 qt_resource_data = b"\
 \x00\x00\x22\x2a\
@@ -1334,7 +1334,7 @@ qt_resource_struct_v2 = b"\
 \x00\x00\x01\x69\x7a\xde\x2e\x18\
 "
 
-qt_version = QtCore.qVersion().split('.')
+qt_version = QtCore.qVersion().split('.') # type: ignore
 if qt_version < ['5', '8', '0']:
     rcc_version = 1
     qt_resource_struct = qt_resource_struct_v1

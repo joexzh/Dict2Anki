@@ -1,10 +1,10 @@
 import pytest
-from PyQt5.QtCore import Qt
+from PyQt6.QtCore import Qt
 
 from addon.addonWindow import Windows
 from addon.constants import VERSION
 import json
-from PyQt5.QtWidgets import QApplication
+from PyQt6.QtWidgets import QApplication
 import sys
 
 
@@ -76,7 +76,7 @@ def test_version_check(qtbot, mocker, monkeypatch):
     qtbot.addWidget(w)
     qtbot.waitUntil(w.updateCheckThead.isRunning)
     mocked_VersionCheckWorker_run.assert_called()
-    w.updateCheckWork.haveNewVersion.emit('xxx', 'yyy')
+    w.updateCheckWork.haveNewVersion.emit('xxx', 'yyy') # type: ignore
     qtbot.wait(100)
     mocked_askUser.assert_called_with(f'有新版本:xxx是否更新？\n\nyyy')
 
@@ -120,7 +120,7 @@ def test_newWordWidget(window, words):
     window.insertWordToListWidget(words)
     assert [window.newWordListWidget.item(row).text() for row in range(window.newWordListWidget.count())] == words
     assert all(
-        window.newWordListWidget.item(row).data(Qt.UserRole) is None for row in range(window.newWordListWidget.count()))
+        window.newWordListWidget.item(row).data(Qt.ItemDataRole.UserRole) is None for row in range(window.newWordListWidget.count()))
 
 
 @pytest.mark.skip
@@ -138,8 +138,8 @@ def test_fetch_word_and_compare(monkeypatch, mocker, window, qtbot, local_words,
     mocker.patch('addon.addonWindow.getWordsByDeck', return_value=local_words)
     mocked_tooltip = mocker.patch('addon.addonWindow.tooltip')
     from addon.dictionary.eudict import Eudict
-    window.selectedDict = Eudict
-    window.selectedDict.groups = [('group_1', 'group_1_id')]
+    window.selectedDict = Eudict()
+    window.selectedDict.groups = [('group_1', 1)]
     qtbot.waitUntil(window.workerThread.isRunning, timeout=5000)
     window.getRemoteWordList(['group_1'])
     qtbot.wait(1000)
@@ -149,7 +149,7 @@ def test_fetch_word_and_compare(monkeypatch, mocker, window, qtbot, local_words,
     words_in_list_widget = [i.text() for i in item_in_list_widget]
     words_in_del_widget = [i.text() for i in item_in_del_widget]
 
-    assert all([item.data(Qt.UserRole) is None for item in item_in_list_widget])
+    assert all([item.data(Qt.ItemDataRole.UserRole) is None for item in item_in_list_widget])
     if test_index == 0:
         assert item_in_list_widget == []
         assert item_in_del_widget == []
