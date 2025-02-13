@@ -68,7 +68,7 @@ def update(title, tags, desc):
 def main():
     create_zip()
     # with open('anki_addon_page.tpl', encoding='utf-8') as tpl:
-    #     return update('Dict2Anki（有道,欧陆词典单词本同步工具）', '有道 欧陆 导入 同步', tpl.read())
+    #     return update('Dict2Anki（有道,欧路词典单词本同步工具）', '有道 欧路 导入 同步', tpl.read())
 
 
 if __name__ == '__main__':

@@ -155,18 +155,20 @@ def addNoteToDeck(deckObject, modelObject, currentConfig: Config, oneQueryResult
     for configName in BASIC_OPTION + EXTRA_OPTION:
         logger.debug(f'字段:{configName}--结果:{oneQueryResult.get(configName)}')
         if oneQueryResult.get(configName):
-            # 短语例句
-            if configName in [F_SENTENCE, F_PHRASE] and currentConfig[configName]:
-                newNote[f'{configName}Front'] = '\n'.join(
-                    [f'<tr><td>{e.strip()}</td></tr>' for e, _ in oneQueryResult[configName]])
-                newNote[f'{configName}Back'] = '\n'.join(
-                    [f'<tr><td>{e.strip()}<br>{c.strip()}</td></tr>' for e, c in oneQueryResult[configName]])
+            # 短语
+            if configName == F_PHRASE and currentConfig[configName]:
+                newNote[f'{configName}Front'] = '<br>'.join([f'<i>{e.strip()}</i>' for e, _ in oneQueryResult[configName]])
+                newNote[f'{configName}Back'] = '<br>'.join([f'<i>{e.strip()}</i> {c.strip()}' for e, c in oneQueryResult[configName]])
+            # 例句
+            elif configName == F_SENTENCE and currentConfig[configName]:
+                newNote[f'{configName}Front'] = '<ol>' + '\n'.join([f'<li>{e.strip()}</li>' for e, _ in oneQueryResult[configName]]) + '</ol>'
+                newNote[f'{configName}Back'] = '<ol>' + '\n'.join([f'<li>{e.strip()}<br>{c.strip()}</li>' for e, c in oneQueryResult[configName]]) + '</ol>'
             # 图片
             elif configName == F_IMAGE and oneQueryResult[configName]:
                 newNote[configName] = f'<img src="{oneQueryResult[configName]}">'
             # 释义
             elif configName == F_DEFINITION and currentConfig[configName]:
-                newNote[configName] = ' '.join(oneQueryResult[configName])
+                newNote[configName] = '<br>'.join(oneQueryResult[configName])
             # 发音
             elif configName in EXTRA_OPTION[:2] and oneQueryResult[configName]:
                 newNote[configName] = f"[sound:{configName}_{oneQueryResult[F_TERM]}.mp3]"

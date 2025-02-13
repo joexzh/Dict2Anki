@@ -163,7 +163,7 @@ class Parser:
 
 
 class API(AbstractQueryAPI):
-    name = '欧陆词典 API'
+    name = '欧路词典 API'
     # 重用 dictionary.Eudict 的 session。因为如果未登录，网页会返回反爬虫的版本
     timeout = Eudict.timeout
     session = Eudict.session

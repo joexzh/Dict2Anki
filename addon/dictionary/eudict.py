@@ -13,7 +13,7 @@ logger = logging.getLogger('dict2Anki.dictionary.eudict')
 
 
 class Eudict(AbstractDictionary):
-    name = '欧陆词典'
+    name = '欧路词典'
     loginUrl = 'https://dict.eudic.net/account/login'
     timeout = 10
     headers = {
