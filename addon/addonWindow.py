@@ -462,8 +462,9 @@ class Windows(QDialog, mainUI.Ui_Dialog):
                 added += 1
                 # 添加发音任务
                 if whichPron and wordItemData.get(whichPron):
-                    media_dir = mw.col.media.dir() # type: ignore
-                    fpath = os.path.join(media_dir, f"{whichPron}_{wordItemData[F_TERM]}.mp3")
+                    # 我们不希望文件名被 mw.col.media.add_file 改变，因此直接下载到媒体库文件夹。
+                    # 后续不需要再调用 mw.col.media.add_file
+                    fpath = noteManager.media_path(f"{whichPron}_{wordItemData[F_TERM]}.mp3")
                     audiosDownloadTasks.append((fpath, wordItemData[whichPron],))
 
         logger.info(f'发音下载任务:{audiosDownloadTasks}')

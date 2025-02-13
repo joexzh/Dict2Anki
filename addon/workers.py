@@ -8,8 +8,6 @@ from .misc import ThreadPool
 from requests.adapters import HTTPAdapter
 from .constants import *
 from PyQt6.QtCore import QObject, pyqtSignal, QThread
-import aqt
-import os
 
 class VersionCheckWorker(QObject):
     haveNewVersion = pyqtSignal(str, str)
@@ -158,9 +156,7 @@ class AudioDownloadWorker(QObject):
                     for chunk in r.iter_content(chunk_size=1024):
                         if chunk:
                             f.write(chunk)
-                self.logger.info(f'{fileName} 下载完成')
-                aqt.mw.col.media.add_file(fileName) # type: ignore
-                self.logger.info(f"{fileName} 添加到媒体库")
+                self.logger.info(f"发音下载完成：{fileName}")
             except Exception as e:
                 self.logger.warning(f'下载{fileName}:{url}异常: {e}')
             finally:

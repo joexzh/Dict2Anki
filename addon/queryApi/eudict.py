@@ -66,10 +66,8 @@ class Parser:
             F_AMEPRON: ''
         }
 
-        el_phon_line = self._soap.select_one('.phonitic-line')
-
         try:
-            if el_phon_line:
+            if el_phon_line := self._soap.select_one('.phonitic-line'):
                 links = el_phon_line.select('a')
                 phons = el_phon_line.select('.Phonitic')
 
@@ -83,11 +81,14 @@ class Parser:
                     pron[F_AMEPRON] = self.__make_pron_url(links[1]['data-rel'])
                     pron[F_BREPHONETIC] = phons[0].get_text(strip=True)
                     pron[F_AMEPHONETIC] = phons[0].get_text(strip=True) if len(phons) == 1 else phons[1].get_text(strip=True)
-            else:
-                link = self._soap.select_one('div .gv_details .voice-button')
-                if link: # 只有全球发音，没有音标
-                    pron[F_BREPRON] = self.__make_pron_url(link['data-rel'])
-                    pron[F_AMEPRON] = self.__make_pron_url(link['data-rel'])
+            elif link := self._soap.select_one('div .gv_details .voice-button'):
+                # 只有"全球发音"，没有音标
+                pron[F_BREPRON] = self.__make_pron_url(link['data-rel'])
+                pron[F_AMEPRON] = self.__make_pron_url(link['data-rel'])
+            elif link := self._soap.select_one('#tbOrgText a.voice-button'):
+                # 在“参考译文”中，例如 https://dict.eudic.net/dicts/en/azeroth
+                pron[F_BREPRON] = self.__make_pron_url(link['data-rel'])
+                pron[F_AMEPRON] = self.__make_pron_url(link['data-rel'])
         except (TypeError, KeyError, IndexError):
             pass
 

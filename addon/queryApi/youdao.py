@@ -1,11 +1,9 @@
 import logging
-import requests
-from urllib3 import Retry
 from urllib.parse import urlencode
-from requests.adapters import HTTPAdapter
 from typing import Optional
 from ..constants import *
 from ..__typing import AbstractQueryAPI, QueryWordData
+from ..dictionary.youdao import Youdao
 logger = logging.getLogger('dict2Anki.queryApi.youdao')
 __all__ = ['API']
 
@@ -133,12 +131,9 @@ class Parser:
 
 class API(AbstractQueryAPI):
     name = '有道 API'
-    timeout = 10
-    headers = {'User-Agent': USER_AGENT}
-    retries = Retry(total=5, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
-    session = requests.Session()
-    session.mount('http://', HTTPAdapter(max_retries=retries))
-    session.mount('https://', HTTPAdapter(max_retries=retries))
+    # 重用 dictionary.Youdao 的 session
+    timeout = Youdao.timeout
+    session = Youdao.session
     url = 'https://dict.youdao.com/jsonapi'
     params = {"dicts": {"count": 99, "dicts": [["ec", "ee", "phrs", "pic_dict"], ["web_trans"], ["fanyi"], ["blng_sents_part"]]}}
     parser = Parser

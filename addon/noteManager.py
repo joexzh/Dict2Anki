@@ -1,3 +1,4 @@
+import os
 from .constants import *
 from .__typing import Config, QueryWordData
 import logging
@@ -175,3 +176,13 @@ def addNoteToDeck(deckObject, modelObject, currentConfig: Config, oneQueryResult
 
     mw.col.add_note(newNote, deckObject['id'])
     logger.info(f"添加笔记{newNote[F_TERM]}")
+
+
+def media_path(fileName: str):
+    '''如果有文件名，返回完整文件路径，否则返回媒体库dir'''
+    if not mw.col:
+        raise RuntimeError
+    media_dir = mw.col.media.dir()
+    if not fileName:
+        return media_dir
+    return os.path.join(media_dir, fileName)

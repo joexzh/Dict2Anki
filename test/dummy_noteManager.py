@@ -32,3 +32,7 @@ def getNoteIds(*args, **kwargs):
 
 def removeNotes(noteIds):
     pass
+
+
+def media_path(fileName: str) -> str:
+    return ''
