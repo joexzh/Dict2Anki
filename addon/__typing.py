@@ -64,7 +64,7 @@ class AbstractDictionary(ABC):
 
     @abstractmethod
     def __init__(self):
-        self.groups: list[tuple[str, int]] = []
+        self.groups: list[tuple[str, str]] = []
         self.indexSoup: Optional[BeautifulSoup] = None
 
     @abstractmethod
@@ -72,11 +72,11 @@ class AbstractDictionary(ABC):
         pass
 
     @abstractmethod
-    def getGroups(self) -> list[tuple[str, int]]:
+    def getGroups(self) -> list[tuple[str, str]]:
         pass
 
     @abstractmethod
-    def getTotalPage(self, groupName: str, groupId: int) -> int:
+    def getTotalPage(self, groupName: str, groupId: str) -> int:
         pass
 
     @abstractmethod

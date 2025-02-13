@@ -26,7 +26,7 @@ class Eudict(AbstractDictionary):
     session.headers.update(headers)
 
     def __init__(self):
-        self.groups: list[tuple[str, int]] = []
+        self.groups: list[tuple[str, str]] = []
         self.indexSoup: Optional[BeautifulSoup] = None
 
     def checkCookie(self, cookie: dict) -> bool:
@@ -51,7 +51,7 @@ class Eudict(AbstractDictionary):
             return True
         return False
 
-    def getGroups(self) -> list[tuple[str, int]]:
+    def getGroups(self) -> list[tuple[str, str]]:
         """
         获取单词本分组
         :return: [(group_name,group_id)]
@@ -61,13 +61,13 @@ class Eudict(AbstractDictionary):
         elements = self.indexSoup.select('a.media_heading_a.new_cateitem_click')
         groups = []
         if elements:
-            groups = [(el.get_text(strip=True), int(str(el['data-id']))) for el in elements]
+            groups = [(el.get_text(strip=True), str(el['data-id'])) for el in elements]
 
         logger.info(f'单词本分组:{groups}')
         self.groups = groups
         return groups
 
-    def getTotalPage(self, groupName: str, groupId: int) -> int:
+    def getTotalPage(self, groupName: str, groupId: str) -> int:
         """
         获取分组下总页数
         :param groupName: 分组名称
@@ -88,7 +88,7 @@ class Eudict(AbstractDictionary):
             logger.exception(f'网络异常{error}')
             return 0
 
-    def getWordsByPage(self, pageNo: int, groupName: str, groupId: int) -> list[str]:
+    def getWordsByPage(self, pageNo: int, groupName: str, groupId: str) -> list[str]:
         wordList = []
         data = {
             'columns[2][data]': 'word',

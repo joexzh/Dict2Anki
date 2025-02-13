@@ -61,7 +61,7 @@ class RemoteWordFetchingWorker(QObject):
     doneThisGroup = pyqtSignal(list)
     logger = logging.getLogger('dict2Anki.workers.RemoteWordFetchingWorker')
 
-    def __init__(self, selectedDict: AbstractDictionary, groups: list[tuple[str, int]]):
+    def __init__(self, selectedDict: AbstractDictionary, groups: list[tuple[str, str]]):
         super().__init__()
         self.selectedDict = selectedDict
         self.groups = groups

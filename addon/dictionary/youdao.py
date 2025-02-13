@@ -25,7 +25,7 @@ class Youdao(AbstractDictionary):
     session.mount('https://', HTTPAdapter(max_retries=retries))
 
     def __init__(self):
-        self.groups: list[tuple[str, int]] = []
+        self.groups: list[tuple[str, str]] = []
         self.indexSoup: Optional[BeautifulSoup] = None
 
     def checkCookie(self, cookie: dict) -> bool:
@@ -50,7 +50,7 @@ class Youdao(AbstractDictionary):
             return True
         return False
 
-    def getGroups(self) -> list[tuple[str, int]]:
+    def getGroups(self) -> list[tuple[str, str]]:
         """
         获取单词本分组
         :return: [(group_name,group_id)]
@@ -65,7 +65,7 @@ class Youdao(AbstractDictionary):
 
         return groups
 
-    def getTotalPage(self, groupName: str, groupId: int) -> int:
+    def getTotalPage(self, groupName: str, groupId: str) -> int:
         """
         获取分组下总页数
         :param groupName: 分组名称

@@ -1,7 +1,4 @@
 import logging
-import requests
-from urllib3 import Retry
-from requests.adapters import HTTPAdapter
 from typing import Optional
 from bs4 import BeautifulSoup
 from ..constants import *
@@ -166,7 +163,7 @@ class Parser:
 
 class API(AbstractQueryAPI):
     name = '欧陆词典 API'
-    # 重用dictionary.Eudict，如果未登录，网页会返回反爬虫的版本
+    # 重用 dictionary.Eudict 的 session。因为如果未登录，网页会返回反爬虫的版本
     timeout = Eudict.timeout
     session = Eudict.session
     url = 'https://dict.eudic.net/dicts/en/{}'
