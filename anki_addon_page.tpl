@@ -1,7 +1,13 @@
-<img src="https://travis-ci.org/megachweng/Dict2Anki.svg?branch=master">
+<strong>Dict2Anki-ng</strong> is a fork from <a href="https://github.com/megachweng/Dict2Anki" rel="nofollow">Dict2Anki</a>，目的是兼容 PyQt6 和新版 anki，主要功能与原版一致。
+
 <strong>Dict2Anki</strong> 是一款方便<a href="http://cidian.youdao.com/multi.html" rel="nofollow">有道词典</a>、<a href="https://www.eudic.net/" rel="nofollow">欧陆词典</a>用户同步生成单词本卡片至<a href="https://apps.ankiweb.net/#download" rel="nofollow">Anki</a>的插件
 
 <strong>Change Logs</strong>:
+<strong>v7.0.0</strong>:
+    <strong>Breaking Change:</strong>
+        迁移到 pyqt6，现在不兼容 pyqt5
+        模板的 image 字段有调整，`v7` 前的版本保存 `src=xxx`，现在保存完整的 `<img src="xxx">`，手动添加图片不会打乱排版了。
+    修复欧路词典单词信息不完整、不正确的问题
 <strong>v6.1.5</strong>:
     更新有道词典API，解决首次登录无法唤出登陆页的问题
 <strong>v6.1.4</strong>:

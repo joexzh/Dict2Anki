@@ -1,7 +1,7 @@
 try:
     from aqt import mw
     from .addon.addonWindow import Windows
-    from .addon.constants import MODEL_NAME
+    from .addon.constants import ADDON_FULL_NAME
     from PyQt6.QtGui import QAction
 
 
@@ -10,7 +10,7 @@ try:
         w.exec()
 
 
-    action = QAction(MODEL_NAME, mw)
+    action = QAction(ADDON_FULL_NAME, mw)
     action.triggered.connect(showWindow)
     mw.form.menuTools.addAction(action)
 

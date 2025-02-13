@@ -1,13 +1,19 @@
 
-## Dict2Anki-qt6
+## Dict2Anki-ng
 
-**Dict2Anki-qt6** 是一款方便[有道词典](http://cidian.youdao.com/multi.html)、[欧陆词典](https://www.eudic.net/)用户同步生成单词本卡片至[Anki](https://apps.ankiweb.net/#download)的插件
+**Dict2Anki-ng** is a fork from [Dict2Anki](https://github.com/megachweng/Dict2Anki)，目的是兼容 PyQt6 和新版 anki，主要与功能原版一致。
 
-Fork from [Dict2Anki](https://github.com/megachweng/Dict2Anki)，目的是兼容 PyQt6 以及兼容新版 anki，主要功能原版一致。
+**Dict2Anki** 是一款方便[有道词典](http://cidian.youdao.com/multi.html)、[欧陆词典](https://www.eudic.net/)用户同步生成单词本卡片至[Anki](https://apps.ankiweb.net/#download)的插件
+
 
 ### Change log
-
 ___
+
+* v7.0.0
+  * **Breaking Change:**
+    * 迁移到 pyqt6，现在不兼容 pyqt5
+    * 模板的 image 字段有调整，`v7` 前的版本保存 `src=xxx`，现在保存完整的 `<img src="xxx">`，手动添加图片不会打乱排版了。
+  * 修复欧路词典单词信息不完整、不正确的问题
 * v6.1.6
   * 修复ARM Mac启动日志出错的问题 THX to <a href="https://github.com/megachweng/Dict2Anki/pull/108">@xbot</a>  
 * v6.1.5  
@@ -49,10 +55,10 @@ Anki --> 工具 --> 附加组件 --> 获取插件
 <img src = "https://raw.githubusercontent.com/megachweng/Dict2Anki/master/screenshots/del.gif"></span>
 
 ### Contribute Guide
-非常欢迎你的贡献，请PR前确保通过了全部单元测试 `pytest test`
+非常欢迎你的贡献，<del>请PR前确保通过了全部单元测试 `pytest test`。</del>暂时没有 unit test。
 
 ### Development Guide
-Python > 3.6  
+Python > 3.8 
 ```
 export PYTHONPATH='xxx/Dict2Anki'  
 export DEVDICT2ANKI=1  

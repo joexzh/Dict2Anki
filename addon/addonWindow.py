@@ -63,7 +63,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         self.audioDownloadWorker = None
 
         self.setupUi(self)
-        self.setWindowTitle(MODEL_NAME)
+        self.setWindowTitle(ADDON_FULL_NAME)
         self.setupLogger()
         self.initCore()
         self.checkUpdate()
@@ -500,7 +500,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
 
         deleted = 0
 
-        if needToDeleteWords and askUser(f'确定要删除这些单词吗:{needToDeleteWords[:3]}...({len(needToDeleteWords)}个)', title=MODEL_NAME, parent=self):
+        if needToDeleteWords and askUser(f'确定要删除这些单词吗:{needToDeleteWords[:3]}...({len(needToDeleteWords)}个)', title=ADDON_FULL_NAME, parent=self):
             noteIds = noteManager.getNoteIds(needToDeleteWords, currentConfig['deck'])
             noteManager.removeNotes(noteIds)
             deleted += 1

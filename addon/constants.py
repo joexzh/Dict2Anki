@@ -1,7 +1,9 @@
 VERSION = 'v7.0.0'
 RELEASE_URL = 'https://github.com/joexzh/Dict2Anki'
 VERSION_CHECK_API = 'https://api.github.com/repos/joexzh/Dict2Anki/releases/latest'
-MODEL_NAME = f'Dict2Anki-qt6-{VERSION}'
+ADDON_NAME = 'Dict2Anki-ng'
+ADDON_FULL_NAME = f'{ADDON_NAME}-{VERSION}'
+MODEL_NAME = ADDON_NAME # 若不兼容旧模板，需要修改模板名称
 
 F_DEFINITION = 'definition'
 F_SENTENCE = 'sentence'

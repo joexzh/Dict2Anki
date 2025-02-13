@@ -4,7 +4,7 @@ from zipfile import ZipFile
 from bs4 import BeautifulSoup
 from requests.sessions import Session
 
-from addon.constants import MODEL_NAME
+from addon.constants import ADDON_FULL_NAME
 
 username = os.environ.get('ANKI_USERNAME')
 password = os.environ.get('ANKI_PASSWORD')
@@ -35,7 +35,7 @@ def create_zip():
         for filename in files:
             file_paths.append(os.path.join(dirname, filename))
 
-    with ZipFile(f'{MODEL_NAME}.zip', 'w') as zf:
+    with ZipFile(f'{ADDON_FULL_NAME}.zip', 'w') as zf:
         for file in file_paths:
             zf.write(file)
 
@@ -49,7 +49,7 @@ def update(title, tags, desc):
     s.post(URL, data={'submit': 1, 'csrf_token': csrf_token, 'username': username, 'password': password})
 
     URL = 'https://ankiweb.net/shared/upload'
-    file = {'v21file': open(f'{MODEL_NAME}.zip', 'rb')}
+    file = {'v21file': open(f'{ADDON_FULL_NAME}.zip', 'rb')}
     rsp = s.post(URL, files=file, data={
         'title': title,
         'tags': tags,
