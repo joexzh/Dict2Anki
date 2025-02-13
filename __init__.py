@@ -1,6 +1,7 @@
 try:
     from aqt import mw
     from .addon.addonWindow import Windows
+    from .addon.constants import MODEL_NAME
     from PyQt6.QtGui import QAction
 
 
@@ -9,7 +10,7 @@ try:
         w.exec()
 
 
-    action = QAction("Dict2Anki...", mw)
+    action = QAction(MODEL_NAME, mw)
     action.triggered.connect(showWindow)
     mw.form.menuTools.addAction(action)
 

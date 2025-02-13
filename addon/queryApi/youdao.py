@@ -3,9 +3,9 @@ import requests
 from urllib3 import Retry
 from urllib.parse import urlencode
 from requests.adapters import HTTPAdapter
-from ..misc import AbstractQueryAPI
+from typing import Optional
 from ..constants import *
-from ..__typing import QueryWordData
+from ..__typing import AbstractQueryAPI, QueryWordData
 logger = logging.getLogger('dict2Anki.queryApi.youdao')
 __all__ = ['API']
 
@@ -144,7 +144,7 @@ class API(AbstractQueryAPI):
     parser = Parser
 
     @classmethod
-    def query(cls, word) -> QueryWordData | None:
+    def query(cls, word) -> Optional[QueryWordData]:
         queryResult = None
         try:
             rsp = cls.session.get(cls.url, params=urlencode(dict(cls.params, **{'q': word})), timeout=cls.timeout)

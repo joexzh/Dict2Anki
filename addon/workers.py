@@ -3,7 +3,8 @@ import logging
 import requests
 from urllib3 import Retry
 from itertools import chain
-from .misc import ThreadPool, AbstractDictionary, AbstractQueryAPI
+from .__typing import AbstractDictionary, AbstractQueryAPI
+from .misc import ThreadPool
 from requests.adapters import HTTPAdapter
 from .constants import *
 from PyQt6.QtCore import QObject, pyqtSignal, QThread
@@ -92,8 +93,8 @@ class RemoteWordFetchingWorker(QObject):
 class QueryWorker(QObject):
     start = pyqtSignal()
     tick = pyqtSignal()
-    thisRowDone = pyqtSignal(int, dict)
-    thisRowFailed = pyqtSignal(int)
+    thisRowDone = pyqtSignal(str, int, dict)
+    thisRowFailed = pyqtSignal(str, int)
     allQueryDone = pyqtSignal()
     logger = logging.getLogger('dict2Anki.workers.QueryWorker')
 
@@ -159,8 +160,7 @@ class AudioDownloadWorker(QObject):
                             f.write(chunk)
                 self.logger.info(f'{fileName} 下载完成')
                 aqt.mw.col.media.add_file(fileName) # type: ignore
-                os.remove(fileName)
-                self.logger.info(f"{fileName} 添加到媒体库,临时文件已删除")
+                self.logger.info(f"{fileName} 添加到媒体库")
             except Exception as e:
                 self.logger.warning(f'下载{fileName}:{url}异常: {e}')
             finally:

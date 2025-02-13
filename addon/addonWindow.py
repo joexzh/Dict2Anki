@@ -4,6 +4,7 @@ import logging
 import json
 from copy import deepcopy
 from tempfile import gettempdir
+from typing import Optional
 
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QPlainTextEdit, QDialog, QListWidgetItem, QVBoxLayout, QPushButton
@@ -15,9 +16,8 @@ from .workers import LoginStateCheckWorker, VersionCheckWorker, RemoteWordFetchi
 from .dictionary import dictionaries
 from .logger import Handler
 from .loginDialog import LoginDialog
-from .misc import Mask, AbstractDictionary
 from .constants import *
-from .__typing import Config, QueryWordData
+from .__typing import AbstractDictionary, Config, Mask, QueryWordData
 
 try:
     from aqt import mw
@@ -378,7 +378,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         self.syncBtn.setEnabled(False)
 
         wordItems = self.newWordListWidget.selectedItems()
-        if wordItems: # 如果没有选中单词，则查询所有单词
+        if not wordItems: # 如果没有选中单词，则查询所有单词
             wordItems = [self.newWordListWidget.item(row) for row in range(self.newWordListWidget.count())]
 
         wordList = []
@@ -456,7 +456,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         added = 0
         for i in range(self.newWordListWidget.count()):
             wordItem = self.newWordListWidget.item(i)
-            wordItemData: QueryWordData | None = wordItem.data(Qt.ItemDataRole.UserRole) # type: ignore
+            wordItemData: Optional[QueryWordData] = wordItem.data(Qt.ItemDataRole.UserRole) # type: ignore
             if wordItemData:
                 noteManager.addNoteToDeck(deck, model, currentConfig, wordItemData)
                 added += 1

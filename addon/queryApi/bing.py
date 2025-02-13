@@ -4,9 +4,9 @@ import requests
 from urllib3 import Retry
 from urllib.parse import urlencode
 from requests.adapters import HTTPAdapter
-from ..misc import AbstractQueryAPI
+from typing import Optional
 from ..constants import USER_AGENT
-from ..__typing import QueryWordData
+from ..__typing import AbstractQueryAPI, QueryWordData
 logger = logging.getLogger('dict2Anki.queryApi.bing')
 __all__ = ['API']
 
@@ -79,7 +79,7 @@ class API(AbstractQueryAPI):
     parser = Parser
 
     @classmethod
-    def query(cls, word) -> QueryWordData | None:
+    def query(cls, word) -> Optional[QueryWordData]:
         validator = str.maketrans(string.punctuation, ' ' * len(string.punctuation))  # 第三方Bing API查询包含标点的单词时有可能会报错，所以用空格替换所有标点
         query_result = None
         try:

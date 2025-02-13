@@ -1,67 +1,9 @@
 import logging
 from queue import Queue
 from threading import Thread
-from abc import ABC, abstractmethod
-from bs4 import BeautifulSoup
-from .__typing import QueryWordData
+
 
 logger = logging.getLogger('dict2Anki.misc')
-
-
-class AbstractDictionary(ABC):
-    name: str
-    loginUrl: str
-    timeout: int
-    headers: dict[str, str]
-
-    @staticmethod
-    @abstractmethod
-    def loginCheckCallbackFn(cookie: dict, content: str):
-        pass
-
-    @abstractmethod
-    def __init__(self):
-        self.groups: list[tuple[str, int]] = []
-        self.indexSoup: BeautifulSoup | None = None
-
-    @abstractmethod
-    def checkCookie(self, cookie: dict) -> bool:
-        pass
-
-    @abstractmethod
-    def getGroups(self) -> list[tuple[str, int]]:
-        pass
-
-    @abstractmethod
-    def getTotalPage(self, groupName: str, groupId: int) -> int:
-        pass
-
-    @abstractmethod
-    def getWordsByPage(self, pageNo: int, groupName: str, groupId: str) -> list[str]:
-        pass
-
-
-class AbstractQueryAPI(ABC):
-    @classmethod
-    @abstractmethod
-    def query(cls, word: str) -> QueryWordData | None:
-        """
-        查询
-        :param word: 单词
-        :return: 查询结果 dict(term, definition, phrase, image, sentence, BrEPhonetic, AmEPhonetic, BrEPron, AmEPron)
-        """
-        pass
-
-
-class Mask:
-    def __init__(self, info):
-        self.info = info
-
-    def __repr__(self):
-        return '*******'
-
-    def __str__(self):
-        return self.info
 
 
 class Worker(Thread):

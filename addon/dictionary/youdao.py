@@ -4,7 +4,8 @@ import requests
 from bs4 import BeautifulSoup
 from urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
-from ..misc import AbstractDictionary
+from typing import Optional
+from ..__typing import AbstractDictionary
 from ..constants import USER_AGENT
 
 logger = logging.getLogger('dict2Anki.dictionary.youdao')
@@ -25,7 +26,7 @@ class Youdao(AbstractDictionary):
 
     def __init__(self):
         self.groups: list[tuple[str, int]] = []
-        self.indexSoup: BeautifulSoup | None = None
+        self.indexSoup: Optional[BeautifulSoup] = None
 
     def checkCookie(self, cookie: dict) -> bool:
         """

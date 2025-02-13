@@ -2,10 +2,11 @@ import logging
 import requests
 from urllib3 import Retry
 from requests.adapters import HTTPAdapter
-from ..misc import AbstractQueryAPI
-from ..constants import *
-from ..__typing import QueryWordData
+from typing import Optional
 from bs4 import BeautifulSoup
+from ..constants import *
+from ..__typing import AbstractQueryAPI, QueryWordData
+from ..dictionary.eudict import Eudict
 logger = logging.getLogger('dict2Anki.queryApi.eudict')
 __all__ = ['API']
 
@@ -165,17 +166,14 @@ class Parser:
 
 class API(AbstractQueryAPI):
     name = '欧陆词典 API'
-    timeout = 10
-    headers = {'User-Agent': USER_AGENT}
-    retries = Retry(total=5, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
-    session = requests.Session()
-    session.mount('http://', HTTPAdapter(max_retries=retries))
-    session.mount('https://', HTTPAdapter(max_retries=retries))
+    # 重用dictionary.Eudict，如果未登录，网页会返回反爬虫的版本
+    timeout = Eudict.timeout
+    session = Eudict.session
     url = 'https://dict.eudic.net/dicts/en/{}'
     parser = Parser
 
     @classmethod
-    def query(cls, word: str) -> QueryWordData | None:
+    def query(cls, word: str) -> Optional[QueryWordData]:
         queryResult = None
         try:
             rsp = cls.session.get(cls.url.format(word), timeout=cls.timeout)

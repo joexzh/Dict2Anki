@@ -99,7 +99,7 @@
               <bool>true</bool>
              </property>
              <property name="selectionMode">
-              <enum>QAbstractItemView::MultiSelection</enum>
+              <enum>QAbstractItemView::SelectionMode::MultiSelection</enum>
              </property>
             </widget>
            </item>
@@ -111,7 +111,7 @@
             <number>2</number>
            </property>
            <property name="sizeConstraint">
-            <enum>QLayout::SetDefaultConstraint</enum>
+            <enum>QLayout::SizeConstraint::SetDefaultConstraint</enum>
            </property>
            <item>
             <widget class="QLabel" name="label_2">
@@ -233,90 +233,20 @@
        <string>设置</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_2">
-       <item row="1" column="0" colspan="2">
+       <item row="2" column="0" colspan="2">
         <widget class="QGroupBox" name="defaultConfigGroupBox">
          <property name="title">
           <string>默认设置</string>
          </property>
          <layout class="QGridLayout" name="gridLayout">
-          <item row="0" column="1">
-           <widget class="QCheckBox" name="sentenceCheckBox">
-            <property name="text">
-             <string>例句</string>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="0">
-           <widget class="QCheckBox" name="definitionCheckBox">
-            <property name="text">
-             <string>释义</string>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item row="5" column="2">
-           <widget class="QRadioButton" name="noPronRadioButton">
-            <property name="text">
-             <string>无发音</string>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="2">
-           <widget class="QCheckBox" name="phraseCheckBox">
-            <property name="text">
-             <string>短语</string>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item row="5" column="0">
-           <widget class="QRadioButton" name="BrEPronRadioButton">
-            <property name="text">
-             <string>英式发音</string>
-            </property>
-            <property name="checked">
-             <bool>false</bool>
-            </property>
-           </widget>
-          </item>
-          <item row="5" column="1">
+          <item row="7" column="1">
            <widget class="QRadioButton" name="AmEPronRadioButton">
             <property name="text">
              <string>美式发音</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="1">
-           <widget class="QCheckBox" name="BrEPhoneticCheckBox">
-            <property name="text">
-             <string>英式英标</string>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="2">
-           <widget class="QCheckBox" name="AmEPhoneticCheckBox">
-            <property name="text">
-             <string>美式英标</string>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
+          <item row="3" column="0">
            <widget class="QCheckBox" name="imageCheckBox">
             <property name="text">
              <string>图片</string>
@@ -326,16 +256,86 @@
             </property>
            </widget>
           </item>
+          <item row="1" column="1">
+           <widget class="QCheckBox" name="sentenceCheckBox">
+            <property name="text">
+             <string>例句</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="0">
+           <widget class="QRadioButton" name="BrEPronRadioButton">
+            <property name="text">
+             <string>英式发音</string>
+            </property>
+            <property name="checked">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="2">
+           <widget class="QCheckBox" name="phraseCheckBox">
+            <property name="text">
+             <string>短语</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="QCheckBox" name="BrEPhoneticCheckBox">
+            <property name="text">
+             <string>英式英标</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="2">
+           <widget class="QRadioButton" name="noPronRadioButton">
+            <property name="text">
+             <string>无发音</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QCheckBox" name="definitionCheckBox">
+            <property name="text">
+             <string>释义</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="2">
+           <widget class="QCheckBox" name="AmEPhoneticCheckBox">
+            <property name="text">
+             <string>美式英标</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
-       <item row="0" column="0" colspan="2">
+       <item row="1" column="0" colspan="2">
         <widget class="QGroupBox" name="credentialGroupBox">
          <property name="title">
           <string>账号设置</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_3">
-          <item row="0" column="0" colspan="2">
+          <item row="3" column="0" colspan="2">
            <widget class="QLabel" name="currentDictionaryLabel">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -348,17 +348,7 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="usernameLabel">
-            <property name="text">
-             <string>账号</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
+          <item row="5" column="1">
            <widget class="QLineEdit" name="usernameLineEdit">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -368,17 +358,27 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="passwordLabel">
+          <item row="8" column="0">
+           <widget class="QLabel" name="cookieLabel">
             <property name="text">
-             <string>密码</string>
+             <string>Cookie</string>
             </property>
             <property name="alignment">
-             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+             <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
             </property>
            </widget>
           </item>
-          <item row="2" column="1">
+          <item row="5" column="0">
+           <widget class="QLabel" name="usernameLabel">
+            <property name="text">
+             <string>账号</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="1">
            <widget class="QLineEdit" name="passwordLineEdit">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -387,21 +387,21 @@
              </sizepolicy>
             </property>
             <property name="echoMode">
-             <enum>QLineEdit::PasswordEchoOnEdit</enum>
+             <enum>QLineEdit::EchoMode::PasswordEchoOnEdit</enum>
             </property>
            </widget>
           </item>
-          <item row="3" column="0">
-           <widget class="QLabel" name="cookieLabel">
+          <item row="7" column="0">
+           <widget class="QLabel" name="passwordLabel">
             <property name="text">
-             <string>Cookie</string>
+             <string>密码</string>
             </property>
             <property name="alignment">
-             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+             <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
             </property>
            </widget>
           </item>
-          <item row="3" column="1">
+          <item row="8" column="1">
            <widget class="QLineEdit" name="cookieLineEdit">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
