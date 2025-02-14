@@ -5,9 +5,6 @@
 
 **Dict2Anki** 是一款方便[有道词典](http://cidian.youdao.com/multi.html)、[欧路词典](https://www.eudic.net/)用户同步生成单词本卡片至[Anki](https://apps.ankiweb.net/#download)的插件
 
-> **Note**  
-> 有道词典的查词逻辑未修改，未测试
-
 ### Change log
 ___
 
