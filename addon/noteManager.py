@@ -165,7 +165,7 @@ def addNoteToDeck(deckObject, modelObject, currentConfig: Config, oneQueryResult
                 newNote[f'{configName}Back'] = '<ol>' + '\n'.join([f'<li>{e.strip()}<br>{c.strip()}</li>' for e, c in oneQueryResult[configName]]) + '</ol>'
             # 图片
             elif configName == F_IMAGE and currentConfig[configName]:
-                newNote[configName] = f'<img src="{oneQueryResult[configName]}">'
+                newNote[configName] = f'<img style="max-height:300px" src="{oneQueryResult[configName]}">'
             # 释义
             elif configName == F_DEFINITION and currentConfig[configName]:
                 newNote[configName] = '<br>'.join(oneQueryResult[configName])

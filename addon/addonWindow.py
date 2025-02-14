@@ -78,6 +78,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         self.gridLayout_4.addWidget(self.devBtn, 4, 3, 1, 1)
 
     def closeEvent(self, event):
+        self.saveConfig()
         # 插件关闭时退出所有线程
         if self.workerThread.isRunning():
             self.workerThread.requestInterruption()
@@ -148,9 +149,8 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         self.deckComboBox.addItems(noteManager.getDeckNames())
         self.setupGUIByConfig()
 
-    def getAndSaveCurrentConfig(self) -> Config:
-        """获取当前设置"""
-        currentConfig: Config = Config(
+    def setConfigFromUI(self) -> None:
+        self.currentConfig = Config(
             selectedDict=self.dictionaryComboBox.currentIndex(),
             selectedApi=self.apiComboBox.currentIndex(),
             selectedGroup=self.selectedGroups,
@@ -168,10 +168,12 @@ class Windows(QDialog, mainUI.Ui_Dialog):
             AmEPron=self.AmEPronRadioButton.isChecked(),
             noPron=self.noPronRadioButton.isChecked(),
         )
-        logger.info(f'当前设置:{currentConfig}')
-        self._saveConfig(currentConfig)
-        self.currentConfig = currentConfig
-        return currentConfig
+        logger.info(f'当前设置:{self.currentConfig}')
+
+    def saveConfig(self) -> None:
+        self.setConfigFromUI()
+        logger.info(f'保存当前设置:{self.currentConfig}')
+        self._saveConfig(self.currentConfig)
 
     @staticmethod
     def _saveConfig(config):
@@ -226,8 +228,8 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         self.progressBar.setValue(0)
         self.progressBar.setMaximum(0)
 
-        currentConfig = self.getAndSaveCurrentConfig()
-        self.selectedDict = dictionaries[currentConfig['selectedDict']]()
+        self.setConfigFromUI()
+        self.selectedDict = dictionaries[self.currentConfig['selectedDict']]()
 
         # 登陆线程
         self.loginWorker = LoginStateCheckWorker(self.selectedDict.checkCookie, json.loads(self.cookieLineEdit.text() or '{}'))
@@ -255,7 +257,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
     @pyqtSlot(str)
     def onLogSuccess(self, cookie):
         self.cookieLineEdit.setText(cookie)
-        self.getAndSaveCurrentConfig()
+        self.setConfigFromUI()
         self.selectedDict.checkCookie(json.loads(cookie))
         self.selectedDict.getGroups()
 
@@ -372,7 +374,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
     @pyqtSlot()
     def on_queryBtn_clicked(self):
         logger.info('点击查询按钮')
-        currentConfig = self.getAndSaveCurrentConfig()
+        self.setConfigFromUI()
         self.queryBtn.setEnabled(False)
         self.pullRemoteWordsBtn.setEnabled(False)
         self.syncBtn.setEnabled(False)
@@ -388,13 +390,13 @@ class Windows(QDialog, mainUI.Ui_Dialog):
             wordBundle[F_TERM] = wordItem.text() # type: ignore
             wordBundle['row'] = row # 保存单词在列表中的位置
             for configName in BASIC_OPTION + EXTRA_OPTION:
-                wordBundle[configName] = currentConfig[configName]
+                wordBundle[configName] = self.currentConfig[configName]
             wordList.append(wordBundle)
 
         logger.info(f'待查询单词{wordList}')
         # 查询线程
         self.progressBar.setMaximum(len(wordList))
-        self.queryWorker = QueryWorker(wordList, apis[currentConfig['selectedApi']])
+        self.queryWorker = QueryWorker(wordList, apis[self.currentConfig['selectedApi']])
         self.queryWorker.moveToThread(self.workerThread)
         self.queryWorker.thisRowDone.connect(self.on_thisRowDone)
         self.queryWorker.thisRowFailed.connect(self.on_thisRowFailed)
@@ -437,7 +439,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
                     return
                 break
 
-        currentConfig = self.getAndSaveCurrentConfig()
+        self.setConfigFromUI()
         model = noteManager.getOrCreateModel()
         noteManager.getOrCreateModelCardTemplate(model)
         deck = noteManager.getOrCreateDeck(self.deckComboBox.currentText(), model)
@@ -446,7 +448,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         audiosDownloadTasks = []
 
         # 判断是否需要下载发音
-        if currentConfig[F_NOPRON]:
+        if self.currentConfig[F_NOPRON]:
             logger.info('不下载发音')
             whichPron = None
         else:
@@ -458,7 +460,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
             wordItem = self.newWordListWidget.item(i)
             wordItemData: Optional[QueryWordData] = wordItem.data(Qt.ItemDataRole.UserRole) # type: ignore
             if wordItemData:
-                noteManager.addNoteToDeck(deck, model, currentConfig, wordItemData)
+                noteManager.addNoteToDeck(deck, model, self.currentConfig, wordItemData)
                 added += 1
                 # 添加发音任务
                 if whichPron and wordItemData.get(whichPron):
@@ -501,7 +503,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         deleted = 0
 
         if needToDeleteWords and askUser(f'确定要删除这些单词吗:{needToDeleteWords[:3]}...({len(needToDeleteWords)}个)', title=ADDON_FULL_NAME, parent=self):
-            noteIds = noteManager.getNoteIds(needToDeleteWords, currentConfig['deck'])
+            noteIds = noteManager.getNoteIds(needToDeleteWords, self.currentConfig['deck'])
             noteManager.removeNotes(noteIds)
             deleted += 1
             for item in needToDeleteWordItems:
