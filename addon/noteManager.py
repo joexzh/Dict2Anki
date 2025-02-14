@@ -164,13 +164,13 @@ def addNoteToDeck(deckObject, modelObject, currentConfig: Config, oneQueryResult
                 newNote[f'{configName}Front'] = '<ol>' + '\n'.join([f'<li>{e.strip()}</li>' for e, _ in oneQueryResult[configName]]) + '</ol>'
                 newNote[f'{configName}Back'] = '<ol>' + '\n'.join([f'<li>{e.strip()}<br>{c.strip()}</li>' for e, c in oneQueryResult[configName]]) + '</ol>'
             # 图片
-            elif configName == F_IMAGE and oneQueryResult[configName]:
+            elif configName == F_IMAGE and currentConfig[configName]:
                 newNote[configName] = f'<img src="{oneQueryResult[configName]}">'
             # 释义
             elif configName == F_DEFINITION and currentConfig[configName]:
                 newNote[configName] = '<br>'.join(oneQueryResult[configName])
             # 发音
-            elif configName in EXTRA_OPTION[:2] and oneQueryResult[configName]:
+            elif configName in EXTRA_OPTION[:2] and currentConfig[configName]:
                 newNote[configName] = f"[sound:{configName}_{oneQueryResult[F_TERM]}.mp3]"
             # 其他
             elif currentConfig[configName]:
