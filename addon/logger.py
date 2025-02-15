@@ -1,5 +1,5 @@
 import logging
-from PyQt6.QtCore import pyqtSignal, QObject
+from aqt import pyqtSignal, QObject
 
 
 class Handler(QObject, logging.Handler):

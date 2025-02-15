@@ -3,11 +3,14 @@ import logging
 import requests
 from urllib3 import Retry
 from itertools import chain
-from .__typing import AbstractDictionary, AbstractQueryAPI
-from .misc import ThreadPool
+from typing import Optional
+from aqt import QObject, pyqtSignal, QThread
 from requests.adapters import HTTPAdapter
+import os
+from .__typing import AbstractDictionary, AbstractQueryAPI, QueryWordData
+from .misc import ThreadPool
 from .constants import *
-from PyQt6.QtCore import QObject, pyqtSignal, QThread
+
 
 class VersionCheckWorker(QObject):
     haveNewVersion = pyqtSignal(str, str)
@@ -90,9 +93,7 @@ class RemoteWordFetchingWorker(QObject):
 
 class QueryWorker(QObject):
     start = pyqtSignal()
-    tick = pyqtSignal()
-    thisRowDone = pyqtSignal(str, int, dict)
-    thisRowFailed = pyqtSignal(str, int)
+    oneRowDone = pyqtSignal(str, int, Optional[QueryWordData])
     allQueryDone = pyqtSignal()
     logger = logging.getLogger('dict2Anki.workers.QueryWorker')
 
@@ -112,12 +113,9 @@ class QueryWorker(QObject):
             queryResult = self.api.query(word)
             if queryResult:
                 self.logger.info(f'查询成功: {word} -- {queryResult}')
-                self.thisRowDone.emit(word, row, queryResult)
             else:
                 self.logger.warning(f'查询失败: {word}')
-                self.thisRowFailed.emit(word, row)
-
-            self.tick.emit()
+            self.oneRowDone.emit(word, row, queryResult)
             return queryResult
 
         with ThreadPool(max_workers=3) as executor:
@@ -129,7 +127,7 @@ class QueryWorker(QObject):
 
 class AudioDownloadWorker(QObject):
     start = pyqtSignal()
-    tick = pyqtSignal()
+    tick = pyqtSignal(str, str, bool)
     done = pyqtSignal()
     logger = logging.getLogger('dict2Anki.workers.AudioDownloadWorker')
     retries = Retry(total=5, backoff_factor=3, status_forcelist=[500, 502, 503, 504])
@@ -148,6 +146,7 @@ class AudioDownloadWorker(QObject):
             raise RuntimeError
 
         def __download(fileName, url):
+            success = False
             try:
                 if currentThread.isInterruptionRequested():
                     return
@@ -156,11 +155,15 @@ class AudioDownloadWorker(QObject):
                     for chunk in r.iter_content(chunk_size=1024):
                         if chunk:
                             f.write(chunk)
+                success = True
                 self.logger.info(f"发音下载完成：{fileName}")
             except Exception as e:
                 self.logger.warning(f'下载{fileName}:{url}异常: {e}')
+                if os.path.isfile(fileName):
+                    os.remove(fileName)
+                success = False
             finally:
-                self.tick.emit()
+                self.tick.emit(fileName, url, success)
 
         with ThreadPool(max_workers=3) as executor:
             for fileName, url in self.audios:

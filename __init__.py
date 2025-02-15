@@ -1,14 +1,11 @@
 try:
-    from aqt import mw
+    from aqt import mw, QAction
     from .addon.addonWindow import Windows
     from .addon.constants import ADDON_FULL_NAME
-    from PyQt6.QtGui import QAction
-
 
     def showWindow():
         w = Windows()
         w.exec()
-
 
     action = QAction(ADDON_FULL_NAME, mw)
     action.triggered.connect(showWindow)
@@ -19,7 +16,8 @@ except ImportError:
     from PyQt6.QtWidgets import QApplication
     from addon.addonWindow import Windows
     import sys
-    if os.environ.get('DEVDICT2ANKI'):
+
+    if os.environ.get("DEVDICT2ANKI"):
         app = QApplication(sys.argv)
         window = Windows()
         window.show()

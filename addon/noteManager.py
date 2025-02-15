@@ -1,7 +1,9 @@
 import os
+from typing import Optional
 from .constants import *
-from .__typing import Config, QueryWordData
 import logging
+from collections.abc import Callable
+from .__typing import Config, QueryWordData
 
 logger = logging.getLogger('dict2Anki.noteManager')
 try:
@@ -20,7 +22,6 @@ def getDeckNames():
     if not mw.col:
         raise RuntimeError
     return [deck['name'] for deck in mw.col.decks.all()]
-
 
 
 def getWordsByDeck(deckName) -> list[str]:
@@ -45,6 +46,28 @@ def getNoteIds(wordList, deckName) -> list[notes.NoteId]:
     return noteIds
 
 
+def noteFilterByModelName(note: notes.Note):
+    model = note.note_type()
+    if model and model['name'] == MODEL_NAME:
+        return True
+    return False
+
+
+def getNotesByDeckName(deckName: str, filter: Optional[Callable]=None) -> list[notes.Note]:
+    if not mw.col:
+        raise RuntimeError
+
+    noteIds = mw.col.find_notes(f'deck:"{deckName}"')
+    notes = []
+    for noteId in noteIds:
+        note = mw.col.get_note(noteId)
+        if not filter:
+            notes.append(note)
+        elif filter(note):
+            notes.append(note)
+    return notes
+
+
 def removeNotes(noteIds):
     if not mw.col:
         raise RuntimeError
@@ -55,10 +78,10 @@ def getOrCreateDeck(deckName, model):
     if not mw.col:
         raise RuntimeError
     deck_id = mw.col.decks.id(deckName)
-    deck = mw.col.decks.get(deck_id) # type: ignore
-    mw.col.decks.select(deck['id']) # type: ignore
+    deck = mw.col.decks.get(deck_id)  # type: ignore
+    mw.col.decks.select(deck['id'])  # type: ignore
     mw.col.decks.save(deck)
-    model['did'] = deck['id'] # type: ignore
+    model['did'] = deck['id']  # type: ignore
     mw.col.models.save(model)
     return deck
 
@@ -152,35 +175,95 @@ def addNoteToDeck(deckObject, modelObject, currentConfig: Config, oneQueryResult
 
     newNote = mw.col.new_note(modelObject)
     newNote[F_TERM] = oneQueryResult[F_TERM]
-    for configName in BASIC_OPTION + EXTRA_OPTION:
-        logger.debug(f'字段:{configName}--结果:{oneQueryResult.get(configName)}')
-        if oneQueryResult.get(configName):
-            # 短语
-            if configName == F_PHRASE and currentConfig[configName]:
-                newNote[f'{configName}Front'] = '<br>'.join([f'<i>{e.strip()}</i>' for e, _ in oneQueryResult[configName]])
-                newNote[f'{configName}Back'] = '<br>'.join([f'<i>{e.strip()}</i> {c.strip()}' for e, c in oneQueryResult[configName]])
-            # 例句
-            elif configName == F_SENTENCE and currentConfig[configName]:
-                newNote[f'{configName}Front'] = '<ol>' + '\n'.join([f'<li>{e.strip()}</li>' for e, _ in oneQueryResult[configName]]) + '</ol>'
-                newNote[f'{configName}Back'] = '<ol>' + '\n'.join([f'<li>{e.strip()}<br>{c.strip()}</li>' for e, c in oneQueryResult[configName]]) + '</ol>'
-            # 图片
-            elif configName == F_IMAGE and currentConfig[configName]:
-                newNote[configName] = f'<img style="max-height:300px" src="{oneQueryResult[configName]}">'
-            # 释义
-            elif configName == F_DEFINITION and currentConfig[configName]:
-                newNote[configName] = '<br>'.join(oneQueryResult[configName])
-            # 发音
-            elif configName in EXTRA_OPTION[:2] and currentConfig[configName]:
-                newNote[configName] = f"[sound:{configName}_{oneQueryResult[F_TERM]}.mp3]"
-            # 其他
-            elif currentConfig[configName]:
-                newNote[configName] = oneQueryResult[configName]
-
+    writeNoteFields(newNote, oneQueryResult, currentConfig,
+                    [writeNoteDefinition, writeNotePhrase, writeNoteSentence, writeNoteImage, writeNotePron,
+                     writeNoteAmEPhonetic, writeNoteBrEPhonetic])  # 写入所有字段
     mw.col.add_note(newNote, deckObject['id'])
     logger.info(f"添加笔记{newNote[F_TERM]}")
 
 
-def media_path(fileName: str):
+def writeNoteDefinition(note: notes.Note, queryData: QueryWordData, currentConfig: Config):
+    if currentConfig[F_DEFINITION]:
+        if queryData[F_DEFINITION]:
+            note[F_DEFINITION] = '<br>'.join(queryData[F_DEFINITION])
+    else:
+        note[F_DEFINITION] = ''
+
+
+def writeNotePhrase(note: notes.Note, queryData: QueryWordData, currentConfig: Config):
+    if currentConfig[F_PHRASE]:
+        if queryData[F_PHRASE]:
+            note[f'{F_PHRASE}Front'] = '<br>'.join(
+                [f'<i>{e.strip()}</i>' for e, _ in queryData[F_PHRASE]])
+            note[f'{F_PHRASE}Back'] = '<br>'.join(
+                [f'<i>{e.strip()}</i> {c.strip()}' for e, c in queryData[F_PHRASE]])
+    else:
+        note[f'{F_PHRASE}Front'] = ''
+        note[f'{F_PHRASE}Back'] = ''
+
+
+def writeNoteSentence(note: notes.Note, queryData: QueryWordData, currentConfig: Config):
+    if currentConfig[F_SENTENCE]:
+        if queryData[F_SENTENCE]:
+            note[f'{F_SENTENCE}Front'] = ('<ol>'
+                + '\n'.join([f'<li>{e.strip()}</li>' for e, _ in queryData[F_SENTENCE]])
+                + '</ol>')
+            note[f'{F_SENTENCE}Back'] = ('<ol>'
+                + '\n'.join([f'<li>{e.strip()}<br>{c.strip()}</li>' for e, c in queryData[F_SENTENCE]])
+                + '</ol>')
+    else:
+        note[f'{F_SENTENCE}Front'] = ''
+        note[f'{F_SENTENCE}Back'] = ''
+
+
+def writeNoteImage(note: notes.Note, queryData: QueryWordData, currentConfig: Config):
+    if currentConfig[F_IMAGE]:
+        if queryData[F_IMAGE]:
+            note[F_IMAGE] = f'<img style="max-height:300px" src="{queryData[F_IMAGE]}">'
+    else:
+        note[F_IMAGE] = ''
+
+
+def writeNotePron(note: notes.Note, queryData: QueryWordData, currentConfig: Config):
+    if currentConfig[F_AMEPRON]:
+        if queryData[F_AMEPRON]:
+            note[F_AMEPRON] = f"[sound:{F_AMEPRON}_{queryData[F_TERM]}.mp3]"
+    else:
+        note[F_AMEPRON] = ''
+
+    if currentConfig[F_BREPRON]:
+        if queryData[F_BREPRON]:
+            note[F_BREPRON] = f"[sound:{F_BREPRON}_{queryData[F_TERM]}.mp3]"
+    else:
+        note[F_BREPRON] = ''
+
+
+def writeNoteAmEPhonetic(note: notes.Note, queryData: QueryWordData, currentConfig: Config):
+    if currentConfig[F_AMEPHONETIC]:
+        if queryData[F_AMEPHONETIC]:
+            note[F_AMEPHONETIC] = queryData[F_AMEPHONETIC]
+    else:
+        note[F_AMEPHONETIC] = ''
+
+
+def writeNoteBrEPhonetic(note: notes.Note, queryData: QueryWordData, currentConfig: Config):
+    if currentConfig[F_BREPHONETIC]:
+        if queryData[F_BREPHONETIC]:
+            note[F_BREPHONETIC] = queryData[F_BREPHONETIC]
+    else:
+        note[F_BREPHONETIC] = ''
+
+
+writeNoteFnType = Callable[[notes.Note, QueryWordData, Config], None]
+
+
+def writeNoteFields(note: notes.Note, queryData: QueryWordData, currentConfig: Config,
+                    modifyFieldFns: list[writeNoteFnType]):
+    for fn in modifyFieldFns:
+        fn(note, queryData, currentConfig)
+
+
+def media_path(fileName: Optional[str]):
     '''如果有文件名，返回完整文件路径，否则返回媒体库dir'''
     if not mw.col:
         raise RuntimeError

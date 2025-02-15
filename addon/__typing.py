@@ -85,6 +85,8 @@ class AbstractDictionary(ABC):
 
 
 class AbstractQueryAPI(ABC):
+    name: str
+
     @classmethod
     @abstractmethod
     def query(cls, word: str) -> Optional[QueryWordData]:

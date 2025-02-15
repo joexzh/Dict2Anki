@@ -6,9 +6,7 @@ from copy import deepcopy
 from tempfile import gettempdir
 from typing import Optional
 
-from PyQt6.QtGui import QIcon
-from PyQt6.QtWidgets import QPlainTextEdit, QDialog, QListWidgetItem, QVBoxLayout, QPushButton
-from PyQt6.QtCore import pyqtSlot, QThread, Qt
+from aqt import QIcon, QPlainTextEdit, QDialog, QListWidgetItem, QVBoxLayout, QPushButton, pyqtSlot, QThread, Qt
 
 from .queryApi import apis
 from .UIForm import wordGroup, mainUI, icons_rc
@@ -17,7 +15,7 @@ from .dictionary import dictionaries
 from .logger import Handler
 from .loginDialog import LoginDialog
 from .constants import *
-from .__typing import AbstractDictionary, Config, Mask, QueryWordData
+from .__typing import AbstractDictionary, AbstractQueryAPI, Config, Mask, QueryWordData
 
 try:
     from aqt import mw
@@ -78,7 +76,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         self.gridLayout_4.addWidget(self.devBtn, 4, 3, 1, 1)
 
     def closeEvent(self, event):
-        self.saveConfig()
+        self.setCurrentConfigAndSave()
         # 插件关闭时退出所有线程
         if self.workerThread.isRunning():
             self.workerThread.requestInterruption()
@@ -149,7 +147,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         self.deckComboBox.addItems(noteManager.getDeckNames())
         self.setupGUIByConfig()
 
-    def setConfigFromUI(self) -> None:
+    def setCurrentConfigFromUI(self) -> None:
         self.currentConfig = Config(
             selectedDict=self.dictionaryComboBox.currentIndex(),
             selectedApi=self.apiComboBox.currentIndex(),
@@ -170,10 +168,14 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         )
         logger.info(f'当前设置:{self.currentConfig}')
 
-    def saveConfig(self) -> None:
-        self.setConfigFromUI()
+    def setCurrentConfigAndSave(self) -> None:
+        self.setCurrentConfigFromUI()
         logger.info(f'保存当前设置:{self.currentConfig}')
         self._saveConfig(self.currentConfig)
+
+    def resetProgressBar(self, total: int):
+        self.progressBar.setValue(0)
+        self.progressBar.setMaximum(total)
 
     @staticmethod
     def _saveConfig(config):
@@ -208,6 +210,9 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         self.updateCheckWork.start.connect(self.updateCheckWork.run)
         self.updateCheckWork.start.emit()
 
+    def getQueryApiByCurrentConfig(self) -> AbstractQueryAPI:
+        return apis[self.currentConfig['selectedApi']]
+
     @pyqtSlot(int)
     def on_dictionaryComboBox_currentIndexChanged(self, index):
         """词典候选框改变事件"""
@@ -225,10 +230,9 @@ class Windows(QDialog, mainUI.Ui_Dialog):
             return
 
         self.mainTab.setEnabled(False)
-        self.progressBar.setValue(0)
-        self.progressBar.setMaximum(0)
+        self.resetProgressBar(0)
 
-        self.setConfigFromUI()
+        self.setCurrentConfigFromUI()
         self.selectedDict = dictionaries[self.currentConfig['selectedDict']]()
 
         # 登陆线程
@@ -242,8 +246,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
     @pyqtSlot()
     def onLoginFailed(self):
         showCritical('第一次登录或cookie失效!请重新登录')
-        self.progressBar.setValue(0)
-        self.progressBar.setMaximum(1)
+        self.resetProgressBar(1)
         self.mainTab.setEnabled(True)
         self.cookieLineEdit.clear()
         self.loginDialog = LoginDialog(
@@ -257,7 +260,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
     @pyqtSlot(str)
     def onLogSuccess(self, cookie):
         self.cookieLineEdit.setText(cookie)
-        self.setConfigFromUI()
+        self.setCurrentConfigFromUI()
         self.selectedDict.checkCookie(json.loads(cookie))
         self.selectedDict.getGroups()
 
@@ -292,15 +295,13 @@ class Windows(QDialog, mainUI.Ui_Dialog):
                               group.wordGroupListWidget.item(index).checkState() == Qt.CheckState.Checked] # type: ignore
             # 保存分组记录
             self.selectedGroups[self.currentConfig['selectedDict']] = groupNames
-            self.progressBar.setValue(0)
-            self.progressBar.setMaximum(1)
+            self.resetProgressBar(1)
             logger.info(f'选中单词本{groupNames}')
             self.getRemoteWordList(groupNames)
 
         def onRejected():
             """选择单词本弹窗取消事件"""
-            self.progressBar.setValue(0)
-            self.progressBar.setMaximum(1)
+            self.resetProgressBar(1)
             self.mainTab.setEnabled(True)
 
         group.buttonBox.accepted.connect(onAccepted)
@@ -374,7 +375,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
     @pyqtSlot()
     def on_queryBtn_clicked(self):
         logger.info('点击查询按钮')
-        self.setConfigFromUI()
+        self.setCurrentConfigFromUI()
         self.queryBtn.setEnabled(False)
         self.pullRemoteWordsBtn.setEnabled(False)
         self.syncBtn.setEnabled(False)
@@ -395,30 +396,27 @@ class Windows(QDialog, mainUI.Ui_Dialog):
 
         logger.info(f'待查询单词{wordList}')
         # 查询线程
-        self.progressBar.setMaximum(len(wordList))
-        self.queryWorker = QueryWorker(wordList, apis[self.currentConfig['selectedApi']])
+        self.resetProgressBar(len(wordList))
+        self.queryWorker = QueryWorker(wordList, self.getQueryApiByCurrentConfig())
         self.queryWorker.moveToThread(self.workerThread)
-        self.queryWorker.thisRowDone.connect(self.on_thisRowDone)
-        self.queryWorker.thisRowFailed.connect(self.on_thisRowFailed)
-        self.queryWorker.tick.connect(lambda: self.progressBar.setValue(self.progressBar.value() + 1))
+        self.queryWorker.oneRowDone.connect(self.on_oneRowDone)
         self.queryWorker.allQueryDone.connect(self.on_allQueryDone)
         self.queryWorker.start.connect(self.queryWorker.run)
         self.queryWorker.start.emit()
 
-    @pyqtSlot(str, int, QueryWordData)
-    def on_thisRowDone(self, word, row, result):
+    @pyqtSlot(str, int, Optional[QueryWordData])
+    def on_oneRowDone(self, word, row, result):
         """该行单词查询完毕"""
-        doneIcon = QIcon(':/icons/done.png')
         wordItem = self.newWordListWidget.item(row)
-        wordItem.setIcon(doneIcon) # type: ignore
+        if result:
+            # succeeded
+            wordItem.setIcon(QIcon(':/icons/done.png')) # type: ignore
+        else:
+            # failed
+            wordItem.setIcon(QIcon(':/icons/failed.png')) # type: ignore
+            self.queryFailedWords.append(word)
         wordItem.setData(Qt.ItemDataRole.UserRole, result) # type: ignore
-
-    @pyqtSlot(str, int)
-    def on_thisRowFailed(self, word, row):
-        failedIcon = QIcon(':/icons/failed.png')
-        failedWordItem = self.newWordListWidget.item(row)
-        failedWordItem.setIcon(failedIcon) # type: ignore
-        self.queryFailedWords.append(word)
+        self.progressBar.setValue(self.progressBar.value() + 1)
 
     @pyqtSlot()
     def on_allQueryDone(self):
@@ -439,7 +437,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
                     return
                 break
 
-        self.setConfigFromUI()
+        self.setCurrentConfigFromUI()
         model = noteManager.getOrCreateModel()
         noteManager.getOrCreateModelCardTemplate(model)
         deck = noteManager.getOrCreateDeck(self.deckComboBox.currentText(), model)
@@ -473,8 +471,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
 
         if audiosDownloadTasks:
             self.syncBtn.setEnabled(False)
-            self.progressBar.setValue(0)
-            self.progressBar.setMaximum(len(audiosDownloadTasks))
+            self.resetProgressBar(len(audiosDownloadTasks))
             if self.audioDownloadThread is not None:
                 self.audioDownloadThread.requestInterruption()
                 self.audioDownloadThread.quit()
@@ -484,7 +481,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
             self.audioDownloadThread.start()
             self.audioDownloadWorker = AudioDownloadWorker(audiosDownloadTasks)
             self.audioDownloadWorker.moveToThread(self.audioDownloadThread)
-            self.audioDownloadWorker.tick.connect(lambda: self.progressBar.setValue(self.progressBar.value() + 1))
+            self.audioDownloadWorker.tick.connect(lambda f, u, b: self.progressBar.setValue(self.progressBar.value() + 1))
             self.audioDownloadWorker.start.connect(self.audioDownloadWorker.run)
             self.audioDownloadWorker.done.connect(lambda: tooltip(f'发音下载完成'))
             self.audioDownloadWorker.done.connect(self.audioDownloadThread.quit)

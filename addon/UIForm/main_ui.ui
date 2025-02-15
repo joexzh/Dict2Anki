@@ -422,6 +422,126 @@
        </item>
       </layout>
      </widget>
+     <widget class="QWidget" name="noteFixTab">
+      <attribute name="title">
+       <string>修复</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_6">
+       <item row="4" column="0" rowspan="2" colspan="2">
+        <widget class="QGroupBox" name="noteFixCBGroupBox">
+         <property name="title">
+          <string>修复字段</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_5">
+          <item row="0" column="0">
+           <widget class="QCheckBox" name="noteFixDefCB">
+            <property name="text">
+             <string>释义</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QCheckBox" name="noteFixSentenceCB">
+            <property name="text">
+             <string>例句</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QCheckBox" name="noteFixPhraseCB">
+            <property name="text">
+             <string>短语</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="3">
+           <widget class="QCheckBox" name="noteFixImgCB">
+            <property name="text">
+             <string>图片</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QCheckBox" name="noteFixBrEPhoneticCB">
+            <property name="text">
+             <string>英式音标</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QCheckBox" name="noteFixAmEPhoneticCB">
+            <property name="text">
+             <string>美式音标</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="2">
+           <widget class="QCheckBox" name="noteFixPronCB">
+            <property name="text">
+             <string>发音</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="6" column="0" colspan="2">
+        <widget class="QPushButton" name="noteFixBtn">
+         <property name="text">
+          <string>开始修复</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="0" colspan="2">
+        <widget class="QLabel" name="noteFixIntroLabel">
+         <property name="text">
+          <string>### 修复笔记中的字段
+
+- 若字段在【设置-默认设置】中未勾选，并在【修复字段】中被勾选，则字段内容会被**清空**，请谨慎使用
+- 只会影响到【修复字段】中勾选的字段
+- 笔记必须应用了最新的模板，否则会被忽略
+- 过程中会调用查询 API，可能花费较长时间</string>
+         </property>
+         <property name="textFormat">
+          <enum>Qt::TextFormat::MarkdownText</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0" colspan="2">
+        <widget class="QGroupBox" name="noteFixProgressGroupBox">
+         <property name="title">
+          <string>进度信息</string>
+         </property>
+         <property name="flat">
+          <bool>false</bool>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_7">
+          <item row="0" column="0">
+           <widget class="QLabel" name="noteFixProgressNoteLabel">
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="noteFixProgressQueryLabel">
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="noteFixProgressAudioLabel">
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
      <widget class="QWidget" name="logTab">
       <attribute name="title">
        <string>日志</string>
