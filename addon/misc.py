@@ -1,9 +1,10 @@
 import logging
+import time
 from queue import Queue
 from threading import Thread
 
 
-logger = logging.getLogger('dict2Anki.misc')
+logger = logging.getLogger("dict2Anki.misc")
 
 
 class Worker(Thread):
@@ -19,8 +20,7 @@ class Worker(Thread):
             try:
                 f, args, kwargs = self._q.get()
                 result = f(*args, **kwargs)
-                if result:
-                    self.result_queue.put(result)
+                self.result_queue.put((args, kwargs, result))
             except Exception as e:
                 logger.exception(e)
             finally:
@@ -32,6 +32,8 @@ class ThreadPool:
         self._q = Queue(max_workers)
         self.results_q = Queue()
         self.result = []
+        """each item of result is a tuple ( args, kwargs, ret ).
+        'args', 'kwargs' are the unnamed and named arguments you pass to submit function"""
         # Create Worker Thread
         for _ in range(max_workers):
             Worker(self._q, self.results_q)
@@ -50,3 +52,17 @@ class ThreadPool:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.wait_complete()
+
+
+def congestGenerator(n=60):
+    """yields n times per minute"""
+    con = n / 60
+    start = time.time()
+    cnt = 0
+
+    while True:
+        if (time.time() - start) * con > cnt:
+            cnt += 1
+            yield
+        else:
+            time.sleep(1)

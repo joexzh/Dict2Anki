@@ -1,11 +1,13 @@
 import logging
 from math import ceil
+from typing import Optional
+
 import requests
 from bs4 import BeautifulSoup
-from urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
-from typing import Optional
-from ..__typing import AbstractDictionary
+from urllib3.util.retry import Retry
+
+from .._typing import AbstractDictionary
 from ..constants import USER_AGENT
 
 logger = logging.getLogger('dict2Anki.dictionary.youdao')
@@ -23,23 +25,23 @@ class Youdao(AbstractDictionary):
     session = requests.Session()
     session.mount('http://', HTTPAdapter(max_retries=retries))
     session.mount('https://', HTTPAdapter(max_retries=retries))
+    groups: list[tuple[str, str]] = []
 
-    def __init__(self):
-        self.groups: list[tuple[str, str]] = []
-        self.indexSoup: Optional[BeautifulSoup] = None
+    _indexSoup: Optional[BeautifulSoup] = None
 
-    def checkCookie(self, cookie: dict) -> bool:
+    @classmethod
+    def checkCookie(cls, cookie: dict) -> bool:
         """
         cookie有效性检验
         :param cookie:
         :return: bool
         """
-        rsp = requests.get('http://dict.youdao.com/login/acc/query/accountinfo', cookies=cookie, headers=self.headers)
+        rsp = requests.get('http://dict.youdao.com/login/acc/query/accountinfo', cookies=cookie, headers=cls.headers)
         if rsp.json().get('code', None) == 0:
-            self.indexSoup = BeautifulSoup(rsp.text, features="html.parser")
+            cls._indexSoup = BeautifulSoup(rsp.text, features="html.parser")
             logger.info('Cookie有效')
             cookiesJar = requests.utils.cookiejar_from_dict(cookie, cookiejar=None, overwrite=True)
-            self.session.cookies = cookiesJar
+            cls.session.cookies = cookiesJar
             return True
         logger.info('Cookie失效')
         return False
@@ -50,22 +52,24 @@ class Youdao(AbstractDictionary):
             return True
         return False
 
-    def getGroups(self) -> list[tuple[str, str]]:
+    @classmethod
+    def getGroups(cls) -> list[tuple[str, str]]:
         """
         获取单词本分组
         :return: [(group_name,group_id)]
         """
-        r = self.session.get(
+        r = cls.session.get(
             url='http://dict.youdao.com/wordbook/webapi/books',
-            timeout=self.timeout,
+            timeout=cls.timeout,
         )
         groups = [(g['bookName'], g['bookId']) for g in r.json()['data']]
         logger.info(f'单词本分组:{groups}')
-        self.groups = groups
+        cls.groups = groups
 
         return groups
 
-    def getTotalPage(self, groupName: str, groupId: str) -> int:
+    @classmethod
+    def getTotalPage(cls, groupName: str, groupId: str) -> int:
         """
         获取分组下总页数
         :param groupName: 分组名称
@@ -73,9 +77,9 @@ class Youdao(AbstractDictionary):
         :return:
         """
         try:
-            r = self.session.get(
+            r = cls.session.get(
                 url='http://dict.youdao.com/wordbook/webapi/words',
-                timeout=self.timeout,
+                timeout=cls.timeout,
                 params={'bookId': groupId, 'limit': 1, 'offset': 0}
             )
             totalWords = r.json()['data']['total']
@@ -86,7 +90,8 @@ class Youdao(AbstractDictionary):
             logger.exception(f'网络异常{error}')
             return 0
 
-    def getWordsByPage(self, pageNo: int, groupName: str, groupId: str) -> list[str]:
+    @classmethod
+    def getWordsByPage(cls, pageNo: int, groupName: str, groupId: str) -> list[str]:
         """
         获取分组下每一页的单词
         :param pageNo: 页数
@@ -96,10 +101,10 @@ class Youdao(AbstractDictionary):
         """
         wordList = []
         try:
-            logger.info(f'获取单词本(f{groupName}-{groupId})第:{pageNo}页')
-            r = self.session.get(
+            logger.info(f'获取单词本({groupName}-{groupId})第:{pageNo}页')
+            r = cls.session.get(
                 'http://dict.youdao.com/wordbook/webapi/words',
-                timeout=self.timeout,
+                timeout=cls.timeout,
                 params={'bookId': groupId, 'limit': 15, 'offset': pageNo * 15}
             )
             wordList = [item['word'] for item in r.json()['data']['itemList']]

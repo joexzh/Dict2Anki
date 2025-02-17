@@ -1,28 +1,34 @@
+import json
+import logging
 import os
 import sys
-import logging
-import json
 from copy import deepcopy
 from tempfile import gettempdir
 from typing import Optional
 
-from aqt import QIcon, QPlainTextEdit, QDialog, QListWidgetItem, QVBoxLayout, QPushButton, pyqtSlot, QThread, Qt
+from aqt import (QDialog, QIcon, QListWidgetItem, QPlainTextEdit, QPushButton,
+                 Qt, QThread, QVBoxLayout, pyqtSlot)
 
-from .queryApi import apis
-from .UIForm import wordGroup, mainUI, icons_rc
-from .workers import LoginStateCheckWorker, VersionCheckWorker, RemoteWordFetchingWorker, QueryWorker, AudioDownloadWorker
+from ._typing import (AbstractDictionary, AbstractQueryAPI, Config, Mask,
+                      QueryWordData)
+from .constants import *
 from .dictionary import dictionaries
 from .logger import Handler
 from .loginDialog import LoginDialog
-from .constants import *
-from .__typing import AbstractDictionary, AbstractQueryAPI, Config, Mask, QueryWordData
+from .queryApi import apis
+from .UIForm import icons_rc, mainUI, wordGroup
+from .workers import (AudioDownloadWorker, LoginStateCheckWorker, QueryWorker,
+                      RemoteWordFetchingWorker, VersionCheckWorker)
 
 try:
     from aqt import mw
-    from aqt.utils import askUser, showCritical, showInfo, tooltip, openLink
+    from aqt.utils import askUser, openLink, showCritical, showInfo, tooltip
+
     from . import noteManager
 except ImportError:
-    from test.dummy_aqt import mw, askUser, showCritical, showInfo, tooltip, openLink
+    from test.dummy_aqt import (askUser, mw, openLink, showCritical, showInfo,
+                                tooltip)
+
     from ..test import dummy_noteManager as noteManager
 
 logger = logging.getLogger('dict2Anki')
@@ -41,12 +47,10 @@ class Windows(QDialog, mainUI.Ui_Dialog):
 
     def __init__(self, parent=None):
         super(Windows, self).__init__(parent)
-        self.selectedDict: AbstractDictionary
         self.currentConfig: Config
         self.localWords = []
         self.remoteWords = []
         self.selectedGroups: list[list[str]] = []
-        self.queryFailedWords: list[str] = []
 
         self.workerThread = QThread(self)
         self.workerThread.start()
@@ -173,9 +177,13 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         logger.info(f'保存当前设置:{self.currentConfig}')
         self._saveConfig(self.currentConfig)
 
-    def resetProgressBar(self, total: int):
+    def resetProgressBar(self, total: int, text=''):
         self.progressBar.setValue(0)
         self.progressBar.setMaximum(total)
+        if text:
+            self.progressBar.setFormat(f"{text}...%p%")
+        else:
+            self.progressBar.resetFormat()
 
     @staticmethod
     def _saveConfig(config):
@@ -210,8 +218,11 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         self.updateCheckWork.start.connect(self.updateCheckWork.run)
         self.updateCheckWork.start.emit()
 
-    def getQueryApiByCurrentConfig(self) -> AbstractQueryAPI:
+    def getQueryApiByCurrentConfig(self) -> type[AbstractQueryAPI]:
         return apis[self.currentConfig['selectedApi']]
+    
+    def getDictByCurrentConfig(self) -> type[AbstractDictionary]:
+        return dictionaries[self.currentConfig['selectedDict']]
 
     @pyqtSlot(int)
     def on_dictionaryComboBox_currentIndexChanged(self, index):
@@ -233,15 +244,15 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         self.resetProgressBar(0)
 
         self.setCurrentConfigFromUI()
-        self.selectedDict = dictionaries[self.currentConfig['selectedDict']]()
 
         # 登陆线程
-        self.loginWorker = LoginStateCheckWorker(self.selectedDict.checkCookie, json.loads(self.cookieLineEdit.text() or '{}'))
+        self.loginWorker = LoginStateCheckWorker(self.getDictByCurrentConfig().checkCookie, json.loads(self.cookieLineEdit.text() or '{}'))
         self.loginWorker.moveToThread(self.workerThread)
         self.loginWorker.start.connect(self.loginWorker.run)
         self.loginWorker.logSuccess.connect(self.onLogSuccess)
         self.loginWorker.logFailed.connect(self.onLoginFailed)
         self.loginWorker.start.emit()
+
 
     @pyqtSlot()
     def onLoginFailed(self):
@@ -249,9 +260,10 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         self.resetProgressBar(1)
         self.mainTab.setEnabled(True)
         self.cookieLineEdit.clear()
+        currentDict = self.getDictByCurrentConfig()
         self.loginDialog = LoginDialog(
-            loginUrl=self.selectedDict.loginUrl,
-            loginCheckCallbackFn=self.selectedDict.loginCheckCallbackFn,
+            loginUrl=currentDict.loginUrl,
+            loginCheckCallbackFn=currentDict.loginCheckCallbackFn,
             parent=self
         )
         self.loginDialog.loginSucceed.connect(self.onLogSuccess)
@@ -261,14 +273,15 @@ class Windows(QDialog, mainUI.Ui_Dialog):
     def onLogSuccess(self, cookie):
         self.cookieLineEdit.setText(cookie)
         self.setCurrentConfigFromUI()
-        self.selectedDict.checkCookie(json.loads(cookie))
-        self.selectedDict.getGroups()
+        currentDict = self.getDictByCurrentConfig()
+        currentDict.checkCookie(json.loads(cookie))
+        currentDict.getGroups()
 
         container = QDialog(self)
         group = wordGroup.Ui_Dialog()
         group.setupUi(container)
 
-        for groupName in [str(group_name) for group_name, _ in self.selectedDict.groups]:
+        for groupName in [str(group_name) for group_name, _ in currentDict.groups]:
             item = QListWidgetItem()
             item.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled)
             item.setText(groupName)
@@ -310,10 +323,10 @@ class Windows(QDialog, mainUI.Ui_Dialog):
 
     def getRemoteWordList(self, groupNames: list[str]):
         """根据选中到分组获取分组下到全部单词，并保存到self.remoteWords"""
-        groupMap = dict(self.selectedDict.groups)
+        groupMap = dict(self.getDictByCurrentConfig().groups)
         
         # 启动单词获取线程
-        self.pullWorker = RemoteWordFetchingWorker(self.selectedDict, [(groupName, groupMap[groupName],) for groupName in groupNames])
+        self.pullWorker = RemoteWordFetchingWorker(self.getDictByCurrentConfig(), [(groupName, groupMap[groupName],) for groupName in groupNames])
         self.pullWorker.moveToThread(self.workerThread)
         self.pullWorker.start.connect(self.pullWorker.run)
         self.pullWorker.tick.connect(lambda: self.progressBar.setValue(self.progressBar.value() + 1))
@@ -384,45 +397,47 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         if not wordItems: # 如果没有选中单词，则查询所有单词
             wordItems = [self.newWordListWidget.item(row) for row in range(self.newWordListWidget.count())]
 
-        wordList = []
+        row_words = []
         for wordItem in wordItems:
-            wordBundle = dict()
             row = self.newWordListWidget.row(wordItem)
-            wordBundle[F_TERM] = wordItem.text() # type: ignore
-            wordBundle['row'] = row # 保存单词在列表中的位置
-            for configName in BASIC_OPTION + EXTRA_OPTION:
-                wordBundle[configName] = self.currentConfig[configName]
-            wordList.append(wordBundle)
+            row_words.append((row, wordItem.text())) # type: ignore
 
-        logger.info(f'待查询单词{wordList}')
+        logger.info(f'待查询单词{row_words}')
         # 查询线程
-        self.resetProgressBar(len(wordList))
-        self.queryWorker = QueryWorker(wordList, self.getQueryApiByCurrentConfig())
+        self.resetProgressBar(len(row_words))
+        self.queryWorker = QueryWorker(row_words, self.getQueryApiByCurrentConfig())
         self.queryWorker.moveToThread(self.workerThread)
-        self.queryWorker.oneRowDone.connect(self.on_oneRowDone)
-        self.queryWorker.allQueryDone.connect(self.on_allQueryDone)
+        self.queryWorker.rowSuccess.connect(self.on_queryRowSuccess)
+        self.queryWorker.rowFail.connect(self.on_queryRowFail)
+        self.queryWorker.tick.connect(lambda: self.progressBar.setValue(self.progressBar.value() + 1))
+        self.queryWorker.done.connect(self.on_queryDone)
         self.queryWorker.start.connect(self.queryWorker.run)
         self.queryWorker.start.emit()
 
-    @pyqtSlot(str, int, Optional[QueryWordData])
-    def on_oneRowDone(self, word, row, result):
+    @pyqtSlot(tuple, dict)
+    def on_queryRowSuccess(self, row_word, result):
         """该行单词查询完毕"""
+        row, word = row_word
+        doneIcon = QIcon(':/icons/done.png')
         wordItem = self.newWordListWidget.item(row)
-        if result:
-            # succeeded
-            wordItem.setIcon(QIcon(':/icons/done.png')) # type: ignore
-        else:
-            # failed
-            wordItem.setIcon(QIcon(':/icons/failed.png')) # type: ignore
-            self.queryFailedWords.append(word)
+        wordItem.setIcon(doneIcon) # type: ignore
         wordItem.setData(Qt.ItemDataRole.UserRole, result) # type: ignore
-        self.progressBar.setValue(self.progressBar.value() + 1)
 
-    @pyqtSlot()
-    def on_allQueryDone(self):
-        if self.queryFailedWords:
-            logger.warning(f'查询失败:{self.queryFailedWords}')
-            self.queryFailedWords.clear()
+    @pyqtSlot(tuple)
+    def on_queryRowFail(self, row_word):
+        row, word = row_word
+        failedIcon = QIcon(':/icons/failed.png')
+        failedWordItem = self.newWordListWidget.item(row)
+        failedWordItem.setIcon(failedIcon) # type: ignore
+
+    @pyqtSlot(list)
+    def on_queryDone(self, results):
+        failed_words = []
+        for (row, word), queryResult in results:
+            if not queryResult:
+                failed_words.append(word)
+            if failed_words:
+                logger.warning(f'查询失败:{failed_words}')
 
         self.pullRemoteWordsBtn.setEnabled(True)
         self.queryBtn.setEnabled(True)
@@ -481,10 +496,10 @@ class Windows(QDialog, mainUI.Ui_Dialog):
             self.audioDownloadThread.start()
             self.audioDownloadWorker = AudioDownloadWorker(audiosDownloadTasks)
             self.audioDownloadWorker.moveToThread(self.audioDownloadThread)
-            self.audioDownloadWorker.tick.connect(lambda f, u, b: self.progressBar.setValue(self.progressBar.value() + 1))
+            self.audioDownloadWorker.tick.connect(lambda t,s: self.progressBar.setValue(self.progressBar.value() + 1))
             self.audioDownloadWorker.start.connect(self.audioDownloadWorker.run)
-            self.audioDownloadWorker.done.connect(lambda: tooltip(f'发音下载完成'))
-            self.audioDownloadWorker.done.connect(self.audioDownloadThread.quit)
+            self.audioDownloadWorker.done.connect(lambda _: tooltip(f'发音下载完成'))
+            self.audioDownloadWorker.done.connect(lambda _: self.audioDownloadThread.quit())
             self.audioDownloadWorker.start.emit()
 
         self.newWordListWidget.clear()
@@ -513,3 +528,29 @@ class Windows(QDialog, mainUI.Ui_Dialog):
 
         if not audiosDownloadTasks:
             tooltip(f'添加{added}个笔记\n删除{deleted}个笔记')
+
+    def simpleLogin(self):
+        showCritical("第一次登录或cookie失效！请重新登录")
+        currentDict = dictionaries[self.currentConfig['selectedDict']]
+        self.resetProgressBar(0)
+        self.cookieLineEdit.clear()
+        self.loginDialog = LoginDialog(
+            loginUrl=currentDict.loginUrl,
+            loginCheckCallbackFn=currentDict.loginCheckCallbackFn,
+            parent=self,
+        )
+        self.loginDialog.loginSucceed.connect(
+            self._on_simpleLoginSuccess
+        )
+        self.loginDialog.show()
+
+    def _on_simpleLoginSuccess(self, cookie):
+        self.cookieLineEdit.setText(cookie)
+        self.setCurrentConfigFromUI()
+        # set cookie to cookiejar and check
+        if dictionaries[self.currentConfig['selectedDict']].checkCookie(json.loads(cookie)):
+            tooltip("登录成功")
+        else:
+            tooltip("登录失败")
+        self.resetProgressBar(1)
+

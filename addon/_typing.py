@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import TypedDict, Optional
+from typing import Optional, TypedDict
+
 from bs4 import BeautifulSoup
 
 
@@ -8,7 +9,7 @@ class Mask:
         self.info = info
 
     def __repr__(self):
-        return '*******'
+        return "*******"
 
     def __str__(self):
         return self.info
@@ -39,6 +40,39 @@ class Config(TypedDict):
     noPron: bool
 
 
+class AbstractDictionary(ABC):
+    name: str
+    loginUrl: str
+    timeout: int
+    headers: dict[str, str]
+    groups: list[tuple[str, str]] = []
+
+    @staticmethod
+    @abstractmethod
+    def loginCheckCallbackFn(cookie: dict, content: str):
+        pass
+
+    @classmethod
+    @abstractmethod
+    def checkCookie(cls, cookie: dict) -> bool:
+        pass
+
+    @classmethod
+    @abstractmethod
+    def getGroups(cls) -> list[tuple[str, str]]:
+        pass
+
+    @classmethod
+    @abstractmethod
+    def getTotalPage(cls, groupName: str, groupId: str) -> int:
+        pass
+
+    @classmethod
+    @abstractmethod
+    def getWordsByPage(cls, pageNo: int, groupName: str, groupId: str) -> list[str]:
+        pass
+
+
 class QueryWordData(TypedDict):
     term: str
     definition: list[str]
@@ -49,39 +83,6 @@ class QueryWordData(TypedDict):
     AmEPhonetic: str
     BrEPron: str
     AmEPron: str
-
-
-class AbstractDictionary(ABC):
-    name: str
-    loginUrl: str
-    timeout: int
-    headers: dict[str, str]
-
-    @staticmethod
-    @abstractmethod
-    def loginCheckCallbackFn(cookie: dict, content: str):
-        pass
-
-    @abstractmethod
-    def __init__(self):
-        self.groups: list[tuple[str, str]] = []
-        self.indexSoup: Optional[BeautifulSoup] = None
-
-    @abstractmethod
-    def checkCookie(self, cookie: dict) -> bool:
-        pass
-
-    @abstractmethod
-    def getGroups(self) -> list[tuple[str, str]]:
-        pass
-
-    @abstractmethod
-    def getTotalPage(self, groupName: str, groupId: str) -> int:
-        pass
-
-    @abstractmethod
-    def getWordsByPage(self, pageNo: int, groupName: str, groupId: str) -> list[str]:
-        pass
 
 
 class AbstractQueryAPI(ABC):

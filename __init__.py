@@ -1,11 +1,11 @@
 try:
     from aqt import mw, QAction
-    from .addon.addonWindow import Windows
+    from .addon.entryPoint import EntryPoint
     from .addon.constants import ADDON_FULL_NAME
 
     def showWindow():
-        w = Windows()
-        w.exec()
+        ep = EntryPoint()
+        ep.windows.exec()
 
     action = QAction(ADDON_FULL_NAME, mw)
     action.triggered.connect(showWindow)

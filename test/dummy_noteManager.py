@@ -1,4 +1,4 @@
-from ..addon.__typing import Config, QueryWordData
+from ..addon._typing import Config, QueryWordData
 from ..addon.constants import *
 from .dummy_anki import models
 

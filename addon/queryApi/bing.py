@@ -1,12 +1,15 @@
-import string
 import logging
-import requests
-from urllib3 import Retry
-from urllib.parse import urlencode
-from requests.adapters import HTTPAdapter
+import string
 from typing import Optional
+from urllib.parse import urlencode
+
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3 import Retry
+
+from .._typing import AbstractQueryAPI, QueryWordData
 from ..constants import USER_AGENT
-from ..__typing import AbstractQueryAPI, QueryWordData
+
 logger = logging.getLogger('dict2Anki.queryApi.bing')
 __all__ = ['API']
 

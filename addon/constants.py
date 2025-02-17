@@ -1,4 +1,4 @@
-VERSION = 'v7.0.0'
+VERSION = 'v7.1.0'
 RELEASE_URL = 'https://github.com/joexzh/Dict2Anki'
 VERSION_CHECK_API = 'https://api.github.com/repos/joexzh/Dict2Anki/releases/latest'
 ADDON_NAME = 'Dict2Anki-ng'

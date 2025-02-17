@@ -1,12 +1,14 @@
-import time
 import logging
-import requests
+import time
 from math import ceil
-from bs4 import BeautifulSoup
-from urllib3.util.retry import Retry
-from requests.adapters import HTTPAdapter
 from typing import Optional
-from ..__typing import AbstractDictionary
+
+import requests
+from bs4 import BeautifulSoup
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+from .._typing import AbstractDictionary
 from ..constants import USER_AGENT
 
 logger = logging.getLogger('dict2Anki.dictionary.eudict')
@@ -24,23 +26,24 @@ class Eudict(AbstractDictionary):
     session.mount('http://', HTTPAdapter(max_retries=retries))
     session.mount('https://', HTTPAdapter(max_retries=retries))
     session.headers.update(headers)
+    groups: list[tuple[str, str]] = []
 
-    def __init__(self):
-        self.groups: list[tuple[str, str]] = []
-        self.indexSoup: Optional[BeautifulSoup] = None
+    _indexSoup: Optional[BeautifulSoup] = None
 
-    def checkCookie(self, cookie: dict) -> bool:
+
+    @classmethod
+    def checkCookie(cls, cookie: dict) -> bool:
         """
         cookie有效性检验
         :param cookie:
         :return: Boolean cookie是否有效
         """
-        rsp = requests.get('https://my.eudic.net/studylist', cookies=cookie, headers=self.headers)
+        rsp = requests.get('https://my.eudic.net/studylist', cookies=cookie, headers=cls.headers)
         if 'dict.eudic.net/account/login' not in rsp.url:
-            self.indexSoup = BeautifulSoup(rsp.text, features="html.parser")
+            cls._indexSoup = BeautifulSoup(rsp.text, features="html.parser")
             logger.info('Cookie有效')
             cookiesJar = requests.utils.cookiejar_from_dict(cookie, cookiejar=None, overwrite=True)
-            self.session.cookies = cookiesJar
+            cls.session.cookies = cookiesJar
             return True
         logger.info('Cookie失效')
         return False
@@ -51,23 +54,25 @@ class Eudict(AbstractDictionary):
             return True
         return False
 
-    def getGroups(self) -> list[tuple[str, str]]:
+    @classmethod
+    def getGroups(cls) -> list[tuple[str, str]]:
         """
         获取单词本分组
         :return: [(group_name,group_id)]
         """
-        if self.indexSoup is None:
+        if cls._indexSoup is None:
             return []
-        elements = self.indexSoup.select('a.media_heading_a.new_cateitem_click')
+        elements = cls._indexSoup.select('a.media_heading_a.new_cateitem_click')
         groups = []
         if elements:
             groups = [(el.get_text(strip=True), str(el['data-id'])) for el in elements]
 
         logger.info(f'单词本分组:{groups}')
-        self.groups = groups
+        cls.groups = groups
         return groups
 
-    def getTotalPage(self, groupName: str, groupId: str) -> int:
+    @classmethod
+    def getTotalPage(cls, groupName: str, groupId: str) -> int:
         """
         获取分组下总页数
         :param groupName: 分组名称
@@ -75,9 +80,9 @@ class Eudict(AbstractDictionary):
         :return:
         """
         try:
-            r = self.session.post(
+            r = cls.session.post(
                 url='https://my.eudic.net/StudyList/WordsDataSource',
-                timeout=self.timeout,
+                timeout=cls.timeout,
                 data={'categoryid': groupId}
             )
             records = r.json()['recordsTotal']
@@ -88,7 +93,8 @@ class Eudict(AbstractDictionary):
             logger.exception(f'网络异常{error}')
             return 0
 
-    def getWordsByPage(self, pageNo: int, groupName: str, groupId: str) -> list[str]:
+    @classmethod
+    def getWordsByPage(cls, pageNo: int, groupName: str, groupId: str) -> list[str]:
         wordList = []
         data = {
             'columns[2][data]': 'word',
@@ -98,10 +104,10 @@ class Eudict(AbstractDictionary):
             '_': int(time.time()) * 1000,
         }
         try:
-            logger.info(f'获取单词本(f{groupName}-{groupId})第:{pageNo + 1}页')
-            r = self.session.post(
+            logger.info(f'获取单词本({groupName}-{groupId})第:{pageNo + 1}页')
+            r = cls.session.post(
                 url='https://my.eudic.net/StudyList/WordsDataSource',
-                timeout=self.timeout,
+                timeout=cls.timeout,
                 data=data
             )
             wl = r.json()

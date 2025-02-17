@@ -1,9 +1,12 @@
 import logging
 from typing import Optional
+
 from bs4 import BeautifulSoup
+
+from .._typing import AbstractQueryAPI, QueryWordData
 from ..constants import *
-from ..__typing import AbstractQueryAPI, QueryWordData
 from ..dictionary.eudict import Eudict
+
 logger = logging.getLogger('dict2Anki.queryApi.eudict')
 __all__ = ['API']
 

@@ -497,10 +497,9 @@
          <property name="text">
           <string>### 修复笔记中的字段
 
-- 若字段在【设置-默认设置】中未勾选，并在【修复字段】中被勾选，则字段内容会被**清空**，请谨慎使用
-- 只会影响到【修复字段】中勾选的字段
-- 笔记必须应用了最新的模板，否则会被忽略
-- 过程中会调用查询 API，可能花费较长时间</string>
+- 若字段在【设置-默认设置】未勾选，并在【修复字段】勾选，则字段内容会被**清空**，请谨慎使用
+- 字段会被忽略的情况：①没有在【修复字段】勾选；②没有应用最新模板；③查询失败
+- 数量较多时可能触发API限流，导致查询失败或返回错误结果</string>
          </property>
          <property name="textFormat">
           <enum>Qt::TextFormat::MarkdownText</enum>
@@ -519,21 +518,21 @@
           <item row="0" column="0">
            <widget class="QLabel" name="noteFixProgressNoteLabel">
             <property name="text">
-             <string/>
+             <string>本地笔记更新进度</string>
             </property>
            </widget>
           </item>
           <item row="1" column="0">
            <widget class="QLabel" name="noteFixProgressQueryLabel">
             <property name="text">
-             <string/>
+             <string>API 查询进度</string>
             </property>
            </widget>
           </item>
           <item row="2" column="0">
            <widget class="QLabel" name="noteFixProgressAudioLabel">
             <property name="text">
-             <string/>
+             <string>发音下载进度</string>
             </property>
            </widget>
           </item>

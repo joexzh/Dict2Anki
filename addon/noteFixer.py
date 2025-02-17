@@ -1,19 +1,34 @@
-import os
-from typing import Optional
-import aqt
-import aqt.utils
-import aqt.operations.note
-import aqt.operations
-import re
+import json
 import logging
+import os
+import re
+from typing import Any, Optional
+
+import aqt
+import aqt.operations
+import aqt.operations.note
+import aqt.utils
+
+from . import dictionary, noteManager, queryApi
 from .addonWindow import Windows
-from . import noteManager
-from .__typing import QueryWordData
 from .constants import *
-from .workers import QueryWorker, AudioDownloadWorker
+from .workers import AudioDownloadWorker, QueryWorker
+
+_logger = logging.getLogger("dict2Anki.noteFixer")
 
 
-def __getAudioFileNameFromField(word: str, fieldVal: str):
+_fieldConfigRemoveOnlyMap = {
+    noteManager.writeNoteDefinition: lambda config: not config[F_DEFINITION],
+    noteManager.writeNoteSentence: lambda config: not config[F_SENTENCE],
+    noteManager.writeNotePhrase: lambda config: not config[F_PHRASE],
+    noteManager.writeNoteImage: lambda config: not config[F_IMAGE],
+    noteManager.writeNoteBrEPhonetic: lambda config: not config[F_BREPHONETIC],
+    noteManager.writeNoteAmEPhonetic: lambda config: not config[F_AMEPHONETIC],
+    noteManager.writeNotePron: lambda config: config[F_NOPRON],
+}
+
+
+def _getAudioFileNameFromField(word: str, fieldVal: str) -> str:
     if (
         fieldVal
         and (
@@ -24,50 +39,52 @@ def __getAudioFileNameFromField(word: str, fieldVal: str):
         )
         and len(grp := m.groups()) == 1
     ):
+        _logger.debug(
+            f"__getAudioFileNameFromField matched, word='{word}', fieldVal='{fieldVal}'"
+        )
         return grp[0]
+    _logger.debug(
+        f"__getAudioFileNameFromField didn't matched, word='{word}', fieldVal='{fieldVal}'"
+    )
     return ""
 
 
-def __getWriteFieldFnsFromUI() -> list[noteManager.writeNoteFnType]:
-    # TODO
-    return []
-
-
-class __CntGrp:
+class _CntGrp:
     def __init__(self):
         self.reset()
 
     def reset(self):
-        self.__successCnt = 0
-        self.__failCnt = 0
+        self._successCnt = 0
+        self._failCnt = 0
 
     def getSuccessCnt(self):
-        return self.__successCnt
+        return self._successCnt
 
     def incSuccessCnt(self):
-        self.__successCnt += 1
+        self._successCnt += 1
 
     def getFailCnt(self):
-        return self.__failCnt
+        return self._failCnt
 
     def incFailCnt(self):
-        self.__failCnt += 1
+        self._failCnt += 1
 
 
 class NoteFixer:
-    logger = logging.getLogger("dict2Anki.noteFixer")
 
     def __init__(self, windows: Windows):
-        self.__windows = windows
-        self.__notes: list
-        self.__queryResults: list[QueryWordData]
-        self.__queryCntGrp = __CntGrp()
-        self.__audioCntGrp = __CntGrp()
+        self._w = windows
+        self._queryCntGrp = _CntGrp()
+        self._audioCntGrp = _CntGrp()
+        self._notes = []
+        self._queryResults = []
+        self._fieldFns = []
+        self._queryWorker = None
+        self._audioWorker = None
+        self._w.noteFixBtn.clicked.connect(self._on_noteFixBtnClick)
 
-        self.__windows.noteFixBtn.clicked.connect(self.__on_noteFixBtnClick)
-
-    def __formatStrFromCurrentConfig(self) -> str:
-        config = self.__windows.currentConfig
+    def _formatStrFromCurrentConfig(self) -> str:
+        config = self._w.currentConfig
 
         def pronStr():
             if config[F_NOPRON]:
@@ -78,195 +95,274 @@ class NoteFixer:
                 return "美"
 
         return rf"""默认设置:
-        Deck: {config['deck']}
-        查词API: {self.__windows.getQueryApiByCurrentConfig().name}
-        释义{config[F_DEFINITION]}
-        例句{config[F_SENTENCE]}
-        短语{config[F_PHRASE]}
-        图片{config[F_IMAGE]}
-        英式音标{config[F_BREPHONETIC]}
-        美式音标{config[F_AMEPHONETIC]}
-        发音{pronStr()}"""
+        Deck：{config['deck']}
+        查词API：{self._w.getQueryApiByCurrentConfig().name}
+        释义：{config[F_DEFINITION]}
+        例句：{config[F_SENTENCE]}
+        短语：{config[F_PHRASE]}
+        图片：{config[F_IMAGE]}
+        英式音标：{config[F_BREPHONETIC]}
+        美式音标：{config[F_AMEPHONETIC]}
+        发音：{pronStr()}"""
 
-    def __writeLogAndLabel(self, msg: str, label: aqt.QLabel):
-        self.logger.info(msg)
+    def _writeLogAndLabel(self, msg: str, label: aqt.QLabel):
+        _logger.info(msg)
         label.setText(msg)
 
-    def __UISetEnabled(self, b):
-        self.__windows.noteFixBtn.setEnabled(b)
-        self.__windows.noteFixCBGroupBox.setEnabled(b)
+    def _UISetEnabled(self, b):
+        self._w.noteFixBtn.setEnabled(b)
+        self._w.noteFixCBGroupBox.setEnabled(b)
+        self._w.resetProgressBar(1)
 
-    @aqt.pyqtSlot()
-    def __on_noteFixBtnClick(self):
-        writeFieldFns = __getWriteFieldFnsFromUI()
-        if not writeFieldFns:
+    def _getWriteFieldFnsFromUI(self):
+        self._fieldFns = []
+
+        if self._w.noteFixDefCB.isChecked():
+            self._fieldFns.append(noteManager.writeNoteDefinition)
+
+        if self._w.noteFixSentenceCB.isChecked():
+            self._fieldFns.append(noteManager.writeNoteSentence)
+
+        if self._w.noteFixPhraseCB.isChecked():
+            self._fieldFns.append(noteManager.writeNotePhrase)
+
+        if self._w.noteFixImgCB.isChecked():
+            self._fieldFns.append(noteManager.writeNoteImage)
+
+        if self._w.noteFixBrEPhoneticCB.isChecked():
+            self._fieldFns.append(noteManager.writeNoteBrEPhonetic)
+
+        if self._w.noteFixAmEPhoneticCB.isChecked():
+            self._fieldFns.append(noteManager.writeNoteAmEPhonetic)
+
+        if self._w.noteFixPronCB.isChecked():
+            self._fieldFns.append(noteManager.writeNotePron)
+
+    # @aqt.pyqtSlot()
+    # decorating a pyqtSlot here will cause anki crash without any stacktrace information,
+    # will be very appreciated if anyone can explains this
+    def _on_noteFixBtnClick(self):
+        self._getWriteFieldFnsFromUI()
+        if not self._fieldFns:
             aqt.utils.showInfo("请勾选要修复的字段")
+            return
 
+        self._w.setCurrentConfigFromUI()
         if not aqt.utils.askUser(
-            f"{self.__formatStrFromCurrentConfig()}\n\n可能要花费较长时间，是否继续?"
+            f"{self._formatStrFromCurrentConfig()}\n\n可能要花费较长时间，是否继续?"
         ):
             return
 
-        self.__UISetEnabled(False)
-        self.__windows.noteFixProgressQueryLabel.setText("")
-        self.__windows.noteFixProgressAudioLabel.setText("")
-        self.__writeLogAndLabel("开始修复...", self.__windows.noteFixProgressNoteLabel)
+        if not self._checkLoginState():
+            self._writeLogAndLabel("请在登录后重试", self._w.noteFixProgressNoteLabel)
+            return
 
-        self.__windows.setCurrentConfigFromUI()
+        self._fix()
 
-        self.__notes = noteManager.getNotesByDeckName(
-            self.__windows.currentConfig["deck"], noteManager.noteFilterByModelName
+    def _checkLoginState(self) -> bool:
+        self._writeLogAndLabel("正在检查登录信息...", self._w.noteFixProgressNoteLabel)
+        currentApi = self._w.getQueryApiByCurrentConfig()
+        currentDict = self._w.getDictByCurrentConfig()
+
+        if currentApi == queryApi.eudict.API:
+            if currentDict != dictionary.eudict.Eudict:
+                aqt.utils.showCritical(
+                    f"当前选择的是[{queryApi.eudict.API.name}]，请前往[同步]页面选择[{dictionary.eudict.Eudict.name}]以获取登录信息"
+                )
+                return False
+            else:
+                if currentDict.checkCookie(
+                    json.loads(str(self._w.currentConfig["cookie"]) or "{}")
+                ):
+                    return True
+                else:
+                    self._w.simpleLogin()
+                    return False
+
+        else:
+            return True
+
+    def _fix(self):
+        self._UISetEnabled(False)
+        self._w.noteFixProgressQueryLabel.clear()
+        self._w.noteFixProgressAudioLabel.clear()
+        self._writeLogAndLabel("开始修复...", self._w.noteFixProgressNoteLabel)
+        self._queryCntGrp.reset()
+        self._audioCntGrp.reset()
+
+        self._notes = noteManager.getNotesByDeckName(
+            self._w.currentConfig["deck"], noteManager.noteFilterByModelName
+        )
+        self._queryResults: list[Any] = [None] * len(self._notes)
+        self._writeLogAndLabel(
+            f"找到{len(self._notes)}条笔记...", self._w.noteFixProgressNoteLabel
         )
 
-        wordList = [] * len(self.__notes)
-        for i, note in enumerate(self.__notes):
-            wordList[i] = {F_TERM: note[F_TERM], "row": i}
-
-        self.__queryResults = [] * len(self.__notes)
-        self.__queryCntGrp.reset()
-
-        self.__windows.resetProgressBar(len(wordList))
-
-        # spawn another thread to query words
-        queryWorker = QueryWorker(wordList, self.__windows.getQueryApiByCurrentConfig())
-        queryWorker.oneRowDone.connect(self.__on_queryOneRowDone)
-        aqt.operations.QueryOp(
-            parent=self.__windows,
-            op=lambda col: queryWorker.run(),
-            success=self.__on_querySuccess,
-        ).failure(
-            lambda e: self.__on_queryFail(len(self.__notes), e)
-        ).without_collection().run_in_background()
-
-        self.__writeLogAndLabel(
-            f"找到{len(self.__notes)}条笔记...", self.__windows.noteFixProgressNoteLabel
-        )
-        self.__writeLogAndLabel(
-            f"开始调用查询 API，单词数量：{len(self.__notes)}...",
-            self.__windows.noteFixProgressQueryLabel,
-        )
-
-    def __on_queryOneRowDone(self, word, row, queryResult):
-        self.__windows.progressBar.setValue(self.__windows.progressBar.value() + 1)
-        if queryResult:  # success
-            self.__queryCntGrp.incSuccessCnt()
-        else:  # fail
-            self.__queryCntGrp.incFailCnt()
-        self.__queryResults[row] = queryResult
-
-    def __on_queryFail(self, total: int, e: Exception):
-        self.__writeLogAndLabel(
-            f"单词查询[意外结束]，共{total}，成功{self.__queryCntGrp.getSuccessCnt}，失败{self.__queryCntGrp.getSuccessCnt}, 异常：{e}",
-            self.__windows.noteFixProgressQueryLabel,
-        )
-
-        self.__UISetEnabled(True)
-
-    def __on_querySuccess(
-        self, _  # "_" is for passing type check as a QueryOp success callback
-    ):
-        self.__writeLogAndLabel(
-            f"单词查询[完成]，成功{self.__queryCntGrp.getSuccessCnt}，失败{self.__queryCntGrp.getSuccessCnt}",
-            self.__windows.noteFixProgressQueryLabel,
-        )
-
-        audios = []
-        pronField: Optional[str] = None
-        if not self.__windows.currentConfig[F_NOPRON]:
-            pronField = (
-                F_AMEPRON if self.__windows.currentConfig[F_AMEPRON] else F_BREPRON
+        if self._removeOnly():
+            self._updateNotes()
+            self._endTask(
+                "仅清空字段，跳过查询API和发音下载", self._w.noteFixProgressAudioLabel
             )
+            return
 
-        for i, note in enumerate(self.__notes):
-            # write changes to notes
+        self._queryWords(self._notes)
+
+    def _removeOnly(self):
+        ret = True
+        for fn in self._fieldFns:
+            ret = ret & _fieldConfigRemoveOnlyMap[fn](self._w.currentConfig)
+        return ret
+
+    def _queryWords(self, notes):
+        row_words: list[Any] = [None] * len(notes)
+        for i, note in enumerate(notes):
+            row_words[i] = (i, note[F_TERM])
+
+        if not row_words:
+            self._endTask(
+                f"单词查询[完成]，无任务",
+                self._w.noteFixProgressQueryLabel,
+            )
+            return
+
+        self._w.resetProgressBar(len(row_words), self._w.getDictByCurrentConfig().name)
+        self._writeLogAndLabel(
+            f"开始调用{self._w.getDictByCurrentConfig().name}，单词数量：{len(notes)}...",
+            self._w.noteFixProgressQueryLabel,
+        )
+
+        self._queryWorker = QueryWorker(row_words, self._w.getQueryApiByCurrentConfig())
+        self._queryWorker.rowSuccess.connect(self._on_queryRowSuccess)
+        self._queryWorker.rowFail.connect(self._on_queryRowFail)
+        self._queryWorker.tick.connect(self._queryRowTick)
+        self._queryWorker.done.connect(self._on_queryDone)
+        aqt.operations.QueryOp(
+            parent=self._w,
+            op=lambda col: self._queryWorker.run(),  # type: ignore
+            success=lambda _: None,
+        ).failure(self._on_queryFail).without_collection().run_in_background()
+
+    def _on_queryRowSuccess(self, row_word, queryResult):
+        row, word = row_word
+        self._queryResults[row] = queryResult
+        self._queryCntGrp.incSuccessCnt()
+
+    def _on_queryRowFail(self, row_word):
+        row, word = row_word
+        self._queryResults[row] = None
+        self._queryCntGrp.incFailCnt()
+
+    def _queryRowTick(self):
+        self._w.progressBar.setValue(self._w.progressBar.value() + 1)
+
+    def _on_queryFail(self, e):
+        self._endTask(f"单词查询[失败]，异常：{e}", self._w.noteFixProgressQueryLabel)
+
+    def _on_queryDone(self, _):
+        self._writeLogAndLabel(
+            f"单词查询[完成]，成功{self._queryCntGrp.getSuccessCnt()}，失败{self._queryCntGrp.getFailCnt()}",
+            self._w.noteFixProgressQueryLabel,
+        )
+
+        self._updateNotes()
+        self._downloadAudios()
+
+    def _updateNotes(self):
+        for i, note in enumerate(self._notes):
             noteManager.writeNoteFields(
                 note,
-                self.__queryResults[i],
-                self.__windows.currentConfig,
-                __getWriteFieldFnsFromUI(),
+                self._queryResults[i],
+                self._w.currentConfig,
+                self._fieldFns,
             )
 
-            if pronField:
-                # prepare audios
+        self._writeLogAndLabel(
+            f"开始写入笔记更新，数量：{len(self._notes)}...",
+            self._w.noteFixProgressNoteLabel,
+        )
+
+        # update notes to collection
+        noteManager.updateNotes(self._notes)
+        aqt.mw.reset()
+        self._writeLogAndLabel(
+            f"笔记更新[完成]，数量：{len(self._notes)}",
+            self._w.noteFixProgressNoteLabel,
+        )
+
+    def _downloadAudios(self):
+        audios = []
+        whichPron: Optional[str] = None
+        if not self._w.currentConfig[F_NOPRON]:
+            whichPron = F_AMEPRON if self._w.currentConfig[F_AMEPRON] else F_BREPRON
+
+        if whichPron:
+            for i, note in enumerate(self._notes):
                 if (
                     not (
-                        fileName := __getAudioFileNameFromField(
-                            note[F_TERM], note[pronField]
+                        fileName := _getAudioFileNameFromField(
+                            note[F_TERM], note[whichPron]
                         )
                     )
                     or not (
-                        fullName := os.path.isfile(noteManager.media_path(fileName))
+                        os.path.isfile(fullName := noteManager.media_path(fileName))
                     )
-                    and (queryRet := self.__queryResults[i])
-                    and queryRet[pronField]
+                    and (queryRet := self._queryResults[i])
+                    and (url := queryRet[whichPron])
                 ):
                     audios.append(
                         (
                             fullName,
-                            queryRet[pronField],  # url
+                            url,
                         )
                     )
+        if not audios:
+            self._endTask("发音下载[完成]，无任务", self._w.noteFixProgressAudioLabel)
+            return
 
-            self.__windows.resetProgressBar(len(audios))
-
-            # spawn another thread to download audio
-            audioWorker = AudioDownloadWorker(audios)
-            audioWorker.tick.connect(self.__on_audioDownloadTick)
-            aqt.operations.QueryOp(
-                parent=self.__windows,
-                op=lambda col: audioWorker.run(),
-                success=self.__on_audioDownloadSuccess,
-            ).failure(
-                lambda e: self.__on_audioDownloadFail(len(audios), e)
-            ).without_collection().run_in_background()
-
-            # update note to collection
-            aqt.operations.note.update_notes(
-                parent=self.__windows, notes=self.__notes
-            ).success(
-                lambda _: self.__on_noteUpdateSuccess(_, len(self.__notes))
-            ).failure(
-                self.__on_noteUpdateFail
-            ).run_in_background()
-
-            self.__writeLogAndLabel(
-                f"开始写入笔记更新，数量：{len(self.__notes)}...",
-                self.__windows.noteFixProgressNoteLabel,
-            )
-            self.__writeLogAndLabel(
-                f"开始下载发音，数量：{len(audios)}...",
-                self.__windows.noteFixProgressAudioLabel,
-            )
-
-    def __on_noteUpdateFail(self, e: Exception):
-        self.__writeLogAndLabel(
-            f"笔记更新[失败]，异常：{e}", self.__windows.noteFixProgressNoteLabel
+        self._w.resetProgressBar(len(audios), "发音下载")
+        self._writeLogAndLabel(
+            f"开始发音下载，数量：{len(audios)}...",
+            self._w.noteFixProgressAudioLabel,
         )
 
-    def __on_noteUpdateSuccess(self, _, total: int):
-        self.__writeLogAndLabel(
-            f"笔记更新[完成]，数量：{total}", self.__windows.noteFixProgressNoteLabel
-        )
+        self._audioWorker = AudioDownloadWorker(audios)
+        self._audioWorker.tick.connect(self._on_audioDownloadTick)
+        self._audioWorker.done.connect(self._on_audioDownloadDone)
+        aqt.operations.QueryOp(
+            parent=self._w,
+            op=lambda col: self._audioWorker.run(),  # type: ignore
+            success=lambda _: None,
+        ).failure(self._on_audioFail).without_collection().run_in_background()
 
-    def __on_audioDownloadTick(self, fileName, url, success):
+    def _on_audioDownloadTick(self, audio, success):
+        self._w.progressBar.setValue(self._w.progressBar.value() + 1)
         if success:
-            self.__audioCntGrp.incSuccessCnt()
+            self._audioCntGrp.incSuccessCnt()
         else:
-            self.__audioCntGrp.incFailCnt()
+            self._audioCntGrp.incFailCnt()
 
-    def __on_audioDownloadFail(self, total: int, e: Exception):
-        self.__writeLogAndLabel(
-            f"发音下载[意外退出]，共{total}，成功{self.__audioCntGrp.getSuccessCnt()}，失败{self.__audioCntGrp.getFailCnt()}，异常：{e}",
-            self.__windows.noteFixProgressAudioLabel,
+    def _on_audioDownloadDone(self, _):
+        msg = f"发音下载[完成]，成功{self._audioCntGrp.getSuccessCnt()}，失败{self._audioCntGrp.getFailCnt()}"
+        self._endTask(msg, self._w.noteFixProgressAudioLabel)
+
+    def _on_audioFail(self, e):
+        self._endTask(f"发音下载[失败]，异常：{e}", self._w.noteFixProgressAudioLabel)
+
+    def _endTask(self, msg, label):
+        if msg:
+            self._writeLogAndLabel(msg, label)
+        self._w.noteFixProgressAudioLabel.setText(
+            self._w.noteFixProgressAudioLabel.text() + " . . . 笔记修复完成"
         )
+        self._UISetEnabled(True)
+        self._clear()
 
-        self.__UISetEnabled(True)
+        aqt.utils.tooltip("笔记修复完成")
+        aqt.mw.reset()
 
-    def __on_audioDownloadSuccess(self, _):
-        self.__writeLogAndLabel(
-            f"发音下载[完成]，成功{self.__audioCntGrp.getSuccessCnt()}，失败{self.__audioCntGrp.getFailCnt()}",
-            self.__windows.noteFixProgressAudioLabel,
-        )
-
-        self.__UISetEnabled(True)
-        aqt.utils.tooltip("修复完成")
+    def _clear(self):
+        self._notes.clear()
+        self._queryResults.clear()
+        self._fieldFns.clear()
+        self._queryWorker = None
+        self._audioWorker = None

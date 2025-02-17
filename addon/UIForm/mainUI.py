@@ -276,15 +276,12 @@ class Ui_Dialog(object):
         self.gridLayout_7 = QtWidgets.QGridLayout(self.noteFixProgressGroupBox)
         self.gridLayout_7.setObjectName("gridLayout_7")
         self.noteFixProgressNoteLabel = QtWidgets.QLabel(parent=self.noteFixProgressGroupBox)
-        self.noteFixProgressNoteLabel.setText("")
         self.noteFixProgressNoteLabel.setObjectName("noteFixProgressNoteLabel")
         self.gridLayout_7.addWidget(self.noteFixProgressNoteLabel, 0, 0, 1, 1)
         self.noteFixProgressQueryLabel = QtWidgets.QLabel(parent=self.noteFixProgressGroupBox)
-        self.noteFixProgressQueryLabel.setText("")
         self.noteFixProgressQueryLabel.setObjectName("noteFixProgressQueryLabel")
         self.gridLayout_7.addWidget(self.noteFixProgressQueryLabel, 1, 0, 1, 1)
         self.noteFixProgressAudioLabel = QtWidgets.QLabel(parent=self.noteFixProgressGroupBox)
-        self.noteFixProgressAudioLabel.setText("")
         self.noteFixProgressAudioLabel.setObjectName("noteFixProgressAudioLabel")
         self.gridLayout_7.addWidget(self.noteFixProgressAudioLabel, 2, 0, 1, 1)
         self.gridLayout_6.addWidget(self.noteFixProgressGroupBox, 2, 0, 1, 2)
@@ -343,10 +340,12 @@ class Ui_Dialog(object):
         self.noteFixBtn.setText(_translate("Dialog", "开始修复"))
         self.noteFixIntroLabel.setText(_translate("Dialog", "### 修复笔记中的字段\n"
 "\n"
-"- 若字段在【设置-默认设置】中未勾选，并在【修复字段】中被勾选，则字段内容会被**清空**，请谨慎使用\n"
-"- 只会影响到【修复字段】中勾选的字段\n"
-"- 笔记必须应用了最新的模板，否则会被忽略\n"
-"- 过程中会调用查询 API，可能花费较长时间"))
+"- 若字段在【设置-默认设置】未勾选，并在【修复字段】勾选，则字段内容会被**清空**，请谨慎使用\n"
+"- 字段会被忽略的情况：①没有在【修复字段】勾选；②没有应用最新模板；③查询失败\n"
+"- 数量较多时可能触发API限流，导致查询失败或返回错误结果"))
         self.noteFixProgressGroupBox.setTitle(_translate("Dialog", "进度信息"))
+        self.noteFixProgressNoteLabel.setText(_translate("Dialog", "本地笔记更新进度"))
+        self.noteFixProgressQueryLabel.setText(_translate("Dialog", "API 查询进度"))
+        self.noteFixProgressAudioLabel.setText(_translate("Dialog", "发音下载进度"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.noteFixTab), _translate("Dialog", "修复"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.logTab), _translate("Dialog", "日志"))

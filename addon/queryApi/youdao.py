@@ -1,9 +1,11 @@
 import logging
-from urllib.parse import urlencode
 from typing import Optional
+from urllib.parse import urlencode
+
+from .._typing import AbstractQueryAPI, QueryWordData
 from ..constants import *
-from ..__typing import AbstractQueryAPI, QueryWordData
 from ..dictionary.youdao import Youdao
+
 logger = logging.getLogger('dict2Anki.queryApi.youdao')
 __all__ = ['API']
 
