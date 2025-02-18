@@ -47,7 +47,6 @@ class WorkerManager:
         for worker in self._workers:
             if worker.interrupt:
                 worker.interrupt()
-        self._workers.clear()
         self._pool.wait_complete()
 
     def _on_worker_done(self, worker):
