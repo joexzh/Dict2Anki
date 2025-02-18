@@ -54,20 +54,15 @@ class _CntGrp:
         self.reset()
 
     def reset(self):
-        self._successCnt = 0
-        self._failCnt = 0
-
-    def getSuccessCnt(self):
-        return self._successCnt
+        self.total = 0
+        self.success_cnt = 0
+        self.fail_cnt = 0
 
     def incSuccessCnt(self):
-        self._successCnt += 1
-
-    def getFailCnt(self):
-        return self._failCnt
+        self.success_cnt += 1
 
     def incFailCnt(self):
-        self._failCnt += 1
+        self.fail_cnt += 1
 
 
 class NoteFixer:
@@ -79,8 +74,7 @@ class NoteFixer:
         self._notes = []
         self._queryResults = []
         self._fieldFns = []
-        self._queryWorker = None
-        self._audioWorker = None
+        self._api_name = ""
         self._w.noteFixBtn.clicked.connect(self._on_noteFixBtnClick)
 
     def _formatStrFromCurrentConfig(self) -> str:
@@ -160,7 +154,9 @@ class NoteFixer:
         self._fix()
 
     def _checkLoginState(self) -> bool:
-        self._writeLogAndLabel("正在检查登录信息...", self._w.noteFixProgressNoteLabel)
+        self._writeLogAndLabel(
+            "正在检查登录信息 . . .", self._w.noteFixProgressNoteLabel
+        )
         currentApi = self._w.getQueryApiByCurrentConfig()
         currentDict = self._w.getDictByCurrentConfig()
 
@@ -186,16 +182,17 @@ class NoteFixer:
         self._UISetEnabled(False)
         self._w.noteFixProgressQueryLabel.clear()
         self._w.noteFixProgressAudioLabel.clear()
-        self._writeLogAndLabel("开始修复...", self._w.noteFixProgressNoteLabel)
+        self._writeLogAndLabel("开始修复 . . .", self._w.noteFixProgressNoteLabel)
         self._queryCntGrp.reset()
         self._audioCntGrp.reset()
+        self._api_name = self._w.getQueryApiByCurrentConfig().name
 
         self._notes = noteManager.getNotesByDeckName(
             self._w.currentConfig["deck"], noteManager.noteFilterByModelName
         )
         self._queryResults: list[Any] = [None] * len(self._notes)
         self._writeLogAndLabel(
-            f"找到{len(self._notes)}条笔记...", self._w.noteFixProgressNoteLabel
+            f"找到 {len(self._notes)} 条笔记 . . .", self._w.noteFixProgressNoteLabel
         )
 
         if self._removeOnly():
@@ -220,47 +217,47 @@ class NoteFixer:
 
         if not row_words:
             self._endTask(
-                f"单词查询[完成]，无任务",
+                f"查询单词[完成]，无任务",
                 self._w.noteFixProgressQueryLabel,
             )
             return
 
-        self._w.resetProgressBar(len(row_words), self._w.getDictByCurrentConfig().name)
+        self._w.resetProgressBar(len(row_words))
+        self._queryCntGrp.total = len(row_words)
         self._writeLogAndLabel(
-            f"开始调用{self._w.getDictByCurrentConfig().name}，单词数量：{len(notes)}...",
+            f"正在调用{self._api_name}：0 / {self._queryCntGrp.total} . . .",
             self._w.noteFixProgressQueryLabel,
         )
 
-        self._queryWorker = QueryWorker(row_words, self._w.getQueryApiByCurrentConfig())
-        self._queryWorker.rowSuccess.connect(self._on_queryRowSuccess)
-        self._queryWorker.rowFail.connect(self._on_queryRowFail)
-        self._queryWorker.tick.connect(self._queryRowTick)
-        self._queryWorker.done.connect(self._on_queryDone)
-        aqt.operations.QueryOp(
-            parent=self._w,
-            op=lambda col: self._queryWorker.run(),  # type: ignore
-            success=lambda _: None,
-        ).failure(self._on_queryFail).without_collection().run_in_background()
+        worker = QueryWorker(row_words, self._w.getQueryApiByCurrentConfig())
+        worker.rowSuccess.connect(self._on_queryRowSuccess)
+        worker.rowFail.connect(self._on_queryRowFail)
+        worker.tick.connect(self._queryRowTick)
+        worker.doneWithResult.connect(self._on_queryDone)
+        self._w.workerman.start(worker)
 
     def _on_queryRowSuccess(self, row_word, queryResult):
         row, word = row_word
         self._queryResults[row] = queryResult
         self._queryCntGrp.incSuccessCnt()
+        self._w.noteFixProgressQueryLabel.setText(
+            f"正在调用{self._api_name}：{self._queryCntGrp.success_cnt + self._queryCntGrp.fail_cnt} / {self._queryCntGrp.total} . . ."
+        )
 
     def _on_queryRowFail(self, row_word):
         row, word = row_word
         self._queryResults[row] = None
         self._queryCntGrp.incFailCnt()
+        self._w.noteFixProgressQueryLabel.setText(
+            f"正在调用{self._api_name}：{self._queryCntGrp.success_cnt + self._queryCntGrp.fail_cnt} / {self._queryCntGrp.total} . . ."
+        )
 
     def _queryRowTick(self):
         self._w.progressBar.setValue(self._w.progressBar.value() + 1)
 
-    def _on_queryFail(self, e):
-        self._endTask(f"单词查询[失败]，异常：{e}", self._w.noteFixProgressQueryLabel)
-
     def _on_queryDone(self, _):
         self._writeLogAndLabel(
-            f"单词查询[完成]，成功{self._queryCntGrp.getSuccessCnt()}，失败{self._queryCntGrp.getFailCnt()}",
+            f"查询单词[完成]，成功 {self._queryCntGrp.success_cnt}，失败 {self._queryCntGrp.fail_cnt}",
             self._w.noteFixProgressQueryLabel,
         )
 
@@ -277,7 +274,7 @@ class NoteFixer:
             )
 
         self._writeLogAndLabel(
-            f"开始写入笔记更新，数量：{len(self._notes)}...",
+            f"正在更新笔记，数量：{len(self._notes)} . . .",
             self._w.noteFixProgressNoteLabel,
         )
 
@@ -285,7 +282,7 @@ class NoteFixer:
         noteManager.updateNotes(self._notes)
         aqt.mw.reset()
         self._writeLogAndLabel(
-            f"笔记更新[完成]，数量：{len(self._notes)}",
+            f"更新笔记[完成]，数量：{len(self._notes)}",
             self._w.noteFixProgressNoteLabel,
         )
 
@@ -316,23 +313,20 @@ class NoteFixer:
                         )
                     )
         if not audios:
-            self._endTask("发音下载[完成]，无任务", self._w.noteFixProgressAudioLabel)
+            self._endTask("下载发音[完成]，无任务", self._w.noteFixProgressAudioLabel)
             return
 
-        self._w.resetProgressBar(len(audios), "发音下载")
+        self._w.resetProgressBar(len(audios))
         self._writeLogAndLabel(
-            f"开始发音下载，数量：{len(audios)}...",
+            f"正在下载发音：0 / {len(audios)} . . .",
             self._w.noteFixProgressAudioLabel,
         )
+        self._audioCntGrp.total = len(audios)
 
-        self._audioWorker = AudioDownloadWorker(audios)
-        self._audioWorker.tick.connect(self._on_audioDownloadTick)
-        self._audioWorker.done.connect(self._on_audioDownloadDone)
-        aqt.operations.QueryOp(
-            parent=self._w,
-            op=lambda col: self._audioWorker.run(),  # type: ignore
-            success=lambda _: None,
-        ).failure(self._on_audioFail).without_collection().run_in_background()
+        worker = AudioDownloadWorker(audios)
+        worker.tick.connect(self._on_audioDownloadTick)
+        worker.done.connect(self._on_audioDownloadDone)
+        self._w.workerman.start(worker)
 
     def _on_audioDownloadTick(self, audio, success):
         self._w.progressBar.setValue(self._w.progressBar.value() + 1)
@@ -340,13 +334,13 @@ class NoteFixer:
             self._audioCntGrp.incSuccessCnt()
         else:
             self._audioCntGrp.incFailCnt()
+        self._w.noteFixProgressAudioLabel.setText(
+            f"正在下载发音：{self._audioCntGrp.success_cnt + self._audioCntGrp.fail_cnt} / {self._audioCntGrp.total} . . ."
+        )
 
-    def _on_audioDownloadDone(self, _):
-        msg = f"发音下载[完成]，成功{self._audioCntGrp.getSuccessCnt()}，失败{self._audioCntGrp.getFailCnt()}"
+    def _on_audioDownloadDone(self, worker):
+        msg = f"下载发音[完成]，成功 {self._audioCntGrp.success_cnt}，失败 {self._audioCntGrp.fail_cnt}"
         self._endTask(msg, self._w.noteFixProgressAudioLabel)
-
-    def _on_audioFail(self, e):
-        self._endTask(f"发音下载[失败]，异常：{e}", self._w.noteFixProgressAudioLabel)
 
     def _endTask(self, msg, label):
         if msg:
@@ -358,11 +352,9 @@ class NoteFixer:
         self._clear()
 
         aqt.utils.tooltip("笔记修复完成")
-        aqt.mw.reset()
 
     def _clear(self):
         self._notes.clear()
         self._queryResults.clear()
         self._fieldFns.clear()
-        self._queryWorker = None
-        self._audioWorker = None
+        self._api_name = ""

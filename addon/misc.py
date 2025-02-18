@@ -58,7 +58,8 @@ def congestGenerator(n=60):
     """yields n times per minute"""
     con = n / 60
     start = time.time()
-    cnt = 0
+    cnt = 1
+    yield  #  yield first iteration immediately
 
     while True:
         if (time.time() - start) * con > cnt:

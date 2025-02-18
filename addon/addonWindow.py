@@ -7,7 +7,7 @@ from tempfile import gettempdir
 from typing import Optional
 
 from aqt import (QDialog, QIcon, QListWidgetItem, QPlainTextEdit, QPushButton,
-                 Qt, QThread, QVBoxLayout, pyqtSlot)
+                 Qt, QVBoxLayout, pyqtSlot)
 
 from ._typing import (AbstractDictionary, AbstractQueryAPI, Config, Mask,
                       QueryWordData)
@@ -18,7 +18,8 @@ from .loginDialog import LoginDialog
 from .queryApi import apis
 from .UIForm import icons_rc, mainUI, wordGroup
 from .workers import (AudioDownloadWorker, LoginStateCheckWorker, QueryWorker,
-                      RemoteWordFetchingWorker, VersionCheckWorker)
+                      RemoteWordFetchingWorker, VersionCheckWorker,
+                      WorkerManager)
 
 try:
     from aqt import mw
@@ -52,17 +53,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         self.remoteWords = []
         self.selectedGroups: list[list[str]] = []
 
-        self.workerThread = QThread(self)
-        self.workerThread.start()
-        self.updateCheckThead = QThread(self)
-        self.updateCheckThead.start()
-        self.audioDownloadThread = QThread(self)
-
-        self.updateCheckWork = None
-        self.loginWorker = None
-        self.queryWorker = None
-        self.pullWorker = None
-        self.audioDownloadWorker = None
+        self.workerman = WorkerManager()
 
         self.setupUi(self)
         self.setWindowTitle(ADDON_FULL_NAME)
@@ -82,19 +73,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
     def closeEvent(self, event):
         self.setCurrentConfigAndSave()
         # 插件关闭时退出所有线程
-        if self.workerThread.isRunning():
-            self.workerThread.requestInterruption()
-            self.workerThread.quit()
-            self.workerThread.wait()
-
-        if self.updateCheckThead.isRunning():
-            self.updateCheckThead.quit()
-            self.updateCheckThead.wait()
-
-        if self.audioDownloadThread.isRunning():
-            self.audioDownloadThread.requestInterruption()
-            self.workerThread.quit()
-            self.workerThread.wait()
+        self.workerman.destroy()
 
         event.accept()
 
@@ -146,6 +125,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         self.usernameLabel.hide()
         self.passwordLabel.hide()
         self.passwordLineEdit.hide()
+        self.dummyBtn.hide()
         self.dictionaryComboBox.addItems([d.name for d in dictionaries])
         self.apiComboBox.addItems([d.name for d in apis])
         self.deckComboBox.addItems(noteManager.getDeckNames())
@@ -177,13 +157,9 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         logger.info(f'保存当前设置:{self.currentConfig}')
         self._saveConfig(self.currentConfig)
 
-    def resetProgressBar(self, total: int, text=''):
+    def resetProgressBar(self, total: int):
         self.progressBar.setValue(0)
         self.progressBar.setMaximum(total)
-        if text:
-            self.progressBar.setFormat(f"{text}...%p%")
-        else:
-            self.progressBar.resetFormat()
 
     @staticmethod
     def _saveConfig(config):
@@ -210,13 +186,9 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         def on_haveNewVersion(version, changeLog):
             if askUser(f'有新版本:{version}是否更新？\n\n{changeLog.strip()}'):
                 openLink(RELEASE_URL)
-
-        self.updateCheckWork = VersionCheckWorker()
-        self.updateCheckWork.moveToThread(self.updateCheckThead)
-        self.updateCheckWork.haveNewVersion.connect(on_haveNewVersion)
-        self.updateCheckWork.finished.connect(self.updateCheckThead.quit)
-        self.updateCheckWork.start.connect(self.updateCheckWork.run)
-        self.updateCheckWork.start.emit()
+        worker = VersionCheckWorker()
+        worker.haveNewVersion.connect(on_haveNewVersion)
+        self.workerman.start(worker)
 
     def getQueryApiByCurrentConfig(self) -> type[AbstractQueryAPI]:
         return apis[self.currentConfig['selectedApi']]
@@ -246,13 +218,10 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         self.setCurrentConfigFromUI()
 
         # 登陆线程
-        self.loginWorker = LoginStateCheckWorker(self.getDictByCurrentConfig().checkCookie, json.loads(self.cookieLineEdit.text() or '{}'))
-        self.loginWorker.moveToThread(self.workerThread)
-        self.loginWorker.start.connect(self.loginWorker.run)
-        self.loginWorker.logSuccess.connect(self.onLogSuccess)
-        self.loginWorker.logFailed.connect(self.onLoginFailed)
-        self.loginWorker.start.emit()
-
+        worker = LoginStateCheckWorker(self.getDictByCurrentConfig().checkCookie, json.loads(self.cookieLineEdit.text() or '{}'))
+        worker.logSuccess.connect(self.onLogSuccess)
+        worker.logFailed.connect(self.onLoginFailed)
+        self.workerman.start(worker)
 
     @pyqtSlot()
     def onLoginFailed(self):
@@ -326,14 +295,12 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         groupMap = dict(self.getDictByCurrentConfig().groups)
         
         # 启动单词获取线程
-        self.pullWorker = RemoteWordFetchingWorker(self.getDictByCurrentConfig(), [(groupName, groupMap[groupName],) for groupName in groupNames])
-        self.pullWorker.moveToThread(self.workerThread)
-        self.pullWorker.start.connect(self.pullWorker.run)
-        self.pullWorker.tick.connect(lambda: self.progressBar.setValue(self.progressBar.value() + 1))
-        self.pullWorker.setProgress.connect(self.progressBar.setMaximum)
-        self.pullWorker.doneThisGroup.connect(self.on_getRemoteWords_groupDone)
-        self.pullWorker.done.connect(self.on_allPullWork_done)
-        self.pullWorker.start.emit()
+        worker = RemoteWordFetchingWorker(self.getDictByCurrentConfig(), [(groupName, groupMap[groupName],) for groupName in groupNames])
+        worker.tick.connect(lambda: self.progressBar.setValue(self.progressBar.value() + 1))
+        worker.setProgress.connect(self.progressBar.setMaximum)
+        worker.doneThisGroup.connect(self.on_getRemoteWords_groupDone)
+        worker.done.connect(self.on_allPullWork_done)
+        self.workerman.start(worker)
 
         # 同时获取本地单词
         self.localWords = noteManager.getWordsByDeck(self.deckComboBox.currentText())
@@ -343,8 +310,8 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         """一个分组（单词本）获取完毕事件"""
         self.remoteWords.extend(words)
 
-    @pyqtSlot()
-    def on_allPullWork_done(self):
+    @pyqtSlot(object)
+    def on_allPullWork_done(self, worker):
         """全部分组获取完毕事件"""
         localWordSet = set(self.localWords)
         remoteWordSet = set(self.remoteWords)
@@ -405,14 +372,12 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         logger.info(f'待查询单词{row_words}')
         # 查询线程
         self.resetProgressBar(len(row_words))
-        self.queryWorker = QueryWorker(row_words, self.getQueryApiByCurrentConfig())
-        self.queryWorker.moveToThread(self.workerThread)
-        self.queryWorker.rowSuccess.connect(self.on_queryRowSuccess)
-        self.queryWorker.rowFail.connect(self.on_queryRowFail)
-        self.queryWorker.tick.connect(lambda: self.progressBar.setValue(self.progressBar.value() + 1))
-        self.queryWorker.done.connect(self.on_queryDone)
-        self.queryWorker.start.connect(self.queryWorker.run)
-        self.queryWorker.start.emit()
+        worker = QueryWorker(row_words, self.getQueryApiByCurrentConfig())
+        worker.rowSuccess.connect(self.on_queryRowSuccess)
+        worker.rowFail.connect(self.on_queryRowFail)
+        worker.tick.connect(lambda: self.progressBar.setValue(self.progressBar.value() + 1))
+        worker.doneWithResult.connect(self.on_queryDone)
+        self.workerman.start(worker)
 
     @pyqtSlot(tuple, dict)
     def on_queryRowSuccess(self, row_word, result):
@@ -487,20 +452,11 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         if audiosDownloadTasks:
             self.syncBtn.setEnabled(False)
             self.resetProgressBar(len(audiosDownloadTasks))
-            if self.audioDownloadThread is not None:
-                self.audioDownloadThread.requestInterruption()
-                self.audioDownloadThread.quit()
-                self.audioDownloadThread.wait()
-
-            self.audioDownloadThread = QThread(self)
-            self.audioDownloadThread.start()
-            self.audioDownloadWorker = AudioDownloadWorker(audiosDownloadTasks)
-            self.audioDownloadWorker.moveToThread(self.audioDownloadThread)
-            self.audioDownloadWorker.tick.connect(lambda t,s: self.progressBar.setValue(self.progressBar.value() + 1))
-            self.audioDownloadWorker.start.connect(self.audioDownloadWorker.run)
-            self.audioDownloadWorker.done.connect(lambda _: tooltip(f'发音下载完成'))
-            self.audioDownloadWorker.done.connect(lambda _: self.audioDownloadThread.quit())
-            self.audioDownloadWorker.start.emit()
+            
+            worker = AudioDownloadWorker(audiosDownloadTasks)
+            worker.tick.connect(lambda t,s: self.progressBar.setValue(self.progressBar.value() + 1))
+            worker.done.connect(lambda _: tooltip(f'发音下载完成'))
+            self.workerman.start(worker)
 
         self.newWordListWidget.clear()
 
