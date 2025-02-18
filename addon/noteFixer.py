@@ -28,27 +28,6 @@ _fieldConfigRemoveOnlyMap = {
 }
 
 
-def _getAudioFileNameFromField(word: str, fieldVal: str) -> str:
-    if (
-        fieldVal
-        and (
-            m := re.search(
-                rf"^\[sound:({F_AMEPRON}_{word}\.mp3|{F_BREPRON}_{word}\.mp3)\]$",
-                fieldVal,
-            )
-        )
-        and len(grp := m.groups()) == 1
-    ):
-        _logger.debug(
-            f"__getAudioFileNameFromField matched, word='{word}', fieldVal='{fieldVal}'"
-        )
-        return grp[0]
-    _logger.debug(
-        f"__getAudioFileNameFromField didn't matched, word='{word}', fieldVal='{fieldVal}'"
-    )
-    return ""
-
-
 class _CntGrp:
     def __init__(self):
         self.reset()
@@ -295,20 +274,19 @@ class NoteFixer:
         if whichPron:
             for i, note in enumerate(self._notes):
                 if (
-                    not (
-                        fileName := _getAudioFileNameFromField(
-                            note[F_TERM], note[whichPron]
+                    (queryRet := self._queryResults[i])
+                    and (url := queryRet[whichPron])
+                    and not (
+                        os.path.isfile(
+                            filePath := noteManager.media_path(
+                                f"{whichPron}_{note[F_TERM]}.mp3"
+                            )
                         )
                     )
-                    or not (
-                        os.path.isfile(fullName := noteManager.media_path(fileName))
-                    )
-                    and (queryRet := self._queryResults[i])
-                    and (url := queryRet[whichPron])
                 ):
                     audios.append(
                         (
-                            fullName,
+                            filePath,
                             url,
                         )
                     )
