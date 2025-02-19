@@ -12,13 +12,15 @@ class Worker(Thread):
         self._q = queue
         self.result_queue = result_queue
         self.daemon = True
-        self.shutdown = False
+        self.interrupted = False
         self.start()
 
     def run(self):
-        while not self.shutdown:
+        while True:
             try:
                 f, args, kwargs = self._q.get()
+                if self.interrupted:
+                    return
                 result = f(*args, **kwargs)
                 self.result_queue.put((args, kwargs, result))
             except Exception as e:
@@ -47,7 +49,16 @@ class ThreadPool:
         while not self.results_q.qsize() == 0:
             self.result.append(self.results_q.get())
         for worker in self._workers:
-            worker.shutdown = True
+            worker.interrupted = True  # run in GIL, assume thread safe?
+
+        # At this point all threads are blocked by queue.get(),
+        # so put dummy items to unblock them.
+        # Till Python 3.13 we can switch to queue.shutdown()
+        def dummy():
+            pass
+
+        for _ in range(len(self._workers)):
+            self._q.put((dummy, tuple(), dict()))
         return self.result
 
     def __enter__(self):

@@ -5,7 +5,7 @@ from abc import abstractmethod
 from itertools import chain
 
 import requests
-from aqt import QObject, pyqtSignal
+from aqt import QObject, pyqtSignal, pyqtSlot
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
@@ -18,21 +18,19 @@ class AbstractWorker(QObject):
     done = pyqtSignal(object)
     """Workers must use done to emit itself, otherwise leak!"""
 
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.interrupted = False
+        """Set by WorkerManager when destroyed."""
+
     @abstractmethod
     def run(self):
         """Required!"""
         pass
 
-    @abstractmethod
-    def interrupt(self):
-        """Long running worker should implement this,
-        otherwise prevents anki process to end!
-        
-        This is invoked by WorkerManger, be careful not to cause race condition."""
-        pass
-
 
 class WorkerManager:
+    _logger = logging.getLogger("dict2Anki.workers.WorkerManager")
 
     def __init__(self):
         self._pool = ThreadPool(max_workers=3)
@@ -45,18 +43,20 @@ class WorkerManager:
 
     def destroy(self):
         for worker in self._workers:
-            if worker.interrupt:
-                worker.interrupt()
+            worker.interrupted = True
         self._pool.wait_complete()
 
     def _on_worker_done(self, worker):
-        logging.info("worker done: " + str(worker))
+        self._logger.info("worker done: " + str(worker))
         self._workers.remove(worker)
 
 
 class VersionCheckWorker(AbstractWorker):
     haveNewVersion = pyqtSignal(str, str)
     _logger = logging.getLogger("dict2Anki.workers.UpdateCheckWorker")
+
+    def __init__(self):
+        super().__init__()
 
     def run(self):
         try:
@@ -106,10 +106,6 @@ class RemoteWordFetchingWorker(AbstractWorker):
         super().__init__()
         self.selectedDict = selectedDict
         self.groups = groups
-        self._interrupted = False
-
-    def interrupt(self):
-        self._interrupted = True
 
     def run(self):
 
@@ -118,18 +114,20 @@ class RemoteWordFetchingWorker(AbstractWorker):
             self.tick.emit()
             return wordPerPage
 
-        for groupName, groupId in self.groups:
-            totalPage = self.selectedDict.getTotalPage(groupName, groupId)
-            self.setProgress.emit(totalPage)
-            with ThreadPool(max_workers=3) as executor:
-                for i in range(totalPage):
-                    if self._interrupted:
-                        return
-                    executor.submit(_pull, i, groupName, groupId)
-            remoteWordList = list(chain(*[ft[2] for ft in executor.result]))
-            self.doneThisGroup.emit(remoteWordList)
+        try:
+            for groupName, groupId in self.groups:
 
-        self.done.emit(self)
+                totalPage = self.selectedDict.getTotalPage(groupName, groupId)
+                self.setProgress.emit(totalPage)
+                with ThreadPool(max_workers=3) as executor:
+                    for i in range(totalPage):
+                        if self.interrupted:
+                            return
+                        executor.submit(_pull, i, groupName, groupId)
+                remoteWordList = list(chain(*[ft[2] for ft in executor.result]))
+                self.doneThisGroup.emit(remoteWordList)
+        finally:
+            self.done.emit(self)
 
 
 class QueryWorker(AbstractWorker):
@@ -146,10 +144,6 @@ class QueryWorker(AbstractWorker):
         self._row_words = row_words
         self._api = api
         self._congest = congest
-        self._interrupted = False
-
-    def interrupt(self):
-        self._interrupted = True
 
     def run(self):
 
@@ -165,18 +159,20 @@ class QueryWorker(AbstractWorker):
             self.tick.emit()
             return queryResult
 
-        with ThreadPool(max_workers=3) as executor:
-            congestGen = congestGenerator(self._congest)
-            for row_word in self._row_words:
-                if self._interrupted:
-                    return
-                next(congestGen)
-                executor.submit(_query, row_word)
+        try:
+            with ThreadPool(max_workers=3) as executor:
+                congestGen = congestGenerator(self._congest)
+                for row_word in self._row_words:
+                    if self.interrupted:
+                        return
+                    next(congestGen)
+                    executor.submit(_query, row_word)
 
-        results = [(r[0][0], r[2]) for r in executor.result]
-        self.doneWithResult.emit(results)
-        self.done.emit(self)
-        return results
+            results = [(r[0][0], r[2]) for r in executor.result]
+            self.doneWithResult.emit(results)
+            return results
+        finally:
+            self.done.emit(self)
 
 
 class AudioDownloadWorker(AbstractWorker):
@@ -192,10 +188,6 @@ class AudioDownloadWorker(AbstractWorker):
         super().__init__()
         self._audios = audios
         self._congest = congest
-        self._interrupted = False
-
-    def interrupt(self):
-        self._interrupted = True
 
     def run(self):
 
@@ -219,12 +211,13 @@ class AudioDownloadWorker(AbstractWorker):
                 self.tick.emit(audio, success)
             return success
 
-        with ThreadPool(max_workers=3) as executor:
-            congestGen = congestGenerator(self._congest)
-            for audio in self._audios:
-                if self._interrupted:
-                    return
-                next(congestGen)
-                executor.submit(_download, audio)
-
-        self.done.emit(self)
+        try:
+            with ThreadPool(max_workers=3) as executor:
+                congestGen = congestGenerator(self._congest)
+                for audio in self._audios:
+                    if self.interrupted:
+                        return
+                    next(congestGen)
+                    executor.submit(_download, audio)
+        finally:
+            self.done.emit(self)
