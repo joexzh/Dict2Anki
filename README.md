@@ -5,10 +5,13 @@
 
 **Dict2Anki** 是一款方便[有道词典](http://cidian.youdao.com/multi.html)、[欧路词典](https://www.eudic.net/)用户同步生成单词本卡片至[Anki](https://apps.ankiweb.net/#download)的插件
 
+> **Note**:  
+> 无论导入有道还是欧路词典的生词本，都推荐使用【查询 - 有道 API】。欧路词典API容易触发限流。
+
 ### Change log
 ___
 * v7.1.1
-  * 查询API和下载发音暂时限定在每分钟60次
+  * 查询API暂时限定在每分钟60次
 * v7.1.0
   * 增加字段修复功能
 * v7.0.0

@@ -5,7 +5,7 @@ from abc import abstractmethod
 from itertools import chain
 
 import requests
-from aqt import QObject, pyqtSignal, pyqtSlot
+from aqt import QObject, pyqtBoundSignal, pyqtSignal
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
@@ -16,7 +16,7 @@ from .misc import ThreadPool, congestGenerator
 
 class AbstractWorker(QObject):
     done = pyqtSignal(object)
-    """Workers must use done to emit itself, otherwise leak!"""
+    """Workers must use done to emit itself before run() returns, otherwise leak!"""
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -33,7 +33,7 @@ class WorkerManager:
     _logger = logging.getLogger("dict2Anki.workers.WorkerManager")
 
     def __init__(self):
-        self._pool = ThreadPool(max_workers=3)
+        self._pool = ThreadPool(max_workers=os.cpu_count())
         self._workers: list[AbstractWorker] = []
 
     def start(self, worker: AbstractWorker):
@@ -132,8 +132,8 @@ class RemoteWordFetchingWorker(AbstractWorker):
 
 class QueryWorker(AbstractWorker):
     tick = pyqtSignal()
-    rowSuccess = pyqtSignal(tuple, dict)
-    rowFail = pyqtSignal(tuple)
+    rowSuccess = pyqtSignal(int, str, dict)
+    rowFail = pyqtSignal(int, str)
     doneWithResult = pyqtSignal(list)
     _logger = logging.getLogger("dict2Anki.workers.QueryWorker")
 
@@ -147,77 +147,92 @@ class QueryWorker(AbstractWorker):
 
     def run(self):
 
-        def _query(row_word):
-            row, word = row_word
+        def _query(row, word):
             queryResult = self._api.query(word)
             if queryResult:
-                self._logger.info(f"查询成功: {row_word} -- {queryResult}")
-                self.rowSuccess.emit(row_word, queryResult)
+                self._logger.info(f"查询成功: {row}, {word} -- {queryResult}")
+                self.rowSuccess.emit(row, word, queryResult)
             else:
-                self._logger.warning(f"查询失败: {row_word}")
-                self.rowFail.emit(row_word)
+                self._logger.warning(f"查询失败: {row}, {word}")
+                self.rowFail.emit(row, word)
             self.tick.emit()
             return queryResult
 
         try:
             with ThreadPool(max_workers=3) as executor:
                 congestGen = congestGenerator(self._congest)
-                for row_word in self._row_words:
+                for row, word in self._row_words:
                     if self.interrupted:
                         return
                     next(congestGen)
-                    executor.submit(_query, row_word)
+                    executor.submit(_query, row, word)
 
-            results = [(r[0][0], r[2]) for r in executor.result]
+            results = [(r[0][0], r[0][1], r[2]) for r in executor.result]
             self.doneWithResult.emit(results)
             return results
         finally:
             self.done.emit(self)
 
 
-class AudioDownloadWorker(AbstractWorker):
-    tick = pyqtSignal(tuple, bool)
+class NetworkWorker(AbstractWorker):
     retries = Retry(total=5, backoff_factor=3, status_forcelist=[500, 502, 503, 504])
     session = requests.Session()
     session.mount("http://", HTTPAdapter(max_retries=retries))
     session.mount("https://", HTTPAdapter(max_retries=retries))
     session.headers.update({"User-Agent": USER_AGENT})
+
+    def __init__(self):
+        super().__init__()
+
+
+def downloadSingleAudio(
+    fileName: str,
+    url: str,
+    session: requests.Session,
+    logger: logging.Logger,
+    tick: pyqtBoundSignal,
+):
+    success = False
+    try:
+        r = session.get(url, stream=True)
+        with open(fileName, "wb") as f:
+            for chunk in r.iter_content(chunk_size=1024):
+                if chunk:
+                    f.write(chunk)
+        success = True
+        logger.info(f"发音下载完成：{fileName}, {url}")
+    except Exception as e:
+        logger.warning(f"下载{fileName}, {url}，异常: {e}")
+        if os.path.isfile(fileName):
+            os.remove(fileName)
+        success = False
+    finally:
+        tick.emit(fileName, url, success)
+    return success
+
+
+class AudioDownloadWorker(NetworkWorker):
+    tick = pyqtSignal(str, str, bool)
     _logger = logging.getLogger("dict2Anki.workers.AudioDownloadWorker")
 
-    def __init__(self, audios: list[tuple[str, str]], congest=60):
+    def __init__(self, audios: list[tuple[str, str]]):
         super().__init__()
         self._audios = audios
-        self._congest = congest
 
     def run(self):
 
-        def _download(audio: tuple[str, str]):
-            success = False
-            fileName, url = audio
-            try:
-                r = self.session.get(url, stream=True)
-                with open(fileName, "wb") as f:
-                    for chunk in r.iter_content(chunk_size=1024):
-                        if chunk:
-                            f.write(chunk)
-                success = True
-                self._logger.info(f"发音下载完成：{audio}")
-            except Exception as e:
-                self._logger.warning(f"下载{audio}，异常: {e}")
-                if os.path.isfile(fileName):
-                    os.remove(fileName)
-                success = False
-            finally:
-                self.tick.emit(audio, success)
-            return success
-
         try:
             with ThreadPool(max_workers=3) as executor:
-                congestGen = congestGenerator(self._congest)
-                for audio in self._audios:
+                for fileName, url in self._audios:
                     if self.interrupted:
                         return
-                    next(congestGen)
-                    executor.submit(_download, audio)
+                    executor.submit(
+                        downloadSingleAudio,
+                        fileName,
+                        url,
+                        self.session,
+                        self._logger,
+                        self.tick,
+                    )
         finally:
             self.done.emit(self)

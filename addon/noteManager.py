@@ -20,14 +20,12 @@ __TEMPLATE_NAME = "default"
 
 
 def getDeckNames():
-    if not mw.col:
-        raise RuntimeError
+    assert mw.col
     return [deck["name"] for deck in mw.col.decks.all()]
 
 
 def getWordsByDeck(deckName) -> list[str]:
-    if not mw.col:
-        raise RuntimeError
+    assert mw.col
     noteIds = mw.col.find_notes(f'deck:"{deckName}"')
     words = []
     for nid in noteIds:
@@ -43,8 +41,7 @@ def getWordsByDeck(deckName) -> list[str]:
 
 
 def getNoteIds(wordList, deckName) -> list[notes.NoteId]:
-    if not mw.col:
-        raise RuntimeError
+    assert mw.col
     noteIds = []
     for word in wordList:
         noteIds.extend(mw.col.find_notes(f'deck:"{deckName}" term:"{word}"'))
@@ -61,8 +58,7 @@ def noteFilterByModelName(note: notes.Note):
 def getNotesByDeckName(
     deckName: str, filter: Optional[Callable] = None
 ) -> list[notes.Note]:
-    if not mw.col:
-        raise RuntimeError
+    assert mw.col
 
     noteIds = mw.col.find_notes(f'deck:"{deckName}"')
     notes = []
@@ -76,20 +72,17 @@ def getNotesByDeckName(
 
 
 def removeNotes(noteIds):
-    if not mw.col:
-        raise RuntimeError
+    assert mw.col
     mw.col.remove_notes(noteIds)
 
 
 def updateNotes(notes):
-    if not mw.col:
-        raise RuntimeError
+    assert mw.col
     mw.col.update_notes(notes)
 
 
 def getOrCreateDeck(deckName, model):
-    if not mw.col:
-        raise RuntimeError
+    assert mw.col
     deck_id = mw.col.decks.id(deckName)
     deck = mw.col.decks.get(deck_id)  # type: ignore
     mw.col.decks.select(deck["id"])  # type: ignore
@@ -100,8 +93,7 @@ def getOrCreateDeck(deckName, model):
 
 
 def getOrCreateModel() -> models.NoteType:
-    if not mw.col:
-        raise RuntimeError
+    assert mw.col
     model = mw.col.models.by_name(MODEL_NAME)
     if model:
         if set([f["name"] for f in model["flds"]]) == set(MODEL_FIELDS):
@@ -118,8 +110,7 @@ def getOrCreateModel() -> models.NoteType:
 
 
 def getOrCreateModelCardTemplate(modelObject: models.NoteType):
-    if not mw.col:
-        raise RuntimeError
+    assert mw.col
     logger.info(f"添加卡片类型:{__TEMPLATE_NAME}")
     existingCardTemplate = modelObject["tmpls"]
     if __TEMPLATE_NAME in [t.get("name") for t in existingCardTemplate]:
@@ -190,8 +181,7 @@ def getOrCreateModelCardTemplate(modelObject: models.NoteType):
 def addNoteToDeck(
     deckObject, modelObject, currentConfig: Config, oneQueryResult: QueryWordData
 ):
-    if not mw.col:
-        raise RuntimeError
+    assert mw.col
     modelObject["did"] = deckObject["id"]
 
     newNote = mw.col.new_note(modelObject)
@@ -326,8 +316,7 @@ def writeNoteFields(
 
 def media_path(fileName: Optional[str]):
     """如果有文件名，返回完整文件路径，否则返回媒体库dir"""
-    if not mw.col:
-        raise RuntimeError
+    assert mw.col
     media_dir = mw.col.media.dir()
     if not fileName:
         return media_dir

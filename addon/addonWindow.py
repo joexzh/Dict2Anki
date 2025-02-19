@@ -379,18 +379,16 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         worker.doneWithResult.connect(self.on_queryDone)
         self.workerman.start(worker)
 
-    @pyqtSlot(tuple, dict)
-    def on_queryRowSuccess(self, row_word, result):
+    @pyqtSlot(int, str, dict)
+    def on_queryRowSuccess(self, row, word, result):
         """该行单词查询完毕"""
-        row, word = row_word
         doneIcon = QIcon(':/icons/done.png')
         wordItem = self.newWordListWidget.item(row)
         wordItem.setIcon(doneIcon) # type: ignore
         wordItem.setData(Qt.ItemDataRole.UserRole, result) # type: ignore
 
-    @pyqtSlot(tuple)
-    def on_queryRowFail(self, row_word):
-        row, word = row_word
+    @pyqtSlot(int, str)
+    def on_queryRowFail(self, row, word):
         failedIcon = QIcon(':/icons/failed.png')
         failedWordItem = self.newWordListWidget.item(row)
         failedWordItem.setIcon(failedIcon) # type: ignore
@@ -398,7 +396,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
     @pyqtSlot(list)
     def on_queryDone(self, results):
         failed_words = []
-        for (row, word), queryResult in results:
+        for row, word, queryResult in results:
             if not queryResult:
                 failed_words.append(word)
             if failed_words:
@@ -454,7 +452,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
             self.resetProgressBar(len(audiosDownloadTasks))
             
             worker = AudioDownloadWorker(audiosDownloadTasks)
-            worker.tick.connect(lambda t,s: self.progressBar.setValue(self.progressBar.value() + 1))
+            worker.tick.connect(lambda f,u,s: self.progressBar.setValue(self.progressBar.value() + 1))
             worker.done.connect(lambda _: tooltip(f'发音下载完成'))
             self.workerman.start(worker)
 
