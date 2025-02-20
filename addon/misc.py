@@ -48,24 +48,25 @@ class ThreadPool:
         self._q.join()
         while not self.results_q.qsize() == 0:
             self.result.append(self.results_q.get())
-        for worker in self._workers:
-            worker.interrupted = True  # run in GIL, assume thread safe?
+
+        return self.result
+
+    def exit(self):
+        self.wait_complete()
 
         # At this point all threads are blocked by queue.get(),
         # so put dummy items to unblock them.
         # Till Python 3.13 we can switch to queue.shutdown()
-        def dummy():
-            pass
-
+        for worker in self._workers:
+            worker.interrupted = True  # run in GIL, presume thread safe?
         for _ in range(len(self._workers)):
-            self._q.put((dummy, tuple(), dict()))
-        return self.result
+            self._q.put((lambda: None, tuple(), dict()))
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.wait_complete()
+        self.exit()
 
 
 def congestGenerator(n=60):

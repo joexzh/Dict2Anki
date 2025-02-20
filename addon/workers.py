@@ -44,7 +44,7 @@ class WorkerManager:
     def destroy(self):
         for worker in self._workers:
             worker.interrupted = True
-        self._pool.wait_complete()
+        self._pool.exit()
 
     def _on_worker_done(self, worker):
         self._logger.info("worker done: " + str(worker))
