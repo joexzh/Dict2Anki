@@ -13,7 +13,7 @@ from ._typing import QueryWordData
 from .addonWindow import Windows
 from .constants import *
 
-_logger = logging.getLogger("dict2Anki.repairer")
+_logger = logging.getLogger("dict2Anki.repair")
 
 
 _fieldConfigRemoveOnlyMap = {
@@ -156,11 +156,11 @@ class Repair:
             self._writeLogAndLabel(
                 f"没有要更新的笔记 . . . ", self._w.repairProgressNoteLabel
             )
-            return self._endTask(None, None)
+            return self._complete(None, None)
 
         if self._removeOnly():
             self._updateNotes(self._notes)
-            return self._endTask(
+            return self._complete(
                 "仅清空字段，跳过查询API和发音下载 . . . ",
                 self._w.repairProgressAudioLabel,
             )
@@ -248,7 +248,7 @@ class Repair:
         self._w.progressBar.setValue(self._w.progressBar.value() + 1)
 
     def _on_queryDone(self, _):
-        self._endTask(None, None)
+        self._complete(None, None)
 
     def _updateOneNote(self, note, queryResult):
         noteManager.writeNoteFields(
@@ -291,7 +291,7 @@ class Repair:
             self._audioCntGrp.success_cnt, self._audioCntGrp.fail_cnt
         )
 
-    def _endTask(self, msg, label):
+    def _complete(self, msg, label):
         if msg:
             self._writeLogAndLabel(msg, label)
         self._w.repairProgressNoteLabel.setText(

@@ -69,7 +69,7 @@ Anki --> 工具 --> 附加组件 --> 获取插件
 ![同步删除](https://raw.githubusercontent.com/joexzh/Dict2Anki/master/screenshots/del.gif)
 
 字段修复  
-![字段修复](https://raw.githubusercontent.com/joexzh/Dict2Anki/dev/screenshots/repair.png)
+![字段修复](https://raw.githubusercontent.com/joexzh/Dict2Anki/master/screenshots/repair.png)
 
 ### Contribute Guide
 
