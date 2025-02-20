@@ -5,7 +5,7 @@
 
 **Dict2Anki** 是一款方便[有道词典](http://cidian.youdao.com/multi.html)、[欧路词典](https://www.eudic.net/)用户同步生成单词本卡片至[Anki](https://apps.ankiweb.net/#download)的插件
 
-> **Note**:  
+> **Note:**  
 > 无论导入有道还是欧路词典的生词本，都推荐使用【查询 - 有道 API】。欧路词典API容易触发限流。
 
 ### Change log
@@ -69,7 +69,7 @@ Anki --> 工具 --> 附加组件 --> 获取插件
 ![同步删除](https://raw.githubusercontent.com/joexzh/Dict2Anki/master/screenshots/del.gif)
 
 字段修复  
-![字段修复](https://raw.githubusercontent.com/joexzh/Dict2Anki/master/screenshots/repair.png)
+![字段修复](https://raw.githubusercontent.com/joexzh/Dict2Anki/dev/screenshots/repair.png)
 
 ### Contribute Guide
 
