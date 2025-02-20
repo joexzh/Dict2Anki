@@ -471,61 +471,61 @@
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="noteFixTab">
+     <widget class="QWidget" name="repairTab">
       <attribute name="title">
        <string>修复</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_6">
        <item row="4" column="0" rowspan="2" colspan="2">
-        <widget class="QGroupBox" name="noteFixCBGroupBox">
+        <widget class="QGroupBox" name="repairCBGroupBox">
          <property name="title">
           <string>修复字段</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_5">
           <item row="0" column="0">
-           <widget class="QCheckBox" name="noteFixDefCB">
+           <widget class="QCheckBox" name="repairDefCB">
             <property name="text">
              <string>释义</string>
             </property>
            </widget>
           </item>
           <item row="0" column="1">
-           <widget class="QCheckBox" name="noteFixSentenceCB">
+           <widget class="QCheckBox" name="repairSentenceCB">
             <property name="text">
              <string>例句</string>
             </property>
            </widget>
           </item>
           <item row="0" column="2">
-           <widget class="QCheckBox" name="noteFixPhraseCB">
+           <widget class="QCheckBox" name="repairPhraseCB">
             <property name="text">
              <string>短语</string>
             </property>
            </widget>
           </item>
           <item row="0" column="3">
-           <widget class="QCheckBox" name="noteFixImgCB">
+           <widget class="QCheckBox" name="repairImgCB">
             <property name="text">
              <string>图片</string>
             </property>
            </widget>
           </item>
           <item row="1" column="0">
-           <widget class="QCheckBox" name="noteFixBrEPhoneticCB">
+           <widget class="QCheckBox" name="repairBrEPhoneticCB">
             <property name="text">
              <string>英式音标</string>
             </property>
            </widget>
           </item>
           <item row="1" column="1">
-           <widget class="QCheckBox" name="noteFixAmEPhoneticCB">
+           <widget class="QCheckBox" name="repairAmEPhoneticCB">
             <property name="text">
              <string>美式音标</string>
             </property>
            </widget>
           </item>
           <item row="1" column="2">
-           <widget class="QCheckBox" name="noteFixPronCB">
+           <widget class="QCheckBox" name="repairPronCB">
             <property name="text">
              <string>发音</string>
             </property>
@@ -535,14 +535,14 @@
         </widget>
        </item>
        <item row="6" column="0" colspan="2">
-        <widget class="QPushButton" name="noteFixBtn">
+        <widget class="QPushButton" name="repairBtn">
          <property name="text">
           <string>开始修复</string>
          </property>
         </widget>
        </item>
        <item row="0" column="0" colspan="2">
-        <widget class="QLabel" name="noteFixIntroLabel">
+        <widget class="QLabel" name="repairIntroLabel">
          <property name="text">
           <string>### 修复笔记中的字段
 
@@ -556,7 +556,7 @@
         </widget>
        </item>
        <item row="2" column="0" colspan="2">
-        <widget class="QGroupBox" name="noteFixProgressGroupBox">
+        <widget class="QGroupBox" name="repairProgressGroupBox">
          <property name="title">
           <string>进度信息</string>
          </property>
@@ -565,21 +565,21 @@
          </property>
          <layout class="QGridLayout" name="gridLayout_7">
           <item row="0" column="0">
-           <widget class="QLabel" name="noteFixProgressNoteLabel">
+           <widget class="QLabel" name="repairProgressNoteLabel">
             <property name="text">
              <string>本地笔记更新进度</string>
             </property>
            </widget>
           </item>
           <item row="1" column="0">
-           <widget class="QLabel" name="noteFixProgressQueryLabel">
+           <widget class="QLabel" name="repairProgressQueryLabel">
             <property name="text">
              <string>API 查询进度</string>
             </property>
            </widget>
           </item>
           <item row="2" column="0">
-           <widget class="QLabel" name="noteFixProgressAudioLabel">
+           <widget class="QLabel" name="repairProgressAudioLabel">
             <property name="text">
              <string>发音下载进度</string>
             </property>

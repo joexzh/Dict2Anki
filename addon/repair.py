@@ -13,7 +13,7 @@ from ._typing import QueryWordData
 from .addonWindow import Windows
 from .constants import *
 
-_logger = logging.getLogger("dict2Anki.noteFixer")
+_logger = logging.getLogger("dict2Anki.repairer")
 
 
 _fieldConfigRemoveOnlyMap = {
@@ -27,7 +27,7 @@ _fieldConfigRemoveOnlyMap = {
 }
 
 
-class NoteFixer:
+class Repair:
 
     def __init__(self, windows: Windows):
         self._w = windows
@@ -38,7 +38,7 @@ class NoteFixer:
         self._fieldFns = []
         self._whichPron = None
         self._api_name = ""
-        self._w.noteFixBtn.clicked.connect(self._on_noteFixBtnClick)
+        self._w.repairBtn.clicked.connect(self._on_repairBtnClick)
 
     def _formatStrFromCurrentConfig(self) -> str:
         configMap = self._w.config.map
@@ -67,35 +67,35 @@ class NoteFixer:
         label.setText(msg)
 
     def _UISetEnabled(self, b):
-        self._w.noteFixBtn.setEnabled(b)
-        self._w.noteFixCBGroupBox.setEnabled(b)
+        self._w.repairBtn.setEnabled(b)
+        self._w.repairCBGroupBox.setEnabled(b)
         self._w.resetProgressBar(1)
 
     def _getWriteFieldFnsFromUI(self):
         self._fieldFns = []
 
-        if self._w.noteFixDefCB.isChecked():
+        if self._w.repairDefCB.isChecked():
             self._fieldFns.append(noteManager.writeNoteDefinition)
 
-        if self._w.noteFixSentenceCB.isChecked():
+        if self._w.repairSentenceCB.isChecked():
             self._fieldFns.append(noteManager.writeNoteSentence)
 
-        if self._w.noteFixPhraseCB.isChecked():
+        if self._w.repairPhraseCB.isChecked():
             self._fieldFns.append(noteManager.writeNotePhrase)
 
-        if self._w.noteFixImgCB.isChecked():
+        if self._w.repairImgCB.isChecked():
             self._fieldFns.append(noteManager.writeNoteImage)
 
-        if self._w.noteFixBrEPhoneticCB.isChecked():
+        if self._w.repairBrEPhoneticCB.isChecked():
             self._fieldFns.append(noteManager.writeNoteBrEPhonetic)
 
-        if self._w.noteFixAmEPhoneticCB.isChecked():
+        if self._w.repairAmEPhoneticCB.isChecked():
             self._fieldFns.append(noteManager.writeNoteAmEPhonetic)
 
-        if self._w.noteFixPronCB.isChecked():
+        if self._w.repairPronCB.isChecked():
             self._fieldFns.append(noteManager.writeNotePron)
 
-    def _on_noteFixBtnClick(self):
+    def _on_repairBtnClick(self):
         self._getWriteFieldFnsFromUI()
         if not self._fieldFns:
             aqt.utils.showInfo("请勾选要修复的字段")
@@ -108,14 +108,14 @@ class NoteFixer:
             return
 
         if not self._checkLoginState():
-            self._writeLogAndLabel("请在登录后重试", self._w.noteFixProgressNoteLabel)
+            self._writeLogAndLabel("请在登录后重试", self._w.repairProgressNoteLabel)
             return
 
-        self._fix()
+        self._repair()
 
     def _checkLoginState(self) -> bool:
         self._writeLogAndLabel(
-            "正在检查登录信息 . . .", self._w.noteFixProgressNoteLabel
+            "正在检查登录信息 . . .", self._w.repairProgressNoteLabel
         )
         currentApi = self._w.config.get_current_api()
         currentDict = self._w.config.get_current_dict()
@@ -140,10 +140,10 @@ class NoteFixer:
         else:
             return True
 
-    def _fix(self):
+    def _repair(self):
         self._UISetEnabled(False)
-        self._w.noteFixProgressQueryLabel.clear()
-        self._w.noteFixProgressAudioLabel.clear()
+        self._w.repairProgressQueryLabel.clear()
+        self._w.repairProgressAudioLabel.clear()
         self._noteCnt = 0
         self._queryCntGrp.reset()
         self._audioCntGrp.reset()
@@ -154,7 +154,7 @@ class NoteFixer:
         )
         if len(self._notes) == 0:
             self._writeLogAndLabel(
-                f"没有要更新的笔记 . . . ", self._w.noteFixProgressNoteLabel
+                f"没有要更新的笔记 . . . ", self._w.repairProgressNoteLabel
             )
             return self._endTask(None, None)
 
@@ -162,7 +162,7 @@ class NoteFixer:
             self._updateNotes(self._notes)
             return self._endTask(
                 "仅清空字段，跳过查询API和发音下载 . . . ",
-                self._w.noteFixProgressAudioLabel,
+                self._w.repairProgressAudioLabel,
             )
 
         self._queryWords(self._notes)
@@ -177,17 +177,15 @@ class NoteFixer:
         )
 
     def _updateNoteProgress(self, cnt, total):
-        self._w.noteFixProgressNoteLabel.setText(
-            f"正在更新笔记：{cnt} / {total} . . . "
-        )
+        self._w.repairProgressNoteLabel.setText(f"正在更新笔记：{cnt} / {total} . . . ")
 
     def _updateQueryProgress(self, success_cnt, fail_cnt, total):
-        self._w.noteFixProgressQueryLabel.setText(
+        self._w.repairProgressQueryLabel.setText(
             f"正在调用{self._api_name}：{success_cnt + fail_cnt} / {total}，成功：{success_cnt}，失败：{fail_cnt} . . . "
         )
 
     def _updateAudioProgress(self, success_cnt, fail_cnt):
-        self._w.noteFixProgressAudioLabel.setText(
+        self._w.repairProgressAudioLabel.setText(
             f"正在下载发音，成功：{success_cnt}，失败：{fail_cnt} . . . "
         )
 
@@ -296,8 +294,8 @@ class NoteFixer:
     def _endTask(self, msg, label):
         if msg:
             self._writeLogAndLabel(msg, label)
-        self._w.noteFixProgressNoteLabel.setText(
-            self._w.noteFixProgressNoteLabel.text() + "修复完成"
+        self._w.repairProgressNoteLabel.setText(
+            self._w.repairProgressNoteLabel.text() + "修复完成"
         )
         self._UISetEnabled(True)
         self._clear()

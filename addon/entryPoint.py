@@ -1,5 +1,5 @@
 from .addonWindow import Windows
-from .noteFixer import NoteFixer
+from .repair import Repair
 
 
 class EntryPoint:
@@ -7,4 +7,4 @@ class EntryPoint:
 
     def __init__(self):
         self.windows = Windows()
-        self._noteFixer = NoteFixer(self.windows)
+        self._noteFixer = Repair(self.windows)
