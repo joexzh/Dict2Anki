@@ -41,25 +41,25 @@ class NoteFixer:
         self._w.noteFixBtn.clicked.connect(self._on_noteFixBtnClick)
 
     def _formatStrFromCurrentConfig(self) -> str:
-        config = self._w.currentConfig
+        configMap = self._w.config.map
 
         def pronStr():
-            if config[F_NOPRON]:
+            if configMap[F_NOPRON]:
                 return "无"
-            elif config[F_BREPRON]:
+            elif configMap[F_BREPRON]:
                 return "英"
             else:
                 return "美"
 
         return rf"""默认设置:
-        Deck：{config['deck']}
-        查词API：{self._w.getQueryApiByCurrentConfig().name}
-        释义：{config[F_DEFINITION]}
-        例句：{config[F_SENTENCE]}
-        短语：{config[F_PHRASE]}
-        图片：{config[F_IMAGE]}
-        英式音标：{config[F_BREPHONETIC]}
-        美式音标：{config[F_AMEPHONETIC]}
+        Deck：{configMap['deck']}
+        查词API：{self._w.config.get_current_api().name}
+        释义：{configMap[F_DEFINITION]}
+        例句：{configMap[F_SENTENCE]}
+        短语：{configMap[F_PHRASE]}
+        图片：{configMap[F_IMAGE]}
+        英式音标：{configMap[F_BREPHONETIC]}
+        美式音标：{configMap[F_AMEPHONETIC]}
         发音：{pronStr()}"""
 
     def _writeLogAndLabel(self, msg: str, label: aqt.QLabel):
@@ -95,16 +95,13 @@ class NoteFixer:
         if self._w.noteFixPronCB.isChecked():
             self._fieldFns.append(noteManager.writeNotePron)
 
-    # @aqt.pyqtSlot()
-    # decorating a pyqtSlot here will cause anki crash without any stacktrace information,
-    # will be very appreciated if anyone can explains this
     def _on_noteFixBtnClick(self):
         self._getWriteFieldFnsFromUI()
         if not self._fieldFns:
             aqt.utils.showInfo("请勾选要修复的字段")
             return
 
-        self._w.setCurrentConfigFromUI()
+        self._w.config.print()
         if not aqt.utils.askUser(
             f"{self._formatStrFromCurrentConfig()}\n\n可能要花费较长时间，是否继续?"
         ):
@@ -120,8 +117,8 @@ class NoteFixer:
         self._writeLogAndLabel(
             "正在检查登录信息 . . .", self._w.noteFixProgressNoteLabel
         )
-        currentApi = self._w.getQueryApiByCurrentConfig()
-        currentDict = self._w.getDictByCurrentConfig()
+        currentApi = self._w.config.get_current_api()
+        currentDict = self._w.config.get_current_dict()
 
         if currentApi == queryApi.eudict.API:
             if currentDict != dictionary.eudict.Eudict:
@@ -131,7 +128,9 @@ class NoteFixer:
                 return False
             else:
                 if currentDict.checkCookie(
-                    json.loads(str(self._w.currentConfig["cookie"]) or "{}")
+                    json.loads(
+                        str(self._w.config.get_current_credential()["cookie"]) or "{}"
+                    )
                 ):
                     return True
                 else:
@@ -148,10 +147,10 @@ class NoteFixer:
         self._noteCnt = 0
         self._queryCntGrp.reset()
         self._audioCntGrp.reset()
-        self._api_name = self._w.getQueryApiByCurrentConfig().name
+        self._api_name = self._w.config.get_current_api().name
 
         self._notes = noteManager.getNotesByDeckName(
-            self._w.currentConfig["deck"], noteManager.noteFilterByModelName
+            self._w.config.map["deck"], noteManager.noteFilterByModelName
         )
         if len(self._notes) == 0:
             self._writeLogAndLabel(
@@ -169,10 +168,8 @@ class NoteFixer:
         self._queryWords(self._notes)
 
         self._whichPron: Optional[str] = None
-        if not self._w.currentConfig[F_NOPRON]:
-            self._whichPron = (
-                F_AMEPRON if self._w.currentConfig[F_AMEPRON] else F_BREPRON
-            )
+        if not self._w.config.map[F_NOPRON]:
+            self._whichPron = F_AMEPRON if self._w.config.map[F_AMEPRON] else F_BREPRON
 
         self._updateNoteProgress(0, len(self._notes))
         self._updateAudioProgress(
@@ -197,7 +194,7 @@ class NoteFixer:
     def _removeOnly(self):
         ret = True
         for fn in self._fieldFns:
-            ret = ret & _fieldConfigRemoveOnlyMap[fn](self._w.currentConfig)
+            ret = ret & _fieldConfigRemoveOnlyMap[fn](self._w.config.map)
         return ret
 
     def _queryWords(self, notes):
@@ -213,7 +210,9 @@ class NoteFixer:
             self._queryCntGrp.total,
         )
 
-        worker = workers.QueryWorker(row_words, self._w.getQueryApiByCurrentConfig())
+        worker = workers.QueryWorker(
+            row_words, self._w.config.get_current_api(), self._w.config.map[F_CONGEST]
+        )
         worker.rowSuccess.connect(self._on_queryRowSuccess)
         worker.rowFail.connect(self._on_queryRowFail)
         worker.tick.connect(self._queryRowTick)
@@ -255,7 +254,7 @@ class NoteFixer:
 
     def _updateOneNote(self, note, queryResult):
         noteManager.writeNoteFields(
-            note, queryResult, self._w.currentConfig, self._fieldFns
+            note, queryResult, self._w.config.map, self._fieldFns
         )
 
     def _updateNotes(self, notes):

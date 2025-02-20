@@ -1,4 +1,4 @@
-VERSION = 'v7.1.0'
+VERSION = 'v7.2.0'
 RELEASE_URL = 'https://github.com/joexzh/Dict2Anki'
 VERSION_CHECK_API = 'https://api.github.com/repos/joexzh/Dict2Anki/releases/latest'
 ADDON_NAME = 'Dict2Anki-ng'
@@ -19,6 +19,7 @@ F_BREPRON = 'BrEPron' # 英式发音
 F_AMEPRON = 'AmEPron' # 美式发音
 F_NOPRON = 'noPron'
 F_TERM = 'term'
+F_CONGEST = 'congest' # 限流
 
 BASIC_OPTION = [F_DEFINITION, F_SENTENCE, F_PHRASE, F_IMAGE, F_BREPHONETIC, F_AMEPHONETIC]  # 顺序和名称不可修改
 EXTRA_OPTION = [F_BREPRON, F_AMEPRON, F_NOPRON]  # 顺序和名称不可修改

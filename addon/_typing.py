@@ -21,14 +21,12 @@ class Credential(TypedDict):
     cookie: str
 
 
-class Config(TypedDict):
+class ConfigMap(TypedDict):
     deck: str
     selectedDict: int
     selectedGroup: list[list[str]]
     selectedApi: int
-    username: str
-    password: Mask
-    cookie: Mask
+    credential: list[Credential]
     definition: bool
     sentence: bool
     image: bool
@@ -38,6 +36,7 @@ class Config(TypedDict):
     BrEPron: bool
     AmEPron: bool
     noPron: bool
+    congest: int
 
 
 class AbstractDictionary(ABC):

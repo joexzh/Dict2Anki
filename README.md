@@ -10,8 +10,8 @@
 
 ### Change log
 ___
-* v7.1.1
-  * 查询API暂时限定在每分钟60次
+* v7.2.0
+  * 【默认配置】新增【每分钟查询次数】
 * v7.1.0
   * 增加字段修复功能
 * v7.0.0
@@ -63,10 +63,13 @@ Anki --> 工具 --> 附加组件 --> 获取插件
 ### How to use
 
 同步  
-<img src = "https://raw.githubusercontent.com/joexzh/Dict2Anki/master/screenshots/sync.gif"></span>
+![同步](https://raw.githubusercontent.com/joexzh/Dict2Anki/master/screenshots/sync.gif)
 
 同步删除  
-<img src = "https://raw.githubusercontent.com/joexzh/Dict2Anki/master/screenshots/del.gif"></span>
+![同步删除](https://raw.githubusercontent.com/joexzh/Dict2Anki/master/screenshots/del.gif)
+
+字段修复  
+![字段修复](https://raw.githubusercontent.com/joexzh/Dict2Anki/master/screenshots/repair.png)
 
 ### Contribute Guide
 

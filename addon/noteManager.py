@@ -3,7 +3,7 @@ import os
 from collections.abc import Callable
 from typing import Optional
 
-from ._typing import Config, QueryWordData
+from ._typing import ConfigMap, QueryWordData
 from .constants import *
 
 logger = logging.getLogger("dict2Anki.noteManager")
@@ -179,7 +179,7 @@ def getOrCreateModelCardTemplate(modelObject: models.NoteType):
 
 
 def addNoteToDeck(
-    deckObject, modelObject, currentConfig: Config, oneQueryResult: QueryWordData
+    deckObject, modelObject, configMap: ConfigMap, oneQueryResult: QueryWordData
 ):
     assert mw.col
     modelObject["did"] = deckObject["id"]
@@ -189,7 +189,7 @@ def addNoteToDeck(
     writeNoteFields(
         newNote,
         oneQueryResult,
-        currentConfig,
+        configMap,
         [
             writeNoteDefinition,
             writeNotePhrase,
@@ -205,9 +205,9 @@ def addNoteToDeck(
 
 
 def writeNoteDefinition(
-    note: notes.Note, queryData: Optional[QueryWordData], currentConfig: Config
+    note: notes.Note, queryData: Optional[QueryWordData], configMap: ConfigMap
 ):
-    if currentConfig[F_DEFINITION]:
+    if configMap[F_DEFINITION]:
         if queryData and queryData[F_DEFINITION]:
             note[F_DEFINITION] = "<br>".join(queryData[F_DEFINITION])
     else:
@@ -215,9 +215,9 @@ def writeNoteDefinition(
 
 
 def writeNotePhrase(
-    note: notes.Note, queryData: Optional[QueryWordData], currentConfig: Config
+    note: notes.Note, queryData: Optional[QueryWordData], configMap: ConfigMap
 ):
-    if currentConfig[F_PHRASE]:
+    if configMap[F_PHRASE]:
         if queryData and queryData[F_PHRASE]:
             note[f"{F_PHRASE}Front"] = "<br>".join(
                 [f"<i>{e.strip()}</i>" for e, _ in queryData[F_PHRASE]]
@@ -231,9 +231,9 @@ def writeNotePhrase(
 
 
 def writeNoteSentence(
-    note: notes.Note, queryData: Optional[QueryWordData], currentConfig: Config
+    note: notes.Note, queryData: Optional[QueryWordData], configMap: ConfigMap
 ):
-    if currentConfig[F_SENTENCE]:
+    if configMap[F_SENTENCE]:
         if queryData and queryData[F_SENTENCE]:
             note[f"{F_SENTENCE}Front"] = (
                 "<ol>"
@@ -256,9 +256,9 @@ def writeNoteSentence(
 
 
 def writeNoteImage(
-    note: notes.Note, queryData: Optional[QueryWordData], currentConfig: Config
+    note: notes.Note, queryData: Optional[QueryWordData], configMap: ConfigMap
 ):
-    if currentConfig[F_IMAGE]:
+    if configMap[F_IMAGE]:
         if queryData and queryData[F_IMAGE]:
             note[F_IMAGE] = f'<img style="max-height:300px" src="{queryData[F_IMAGE]}">'
     else:
@@ -266,15 +266,15 @@ def writeNoteImage(
 
 
 def writeNotePron(
-    note: notes.Note, queryData: Optional[QueryWordData], currentConfig: Config
+    note: notes.Note, queryData: Optional[QueryWordData], configMap: ConfigMap
 ):
-    if currentConfig[F_AMEPRON]:
+    if configMap[F_AMEPRON]:
         if queryData and queryData[F_AMEPRON]:
             note[F_AMEPRON] = f"[sound:{F_AMEPRON}_{queryData[F_TERM]}.mp3]"
     else:
         note[F_AMEPRON] = ""
 
-    if currentConfig[F_BREPRON]:
+    if configMap[F_BREPRON]:
         if queryData and queryData[F_BREPRON]:
             note[F_BREPRON] = f"[sound:{F_BREPRON}_{queryData[F_TERM]}.mp3]"
     else:
@@ -282,9 +282,9 @@ def writeNotePron(
 
 
 def writeNoteAmEPhonetic(
-    note: notes.Note, queryData: Optional[QueryWordData], currentConfig: Config
+    note: notes.Note, queryData: Optional[QueryWordData], configMap: ConfigMap
 ):
-    if currentConfig[F_AMEPHONETIC]:
+    if configMap[F_AMEPHONETIC]:
         if queryData and queryData[F_AMEPHONETIC]:
             note[F_AMEPHONETIC] = queryData[F_AMEPHONETIC]
     else:
@@ -292,26 +292,26 @@ def writeNoteAmEPhonetic(
 
 
 def writeNoteBrEPhonetic(
-    note: notes.Note, queryData: Optional[QueryWordData], currentConfig: Config
+    note: notes.Note, queryData: Optional[QueryWordData], configMap: ConfigMap
 ):
-    if currentConfig[F_BREPHONETIC]:
+    if configMap[F_BREPHONETIC]:
         if queryData and queryData[F_BREPHONETIC]:
             note[F_BREPHONETIC] = queryData[F_BREPHONETIC]
     else:
         note[F_BREPHONETIC] = ""
 
 
-writeNoteFnType = Callable[[notes.Note, Optional[QueryWordData], Config], None]
+writeNoteFnType = Callable[[notes.Note, Optional[QueryWordData], ConfigMap], None]
 
 
 def writeNoteFields(
     note: notes.Note,
     queryData: Optional[QueryWordData],
-    currentConfig: Config,
+    configMap: ConfigMap,
     modifyFieldFns: list[writeNoteFnType],
 ):
     for fn in modifyFieldFns:
-        fn(note, queryData, currentConfig)
+        fn(note, queryData, configMap)
 
 
 def media_path(fileName: Optional[str]):

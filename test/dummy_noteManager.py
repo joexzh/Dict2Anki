@@ -1,4 +1,4 @@
-from ..addon._typing import Config, QueryWordData
+from ..addon._typing import QueryWordData, ConfigMap
 from ..addon.constants import *
 from .dummy_anki import models
 
@@ -18,7 +18,7 @@ def getOrCreateModelCardTemplate(modelObject):
     pass
 
 
-def addNoteToDeck(deckObject, modelObject, currentConfig: Config, oneQueryResult: QueryWordData):
+def addNoteToDeck(deckObject, modelObject, configMap: ConfigMap, oneQueryResult: QueryWordData):
     pass
 
 

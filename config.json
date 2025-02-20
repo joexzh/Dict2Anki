@@ -1,7 +1,7 @@
 {
   "deck": "",
   "selectedDict": 0,
-  "selectedGroup": null,
+  "selectedGroup": [[], []],
   "selectedApi": 0,
   "credential": [
     {
@@ -23,5 +23,6 @@
   "BrEPhonetic": true,
   "BrEPron": false,
   "AmEPron": false,
-  "noPron": true
+  "noPron": true,
+  "congest": 60
 }
