@@ -1,129 +1,70 @@
+import copy
+
+import aqt
+import aqt.utils
 import pytest
+import requests
 from PyQt6.QtCore import Qt
-
-from addon.addonWindow import Windows
-from addon.constants import VERSION
-import json
 from PyQt6.QtWidgets import QApplication
-import sys
+
+from ..addon import dictionary
+from ..addon.addonWindow import Windows, noteManager
+from ..addon.constants import *
+from .mock_helper import w_mock
 
 
-@pytest.fixture
-def fresh_config():
-    return json.loads('''{
-      "deck": "",
-      "selectedDict": 0,
-      "selectedGroup": null,
-      "selectedApi": 0,
-      "credential": [
-        {
-          "username": "",
-          "password": "",
-          "cookie": ""
-        },
-        {
-          "username": "",
-          "password": "",
-          "cookie": ""
-        }
-      ],
-      "definition": true,
-      "sentence": true,
-      "image": true,
-      "phrase": true,
-      "AmEPhonetic": true,
-      "BrEPhonetic": true,
-      "BrEPron": false,
-      "AmEPron": true,
-      "noPron": false
-    }''')
-
-
-@pytest.fixture(autouse=True)
-def no_requests(monkeypatch):
-    # monkeypatch.delattr("requests.sessions.Session.request")
-    pass
-
-
-@pytest.fixture(scope='function')
-def window(qtbot):
-    event_loop = QApplication(sys.argv)
-    w = Windows()
+def test_start_up_with_fresh_config(qtbot, w_mock):
+    w: Windows = w_mock()
     qtbot.addWidget(w)
-    qtbot.wait(500)
-    yield w
 
-
-@pytest.mark.skip
-def test_start_up_with_fresh_config(qtbot, mocker, fresh_config):
-    app = QApplication(sys.argv)
-    mocked_getConfig = mocker.patch('addon.addonWindow.mw.addonManager.getConfig', return_value=fresh_config)
-    w = Windows()
-    qtbot.addWidget(w)
-    qtbot.wait(200)
-    assert VERSION in w.windowTitle()
-    assert w.workerThread.isRunning()
-    mocked_getConfig.assert_called()
+    assert w.conf.no_pron == False
+    assert ADDON_FULL_NAME in w.windowTitle()
+    assert aqt.mw.addonManager.getConfig.called > 0
     assert w.usernameLineEdit.text() == w.passwordLineEdit.text() == w.cookieLineEdit.text() == ''
 
+def test_version_check(qtbot, monkeypatch, w_mock):
+    new_tag = "v99999.0.0"
+    monkeypatch.setitem(requests.get("").json.return_value, "tag_name", new_tag)
 
-@pytest.mark.skip
-def test_version_check(qtbot, mocker, monkeypatch):
-    mocked_VersionCheckWorker_run = mocker.patch('addon.addonWindow.VersionCheckWorker.run')
-    mocked_askUser = mocker.patch('addon.addonWindow.askUser')
-    app = QApplication(sys.argv)
-    w = Windows()
+    w = w_mock()
     qtbot.addWidget(w)
-    qtbot.waitUntil(w.updateCheckThead.isRunning)
-    mocked_VersionCheckWorker_run.assert_called()
-    w.updateCheckWork.haveNewVersion.emit('xxx', 'yyy') # type: ignore
-    qtbot.wait(100)
-    mocked_askUser.assert_called_with(f'有新版本:xxx是否更新？\n\nyyy')
+
+    def check_askUser():
+        assert aqt.utils.askUser.called_with == ((
+            f"有新版本:{new_tag.strip()}是否更新？\n\n{requests.get('').json.return_value['body'].strip()}",), {})
+
+    qtbot.waitUntil(check_askUser)
+    assert requests.get("").json.called > 0
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize('index', [0, 1])
-def test_dictionary_combobox_change(qtbot, index, mocker, fresh_config):
-    fresh_config['credential'] = [{'username': '0', 'password': '0', 'cookie': '0'},
-                                  {'username': '1', 'password': '1', 'cookie': '1'}]
-    mocker.patch('addon.addonWindow.mw.addonManager.getConfig', return_value=fresh_config)
-    app = QApplication(sys.argv)
-    w = Windows()
+def test_dictionary_combobox_change(index, monkeypatch, w_mock, qtbot):
+    monkeypatch.setitem(aqt.mw.addonManager.getConfig.return_value, "credential", [
+        {'username': '0', 'password': '0', 'cookie': '0'},
+        {'username': '1', 'password': '1', 'cookie': '1'}])
+
+    w: Windows = w_mock()
     qtbot.addWidget(w)
-    qtbot.wait(500)
     w.dictionaryComboBox.setCurrentIndex(index)
+
+    assert w.conf.selected_dict == index
     assert w.dictionaryComboBox.currentText() in w.currentDictionaryLabel.text()
-    # assert w.usernameLineEdit.text() == fresh_config['credential'][index]['username']
-    # assert w.passwordLineEdit.text() == fresh_config['credential'][index]['password']
-    assert w.cookieLineEdit.text() == fresh_config['credential'][index]['cookie']
+    assert w.conf.current_cookies == aqt.mw.addonManager.getConfig.return_value['credential'][index]["cookie"]
+    assert w.cookieLineEdit.text() == w.conf.current_cookies
 
 
-@pytest.mark.skip
-def test_get_deck_list(qtbot, fresh_config, mocker):
-    fresh_config['deck'] = 'b'
-    mocker.patch('addon.addonWindow.mw.addonManager.getConfig', return_value=fresh_config)
-    mocker.patch('addon.addonWindow.getDeckList', return_value=['a', 'b', 'c'])
-    app = QApplication(sys.argv)
-    w = Windows()
+def test_get_deck_list(qtbot, monkeypatch, w_mock):
+    monkeypatch.setitem(aqt.mw.addonManager.getConfig.return_value, "deck", "b")
+    monkeypatch.setattr(noteManager, "getDeckNames", lambda: ["a", "b", "c"])
+
+    w: Windows = w_mock()
     qtbot.addWidget(w)
-    qtbot.wait(200)
+
     assert [w.deckComboBox.itemText(row) for row in range(w.deckComboBox.count())] == ['a', 'b', 'c']
     assert w.deckComboBox.currentText() == 'b'
+    assert w.conf.deck == "b"
 
 
-@pytest.mark.skip
-@pytest.mark.parametrize('words', [
-    ['a', 'b', 'c', 'd'],
-    []
-])
-def test_newWordWidget(window, words):
-    window.insertWordToListWidget(words)
-    assert [window.newWordListWidget.item(row).text() for row in range(window.newWordListWidget.count())] == words
-    assert all(
-        window.newWordListWidget.item(row).data(Qt.ItemDataRole.UserRole) is None for row in range(window.newWordListWidget.count()))
-
-
-@pytest.mark.skip
 @pytest.mark.parametrize('local_words,remote_words,test_index', [
     ([], [], 0),
     ([], ['a', 'b'], 1),
@@ -132,35 +73,43 @@ def test_newWordWidget(window, words):
     (['a', 'b'], ['c', 'd'], 4),
     (['a', 'b'], ['c', 'b'], 5),
 ])
-def test_fetch_word_and_compare(monkeypatch, mocker, window, qtbot, local_words, remote_words, test_index):
-    mocker.patch('addon.dictionary.eudict.Eudict.getWordsByPage', return_value=remote_words)
-    mocker.patch('addon.dictionary.eudict.Eudict.getTotalPage', return_value=1)
-    mocker.patch('addon.addonWindow.getWordsByDeck', return_value=local_words)
-    mocked_tooltip = mocker.patch('addon.addonWindow.tooltip')
-    from addon.dictionary.eudict import Eudict
-    window.selectedDict = Eudict()
-    window.selectedDict.groups = [('group_1', 1)]
-    qtbot.waitUntil(window.workerThread.isRunning, timeout=5000)
-    window.getRemoteWordList(['group_1'])
-    qtbot.wait(1000)
-    item_in_list_widget = [window.newWordListWidget.item(row) for row in range(window.newWordListWidget.count())]
-    item_in_del_widget = [window.needDeleteWordListWidget.item(row) for row in
-                          range(window.needDeleteWordListWidget.count())]
-    words_in_list_widget = [i.text() for i in item_in_list_widget]
-    words_in_del_widget = [i.text() for i in item_in_del_widget]
+def test_fetch_word_and_compare(monkeypatch, w_mock, qtbot, local_words, remote_words, test_index):
+    monkeypatch.setattr(noteManager, "getWordsByDeck", lambda x: copy.deepcopy(local_words))
+    monkeypatch.setattr(dictionary.eudict.Eudict, "getTotalPage", lambda x, y: 1)
+    monkeypatch.setattr(dictionary.eudict.Eudict, "getWordsByPage", lambda x,y,z: copy.deepcopy(remote_words))
 
-    assert all([item.data(Qt.ItemDataRole.UserRole) is None for item in item_in_list_widget])
+    w: Windows = w_mock()
+    qtbot.addWidget(w)
+
+    w.conf.selected_dict = dictionary.dictionaries.index(dictionary.eudict.Eudict)
+    # value of w.conf is from monkeypatch, also need monkeypatch to modify it
+    monkeypatch.setattr(w.conf, "current_selected_groups", ["group_1"]) # "group_1" is dummy value
+    w.get_current_dict().groups = [(w.conf.current_selected_groups[0], "1")] # "1" is dummy value
+    w.getRemoteWordList(w.conf.current_selected_groups)
+
+    def check_tooltip():
+        assert aqt.utils.tooltip.called
+
+    qtbot.waitUntil(check_tooltip)
+
+    item_in_list_widget = [w.newWordListWidget.item(row) for row in range(w.newWordListWidget.count())]
+    item_in_del_widget = [w.needDeleteWordListWidget.item(row) for row in
+                        range(w.needDeleteWordListWidget.count())]
+    words_in_list_widget = [i.text() for i in item_in_list_widget]  # type: ignore
+    words_in_del_widget = [i.text() for i in item_in_del_widget]  # type: ignore
+
+    assert all([item.data(Qt.ItemDataRole.UserRole) is None for item in item_in_list_widget])  # type: ignore
     if test_index == 0:
         assert item_in_list_widget == []
         assert item_in_del_widget == []
-        assert mocked_tooltip.called_with('无需同步')
+        assert aqt.utils.tooltip.called_with == (('无需同步',), {})
     elif test_index == 1:
         assert sorted(words_in_list_widget) == sorted(remote_words)
         assert item_in_del_widget == []
     elif test_index == 2:
         assert item_in_list_widget == []
         assert item_in_del_widget == []
-        assert mocked_tooltip.called_with('无需同步')
+        assert aqt.utils.tooltip.called_with == (('无需同步',), {})
     elif test_index == 3:
         assert words_in_list_widget == ['b']
         assert item_in_del_widget == []

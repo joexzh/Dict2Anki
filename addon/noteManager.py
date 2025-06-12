@@ -3,33 +3,30 @@ import os
 from collections.abc import Callable
 from typing import Optional
 
-from ._typing import ConfigMap, QueryWordData
+import aqt
+from anki import models, notes
+
+from . import misc
+from ._typing import QueryWordData
+from .conf_model import Conf
 from .constants import *
 
 logger = logging.getLogger("dict2Anki.noteManager")
-try:
-    from anki import models, notes
-    from aqt import mw
-except ImportError:
-    # from test.dummy_aqt import mw
-    # from test.dummy_anki import notes, models
-    pass
-
 
 __TEMPLATE_NAME = "default"
 
 
 def getDeckNames():
-    assert mw.col
-    return [deck["name"] for deck in mw.col.decks.all()]
+    assert aqt.mw.col
+    return [deck["name"] for deck in aqt.mw.col.decks.all()]
 
 
 def getWordsByDeck(deckName) -> list[str]:
-    assert mw.col
-    noteIds = mw.col.find_notes(f'deck:"{deckName}"')
+    assert aqt.mw.col
+    noteIds = aqt.mw.col.find_notes(f'deck:"{deckName}"')
     words = []
     for nid in noteIds:
-        note = mw.col.get_note(nid)
+        note = aqt.mw.col.get_note(nid)
         model = note.note_type()
         if (
             model
@@ -41,10 +38,10 @@ def getWordsByDeck(deckName) -> list[str]:
 
 
 def getNoteIds(wordList, deckName) -> list[notes.NoteId]:
-    assert mw.col
+    assert aqt.mw.col
     noteIds = []
     for word in wordList:
-        noteIds.extend(mw.col.find_notes(f'deck:"{deckName}" term:"{word}"'))
+        noteIds.extend(aqt.mw.col.find_notes(f'deck:"{deckName}" term:"{word}"'))
     return noteIds
 
 
@@ -58,12 +55,12 @@ def noteFilterByModelName(note: notes.Note):
 def getNotesByDeckName(
     deckName: str, filter: Optional[Callable] = None
 ) -> list[notes.Note]:
-    assert mw.col
+    assert aqt.mw.col
 
-    noteIds = mw.col.find_notes(f'deck:"{deckName}"')
+    noteIds = aqt.mw.col.find_notes(f'deck:"{deckName}"')
     notes = []
     for noteId in noteIds:
-        note = mw.col.get_note(noteId)
+        note = aqt.mw.col.get_note(noteId)
         if not filter:
             notes.append(note)
         elif filter(note):
@@ -72,50 +69,50 @@ def getNotesByDeckName(
 
 
 def removeNotes(noteIds):
-    assert mw.col
-    mw.col.remove_notes(noteIds)
+    assert aqt.mw.col
+    aqt.mw.col.remove_notes(noteIds)
 
 
 def updateNotes(notes):
-    assert mw.col
-    mw.col.update_notes(notes)
+    assert aqt.mw.col
+    aqt.mw.col.update_notes(notes)
 
 
 def getOrCreateDeck(deckName, model):
-    assert mw.col
-    deck_id = mw.col.decks.id(deckName)
-    deck = mw.col.decks.get(deck_id)  # type: ignore
-    mw.col.decks.select(deck["id"])  # type: ignore
-    mw.col.decks.save(deck)
+    assert aqt.mw.col
+    deck_id = aqt.mw.col.decks.id(deckName)
+    deck = aqt.mw.col.decks.get(deck_id)  # type: ignore
+    aqt.mw.col.decks.select(deck["id"])  # type: ignore
+    aqt.mw.col.decks.save(deck)
     model["did"] = deck["id"]  # type: ignore
-    mw.col.models.save(model)
+    aqt.mw.col.models.save(model)
     return deck
 
 
 def getOrCreateModel() -> models.NoteType:
-    assert mw.col
-    model = mw.col.models.by_name(MODEL_NAME)
+    assert aqt.mw.col
+    model = aqt.mw.col.models.by_name(MODEL_NAME)
     if model:
         if set([f["name"] for f in model["flds"]]) == set(MODEL_FIELDS):
             return model
         else:
             logger.warning("模版字段异常，自动删除重建")
-            mw.col.models.remove(model["id"])
+            aqt.mw.col.models.remove(model["id"])
 
     logger.info(f"创建新模版:{MODEL_NAME}")
-    model = mw.col.models.new(MODEL_NAME)
+    model = aqt.mw.col.models.new(MODEL_NAME)
     for field_name in MODEL_FIELDS:
-        mw.col.models.add_field(model, mw.col.models.new_field(field_name))
+        aqt.mw.col.models.add_field(model, aqt.mw.col.models.new_field(field_name))
     return model
 
 
 def getOrCreateModelCardTemplate(modelObject: models.NoteType):
-    assert mw.col
+    assert aqt.mw.col
     logger.info(f"添加卡片类型:{__TEMPLATE_NAME}")
     existingCardTemplate = modelObject["tmpls"]
     if __TEMPLATE_NAME in [t.get("name") for t in existingCardTemplate]:
         return
-    cardTemplate = mw.col.models.new_template(__TEMPLATE_NAME)
+    cardTemplate = aqt.mw.col.models.new_template(__TEMPLATE_NAME)
     cardTemplate[
         "qfmt"
     ] = """
@@ -174,22 +171,20 @@ def getOrCreateModelCardTemplate(modelObject: models.NoteType):
     font-size : 35px;
 }
     """
-    mw.col.models.addTemplate(modelObject, cardTemplate)
-    mw.col.models.add(modelObject)
+    aqt.mw.col.models.addTemplate(modelObject, cardTemplate)
+    aqt.mw.col.models.add(modelObject)
 
 
-def addNoteToDeck(
-    deckObject, modelObject, configMap: ConfigMap, oneQueryResult: QueryWordData
-):
-    assert mw.col
+def addNoteToDeck(deckObject, modelObject, conf: Conf, oneQueryResult: QueryWordData):
+    assert aqt.mw.col
     modelObject["did"] = deckObject["id"]
 
-    newNote = mw.col.new_note(modelObject)
+    newNote = aqt.mw.col.new_note(modelObject)
     newNote[F_TERM] = oneQueryResult[F_TERM]
     writeNoteFields(
         newNote,
         oneQueryResult,
-        configMap,
+        conf,
         [
             writeNoteDefinition,
             writeNotePhrase,
@@ -200,24 +195,22 @@ def addNoteToDeck(
             writeNoteBrEPhonetic,
         ],
     )  # 写入所有字段
-    mw.col.add_note(newNote, deckObject["id"])
+    aqt.mw.col.add_note(newNote, deckObject["id"])
     logger.info(f"添加笔记{newNote[F_TERM]}")
 
 
 def writeNoteDefinition(
-    note: notes.Note, queryData: Optional[QueryWordData], configMap: ConfigMap
+    note: notes.Note, queryData: Optional[QueryWordData], conf: Conf
 ):
-    if configMap[F_DEFINITION]:
+    if conf.definition:
         if queryData and queryData[F_DEFINITION]:
             note[F_DEFINITION] = "<br>".join(queryData[F_DEFINITION])
     else:
         note[F_DEFINITION] = ""
 
 
-def writeNotePhrase(
-    note: notes.Note, queryData: Optional[QueryWordData], configMap: ConfigMap
-):
-    if configMap[F_PHRASE]:
+def writeNotePhrase(note: notes.Note, queryData: Optional[QueryWordData], conf: Conf):
+    if conf.phrase:
         if queryData and queryData[F_PHRASE]:
             note[f"{F_PHRASE}Front"] = "<br>".join(
                 [f"<i>{e.strip()}</i>" for e, _ in queryData[F_PHRASE]]
@@ -226,14 +219,12 @@ def writeNotePhrase(
                 [f"<i>{e.strip()}</i> {c.strip()}" for e, c in queryData[F_PHRASE]]
             )
     else:
-        note[f"{F_PHRASE}Front"] = ""
-        note[f"{F_PHRASE}Back"] = ""
+        clear_field(note, f"{F_PHRASE}Front")
+        clear_field(note, f"{F_PHRASE}Back")
 
 
-def writeNoteSentence(
-    note: notes.Note, queryData: Optional[QueryWordData], configMap: ConfigMap
-):
-    if configMap[F_SENTENCE]:
+def writeNoteSentence(note: notes.Note, queryData: Optional[QueryWordData], conf: Conf):
+    if conf.sentence:
         if queryData and queryData[F_SENTENCE]:
             note[f"{F_SENTENCE}Front"] = (
                 "<ol>"
@@ -251,73 +242,77 @@ def writeNoteSentence(
                 + "</ol>"
             )
     else:
-        note[f"{F_SENTENCE}Front"] = ""
-        note[f"{F_SENTENCE}Back"] = ""
+        clear_field(note, f"{F_SENTENCE}Front")
+        clear_field(note, f"{F_SENTENCE}Back")
 
 
-def writeNoteImage(
-    note: notes.Note, queryData: Optional[QueryWordData], configMap: ConfigMap
-):
-    if configMap[F_IMAGE]:
+def writeNoteImage(note: notes.Note, queryData: Optional[QueryWordData], conf: Conf):
+    if conf.image:
         if queryData and queryData[F_IMAGE]:
             note[F_IMAGE] = f'<img style="max-height:300px" src="{queryData[F_IMAGE]}">'
     else:
-        note[F_IMAGE] = ""
+        clear_field(note, F_IMAGE)
 
 
-def writeNotePron(
-    note: notes.Note, queryData: Optional[QueryWordData], configMap: ConfigMap
-):
-    if configMap[F_AMEPRON]:
+def writeNotePron(note: notes.Note, queryData: Optional[QueryWordData], conf: Conf):
+    if conf.ame_pron:
         if queryData and queryData[F_AMEPRON]:
-            note[F_AMEPRON] = f"[sound:{F_AMEPRON}_{queryData[F_TERM]}.mp3]"
+            note[F_AMEPRON] = make_pron_field(F_AMEPRON, queryData[F_TERM])
     else:
-        note[F_AMEPRON] = ""
+        clear_field(note, F_AMEPRON)
 
-    if configMap[F_BREPRON]:
+    if conf.bre_pron:
         if queryData and queryData[F_BREPRON]:
-            note[F_BREPRON] = f"[sound:{F_BREPRON}_{queryData[F_TERM]}.mp3]"
+            note[F_BREPRON] = make_pron_field(F_BREPRON, queryData[F_TERM])
     else:
-        note[F_BREPRON] = ""
+        clear_field(note, F_BREPRON)
 
 
 def writeNoteAmEPhonetic(
-    note: notes.Note, queryData: Optional[QueryWordData], configMap: ConfigMap
+    note: notes.Note, queryData: Optional[QueryWordData], conf: Conf
 ):
-    if configMap[F_AMEPHONETIC]:
+    if conf.ame_phonetic:
         if queryData and queryData[F_AMEPHONETIC]:
             note[F_AMEPHONETIC] = queryData[F_AMEPHONETIC]
     else:
-        note[F_AMEPHONETIC] = ""
+        clear_field(note, F_AMEPHONETIC)
 
 
 def writeNoteBrEPhonetic(
-    note: notes.Note, queryData: Optional[QueryWordData], configMap: ConfigMap
+    note: notes.Note, queryData: Optional[QueryWordData], conf: Conf
 ):
-    if configMap[F_BREPHONETIC]:
+    if conf.bre_phonetic:
         if queryData and queryData[F_BREPHONETIC]:
             note[F_BREPHONETIC] = queryData[F_BREPHONETIC]
     else:
-        note[F_BREPHONETIC] = ""
+        clear_field(note, F_BREPHONETIC)
 
 
-writeNoteFnType = Callable[[notes.Note, Optional[QueryWordData], ConfigMap], None]
+writeNoteFnType = Callable[[notes.Note, Optional[QueryWordData], Conf], None]
 
 
 def writeNoteFields(
     note: notes.Note,
     queryData: Optional[QueryWordData],
-    configMap: ConfigMap,
+    conf: Conf,
     modifyFieldFns: list[writeNoteFnType],
 ):
     for fn in modifyFieldFns:
-        fn(note, queryData, configMap)
+        fn(note, queryData, conf)
 
 
 def media_path(fileName: Optional[str]):
     """如果有文件名，返回完整文件路径，否则返回媒体库dir"""
-    assert mw.col
-    media_dir = mw.col.media.dir()
+    assert aqt.mw.col
+    media_dir = aqt.mw.col.media.dir()
     if not fileName:
         return media_dir
     return os.path.join(media_dir, fileName)
+
+
+def make_pron_field(prefix: str, term: str):
+    return f"[sound:{misc.audio_fname(prefix, term)}]"
+
+
+def clear_field(note: notes.Note, field_name: str):
+    note[field_name] = ""

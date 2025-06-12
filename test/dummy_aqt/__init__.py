@@ -1,31 +1,13 @@
-from test.dummy_aqt.dummy_addon import AddonManager
-from test.dummy_anki.dummy_collection import Collection
+from .addonManager import AddonManager
+from .collection import Collection
+from .deck import Deck
+from .models import Model
 
 
 class mw:
-    addonManager = AddonManager
-    col = Collection
+    addonManager = AddonManager()
+    col = Collection(Deck(), Model())
 
     @staticmethod
     def reset():
         pass
-
-
-def askUser(*args, **kwargs):
-    return True
-
-
-def showCritical(*args, **kwargs):
-    pass
-
-
-def showInfo(*args, **kwargs):
-    pass
-
-
-def tooltip(*args, **kwargs):
-    pass
-
-
-def openLink(*args, **kwargs):
-    pass

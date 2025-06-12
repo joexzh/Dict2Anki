@@ -166,6 +166,9 @@ class Parser:
 
 
 class API(AbstractQueryAPI):
+    import warnings
+    warnings.warn("Deprecated. Will be removed next major version release.", DeprecationWarning, stacklevel=2)
+
     name = '欧路词典 API'
     # 重用 dictionary.Eudict 的 session。因为如果未登录，网页会返回反爬虫的版本
     timeout = Eudict.timeout

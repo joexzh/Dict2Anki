@@ -1,65 +1,136 @@
 import json
 import logging
 import os
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 import aqt
-import aqt.operations
-import aqt.operations.note
 import aqt.utils
 
-from . import dictionary, noteManager, queryApi, workers
-from ._typing import QueryWordData
+from . import conf_model, dictionary, misc, noteManager, queryApi, workers
+from ._typing import ListenableModel, QueryWordData
 from .addonWindow import Windows
 from .constants import *
 
 _logger = logging.getLogger("dict2Anki.repair")
 
 
-_fieldConfigRemoveOnlyMap = {
-    noteManager.writeNoteDefinition: lambda config: not config[F_DEFINITION],
-    noteManager.writeNoteSentence: lambda config: not config[F_SENTENCE],
-    noteManager.writeNotePhrase: lambda config: not config[F_PHRASE],
-    noteManager.writeNoteImage: lambda config: not config[F_IMAGE],
-    noteManager.writeNoteBrEPhonetic: lambda config: not config[F_BREPHONETIC],
-    noteManager.writeNoteAmEPhonetic: lambda config: not config[F_AMEPHONETIC],
-    noteManager.writeNotePron: lambda config: config[F_NOPRON],
+_write_fn_valid_map: dict[
+    noteManager.writeNoteFnType, Callable[[conf_model.Conf], bool]
+] = {
+    noteManager.writeNoteDefinition: lambda conf: not conf.definition,
+    noteManager.writeNoteSentence: lambda conf: not conf.sentence,
+    noteManager.writeNotePhrase: lambda conf: not conf.phrase,
+    noteManager.writeNoteImage: lambda conf: not conf.image,
+    noteManager.writeNoteBrEPhonetic: lambda conf: not conf.bre_phonetic,
+    noteManager.writeNoteAmEPhonetic: lambda conf: not conf.ame_phonetic,
+    noteManager.writeNotePron: lambda conf: conf.no_pron,
 }
+"""Provides lambdas to check whether a write function is needed."""
+
+
+class CntGrp(ListenableModel):
+    def __init__(self):
+        super().__init__()
+        self._total = 0
+        self._success_cnt = 0
+        self._fail_cnt = 0
+
+    @property
+    def total(self):
+        return self._total
+
+    @property
+    def success_cnt(self):
+        return self._success_cnt
+
+    @property
+    def fail_cnt(self):
+        return self._fail_cnt
+
+    def reset(self, total: int = 0, success_cnt: int = 0, fail_cnt: int = 0):
+        """triggers `reset` event, `self` as event argument"""
+        self._total = total
+        self._success_cnt = success_cnt
+        self._fail_cnt = fail_cnt
+        self._notify("reset", self)
+
+    def incSuccessCnt(self):
+        """triggers `incSuccessCnt` event, `self` as event argument"""
+        self._success_cnt += 1
+        self._notify("incSuccessCnt", self)
+
+    def incFailCnt(self):
+        """triggers `incFailCnt` event, `self` as event argument"""
+        self._fail_cnt += 1
+        self._notify("incFailCnt", self)
+
+
+class RepairModel:
+    def __init__(self):
+        self.queryGrp = CntGrp()
+        self.audioGrp = CntGrp()
+        self.noteGrp = CntGrp()
 
 
 class Repair:
 
-    def __init__(self, windows: Windows):
+    def __init__(self, windows: Windows, model: RepairModel):
         self._w = windows
-        self._queryCntGrp = _CntGrp()
-        self._audioCntGrp = _CntGrp()
-        self._noteCnt = 0
+        self._model = model
+        self._register_model_events(self._model)
         self._notes = []
-        self._fieldFns = []
+        self._write_fns = []
         self._whichPron = None
         self._api_name = ""
         self._w.repairBtn.clicked.connect(self._on_repairBtnClick)
 
-    def _formatStrFromCurrentConfig(self) -> str:
-        configMap = self._w.config.map
+    def _register_model_events(self, model: RepairModel):
+        def update_label_note(grp: CntGrp):
+            self._w.repairProgressNoteLabel.setText(
+                f"更新本地笔记：{grp.success_cnt} / {grp.total} . . . "
+            )
+
+        model.noteGrp.listen("reset", update_label_note)
+        model.noteGrp.listen("incSuccessCnt", update_label_note)
+
+        def update_label_query(grp: CntGrp):
+            self._w.repairProgressQueryLabel.setText(
+                f"调用{self._api_name}：{grp.success_cnt + grp.fail_cnt} / {grp.total}，成功：{grp.success_cnt}，失败：{grp.fail_cnt} . . . "
+            )
+
+        model.queryGrp.listen("reset", update_label_query)
+        model.queryGrp.listen("incSuccessCnt", update_label_query)
+        model.queryGrp.listen("incFailCnt", update_label_query)
+
+        def update_label_audio(grp: CntGrp):
+            self._w.repairProgressAudioLabel.setText(
+                f"下载发音，成功：{grp.success_cnt}，失败：{grp.fail_cnt} . . . "
+            )
+
+        model.audioGrp.listen("reset", update_label_audio)
+        model.audioGrp.listen("incSuccessCnt", update_label_audio)
+        model.audioGrp.listen("incFailCnt", update_label_audio)
+
+    def _warning(self) -> str:
+        conf = self._w.conf
 
         def pronStr():
-            if configMap[F_NOPRON]:
+            if conf.no_pron:
                 return "无"
-            elif configMap[F_BREPRON]:
+            elif conf.bre_pron:
                 return "英"
             else:
                 return "美"
 
         return rf"""默认设置:
-        Deck：{configMap['deck']}
-        查词API：{self._w.config.get_current_api().name}
-        释义：{configMap[F_DEFINITION]}
-        例句：{configMap[F_SENTENCE]}
-        短语：{configMap[F_PHRASE]}
-        图片：{configMap[F_IMAGE]}
-        英式音标：{configMap[F_BREPHONETIC]}
-        美式音标：{configMap[F_AMEPHONETIC]}
+        Deck：{conf.deck}
+        查词API：{self._w.get_current_api().name}
+        释义：{conf.definition}
+        例句：{conf.sentence}
+        短语：{conf.phrase}
+        图片：{conf.image}
+        英式音标：{conf.bre_phonetic}
+        美式音标：{conf.ame_phonetic}
         发音：{pronStr()}"""
 
     def _writeLogAndLabel(self, msg: str, label: aqt.QLabel):
@@ -71,40 +142,40 @@ class Repair:
         self._w.repairCBGroupBox.setEnabled(b)
         self._w.resetProgressBar(1)
 
-    def _getWriteFieldFnsFromUI(self):
-        self._fieldFns = []
+    def _get_write_fns(self):
+        fns = []
 
         if self._w.repairDefCB.isChecked():
-            self._fieldFns.append(noteManager.writeNoteDefinition)
+            fns.append(noteManager.writeNoteDefinition)
 
         if self._w.repairSentenceCB.isChecked():
-            self._fieldFns.append(noteManager.writeNoteSentence)
+            fns.append(noteManager.writeNoteSentence)
 
         if self._w.repairPhraseCB.isChecked():
-            self._fieldFns.append(noteManager.writeNotePhrase)
+            fns.append(noteManager.writeNotePhrase)
 
         if self._w.repairImgCB.isChecked():
-            self._fieldFns.append(noteManager.writeNoteImage)
+            fns.append(noteManager.writeNoteImage)
 
         if self._w.repairBrEPhoneticCB.isChecked():
-            self._fieldFns.append(noteManager.writeNoteBrEPhonetic)
+            fns.append(noteManager.writeNoteBrEPhonetic)
 
         if self._w.repairAmEPhoneticCB.isChecked():
-            self._fieldFns.append(noteManager.writeNoteAmEPhonetic)
+            fns.append(noteManager.writeNoteAmEPhonetic)
 
         if self._w.repairPronCB.isChecked():
-            self._fieldFns.append(noteManager.writeNotePron)
+            fns.append(noteManager.writeNotePron)
+
+        return fns
 
     def _on_repairBtnClick(self):
-        self._getWriteFieldFnsFromUI()
-        if not self._fieldFns:
+        self._write_fns = self._get_write_fns()
+        if not self._write_fns:
             aqt.utils.showInfo("请勾选要修复的字段")
             return
 
-        self._w.config.print()
-        if not aqt.utils.askUser(
-            f"{self._formatStrFromCurrentConfig()}\n\n可能要花费较长时间，是否继续?"
-        ):
+        _logger.info(self._w.conf.print())
+        if not aqt.utils.askUser(f"{self._warning()}\n\n可能要花费较长时间，是否继续?"):
             return
 
         if not self._checkLoginState():
@@ -117,8 +188,8 @@ class Repair:
         self._writeLogAndLabel(
             "正在检查登录信息 . . .", self._w.repairProgressNoteLabel
         )
-        currentApi = self._w.config.get_current_api()
-        currentDict = self._w.config.get_current_dict()
+        currentApi = self._w.get_current_api()
+        currentDict = self._w.get_current_dict()
 
         if currentApi == queryApi.eudict.API:
             if currentDict != dictionary.eudict.Eudict:
@@ -128,9 +199,7 @@ class Repair:
                 return False
             else:
                 if currentDict.checkCookie(
-                    json.loads(
-                        str(self._w.config.get_current_credential()["cookie"]) or "{}"
-                    )
+                    json.loads(str(self._w.conf.current_cookies) or "{}")
                 ):
                     return True
                 else:
@@ -144,13 +213,10 @@ class Repair:
         self._UISetEnabled(False)
         self._w.repairProgressQueryLabel.clear()
         self._w.repairProgressAudioLabel.clear()
-        self._noteCnt = 0
-        self._queryCntGrp.reset()
-        self._audioCntGrp.reset()
-        self._api_name = self._w.config.get_current_api().name
+        self._api_name = self._w.get_current_api().name
 
         self._notes = noteManager.getNotesByDeckName(
-            self._w.config.map["deck"], noteManager.noteFilterByModelName
+            self._w.conf.deck, noteManager.noteFilterByModelName
         )
         if len(self._notes) == 0:
             self._writeLogAndLabel(
@@ -158,6 +224,7 @@ class Repair:
             )
             return self._complete(None, None)
 
+        self._model.noteGrp.reset(len(self._notes))
         if self._removeOnly():
             self._updateNotes(self._notes)
             return self._complete(
@@ -168,31 +235,13 @@ class Repair:
         self._queryWords(self._notes)
 
         self._whichPron: Optional[str] = None
-        if not self._w.config.map[F_NOPRON]:
-            self._whichPron = F_AMEPRON if self._w.config.map[F_AMEPRON] else F_BREPRON
-
-        self._updateNoteProgress(0, len(self._notes))
-        self._updateAudioProgress(
-            self._audioCntGrp.success_cnt, self._audioCntGrp.fail_cnt
-        )
-
-    def _updateNoteProgress(self, cnt, total):
-        self._w.repairProgressNoteLabel.setText(f"正在更新笔记：{cnt} / {total} . . . ")
-
-    def _updateQueryProgress(self, success_cnt, fail_cnt, total):
-        self._w.repairProgressQueryLabel.setText(
-            f"正在调用{self._api_name}：{success_cnt + fail_cnt} / {total}，成功：{success_cnt}，失败：{fail_cnt} . . . "
-        )
-
-    def _updateAudioProgress(self, success_cnt, fail_cnt):
-        self._w.repairProgressAudioLabel.setText(
-            f"正在下载发音，成功：{success_cnt}，失败：{fail_cnt} . . . "
-        )
+        if not self._w.conf.no_pron:
+            self._whichPron = F_AMEPRON if self._w.conf.ame_pron else F_BREPRON
 
     def _removeOnly(self):
         ret = True
-        for fn in self._fieldFns:
-            ret = ret & _fieldConfigRemoveOnlyMap[fn](self._w.config.map)
+        for fn in self._write_fns:
+            ret = ret & _write_fn_valid_map[fn](self._w.conf)
         return ret
 
     def _queryWords(self, notes):
@@ -201,15 +250,11 @@ class Repair:
             row_words[i] = (i, note[F_TERM])
 
         self._w.resetProgressBar(len(row_words))
-        self._queryCntGrp.total = len(row_words)
-        self._updateQueryProgress(
-            self._queryCntGrp.success_cnt,
-            self._queryCntGrp.fail_cnt,
-            self._queryCntGrp.total,
-        )
+        self._model.queryGrp.reset(len(row_words))
+        self._model.audioGrp.reset(0)
 
         worker = workers.QueryWorker(
-            row_words, self._w.config.get_current_api(), self._w.config.map[F_CONGEST]
+            row_words, self._w.get_current_api(), self._w.conf.congest
         )
         worker.rowSuccess.connect(self._on_queryRowSuccess)
         worker.rowFail.connect(self._on_queryRowFail)
@@ -218,31 +263,17 @@ class Repair:
         self._w.workerman.start(worker)
 
     def _on_queryRowSuccess(self, row, word, queryResult):
-        self._queryCntGrp.incSuccessCnt()
-        self._updateQueryProgress(
-            self._queryCntGrp.success_cnt,
-            self._queryCntGrp.fail_cnt,
-            self._queryCntGrp.total,
-        )
+        self._model.queryGrp.incSuccessCnt()
 
         self._updateOneNote(self._notes[row], queryResult)
         assert aqt.mw.col
         aqt.mw.col.update_note(self._notes[row])
-        self._noteCnt += 1
-        self._updateNoteProgress(self._noteCnt, len(self._notes))
+        self._model.noteGrp.incSuccessCnt()
 
         self._downloadAudio(self._notes[row], queryResult)
 
     def _on_queryRowFail(self, row, word):
-        self._queryCntGrp.incFailCnt()
-        self._updateQueryProgress(
-            self._queryCntGrp.success_cnt,
-            self._queryCntGrp.fail_cnt,
-            self._queryCntGrp.total,
-        )
-
-        self._noteCnt += 1
-        self._updateNoteProgress(self._noteCnt, len(self._notes))
+        self._model.queryGrp.incFailCnt()
 
     def _queryRowTick(self):
         self._w.progressBar.setValue(self._w.progressBar.value() + 1)
@@ -251,17 +282,17 @@ class Repair:
         self._complete(None, None)
 
     def _updateOneNote(self, note, queryResult):
-        noteManager.writeNoteFields(
-            note, queryResult, self._w.config.map, self._fieldFns
-        )
+        noteManager.writeNoteFields(note, queryResult, self._w.conf, self._write_fns)
 
     def _updateNotes(self, notes):
+        """remove only"""
+
         for i, note in enumerate(notes):
             self._updateOneNote(note, None)
 
         # update notes to collection
         noteManager.updateNotes(notes)
-        self._updateNoteProgress(len(notes), len(notes))
+        self._model.noteGrp.reset(self._model.noteGrp.total, len(notes))
 
     def _downloadAudio(self, note, queryResult: QueryWordData):
         if not self._whichPron:
@@ -273,7 +304,7 @@ class Repair:
             and not (
                 os.path.isfile(
                     filePath := noteManager.media_path(
-                        f"{self._whichPron}_{note[F_TERM]}.mp3"
+                        misc.audio_fname(self._whichPron, note[F_TERM])
                     )
                 )
             )
@@ -284,19 +315,13 @@ class Repair:
 
     def _on_audioDownloadTick(self, fileName, url, success):
         if success:
-            self._audioCntGrp.incSuccessCnt()
+            self._model.audioGrp.incSuccessCnt()
         else:
-            self._audioCntGrp.incFailCnt()
-        self._updateAudioProgress(
-            self._audioCntGrp.success_cnt, self._audioCntGrp.fail_cnt
-        )
+            self._model.audioGrp.incFailCnt()
 
     def _complete(self, msg, label):
         if msg:
             self._writeLogAndLabel(msg, label)
-        self._w.repairProgressNoteLabel.setText(
-            self._w.repairProgressNoteLabel.text() + "修复完成"
-        )
         self._UISetEnabled(True)
         self._clear()
         aqt.mw.reset()
@@ -305,25 +330,7 @@ class Repair:
 
     def _clear(self):
         self._notes.clear()
-        self._fieldFns.clear()
-        self._api_name = ""
-        self._whichPron = None
-
-
-class _CntGrp:
-    def __init__(self):
-        self.reset()
-
-    def reset(self):
-        self.total = 0
-        self.success_cnt = 0
-        self.fail_cnt = 0
-
-    def incSuccessCnt(self):
-        self.success_cnt += 1
-
-    def incFailCnt(self):
-        self.fail_cnt += 1
+        self._write_fns.clear()
 
 
 class AudioDownloadSingleWorker(workers.NetworkWorker):
@@ -342,3 +349,7 @@ class AudioDownloadSingleWorker(workers.NetworkWorker):
             )
         finally:
             self.done.emit(self)
+
+
+def make_repair(win):
+    return Repair(win, RepairModel())

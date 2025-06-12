@@ -71,14 +71,18 @@ class ThreadPool:
 
 def congestGenerator(n=60):
     """yields n times per minute"""
-    con = n / 60
+    co = n / 60
     start = time.time()
     cnt = 1
     yield  #  yield first iteration immediately
 
     while True:
-        if (time.time() - start) * con > cnt:
+        if (time.time() - start) * co > cnt:
             cnt += 1
             yield
         else:
             time.sleep(1)
+
+
+def audio_fname(prefix: str, term: str):
+    return f"{prefix}_{term}.mp3"

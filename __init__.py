@@ -1,5 +1,6 @@
 try:
     from aqt import mw, QAction
+    assert mw is not None
     from .addon.entryPoint import EntryPoint
     from .addon.constants import ADDON_FULL_NAME
 
@@ -11,13 +12,14 @@ try:
     action.triggered.connect(showWindow)
     mw.form.menuTools.addAction(action)
 
-except ImportError:
+except (ImportError, AssertionError):
     import os
-    from PyQt6.QtWidgets import QApplication
-    from addon.addonWindow import Windows
-    import sys
 
-    if os.environ.get("DEVDICT2ANKI"):
+    if os.environ.get("DEVDICT2ANKI") or __name__ == "__main__":
+        from PyQt6.QtWidgets import QApplication
+        from .addon.addonWindow import Windows
+        import sys
+
         app = QApplication(sys.argv)
         window = Windows()
         window.show()

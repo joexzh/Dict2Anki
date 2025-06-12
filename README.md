@@ -10,6 +10,8 @@
 
 ### Change log
 ___
+* v7.2.1
+  * 修复单元测试
 * v7.2.0
   * 【默认配置】新增【每分钟查询次数】
 * v7.1.0
@@ -73,15 +75,19 @@ Anki --> 工具 --> 附加组件 --> 获取插件
 
 ### Contribute Guide
 
-非常欢迎你的贡献，<del>请PR前确保通过了全部单元测试 `pytest test`。</del>暂时没有 unit test。
+非常欢迎你的贡献，请PR前确保通过了全部单元测试
+
+```bash
+python -m pytest test
+```
 
 ### Development Guide
 
-Python > 3.9
+Python 3.9
 
-```
-export PYTHONPATH='xxx/Dict2Anki'  
-export DEVDICT2ANKI=1  
-pip install -r requirements.txt  
+```bash
+export PYTHONPATH='xxx/Dict2Anki'
+export DEVDICT2ANKI=1
+pip install -r requirements.txt
 python __init__.py
 ```
