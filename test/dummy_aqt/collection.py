@@ -1,12 +1,10 @@
-from .deck import Deck
-from .models import Model
-from . import notes
+from . import decks, models, notes
 
 
 class Collection:
     def __init__(self, deck, model):
-        self.decks: Deck = deck
-        self.models: Model = model
+        self.decks: decks.Deck = deck
+        self.models: models.Model = model
 
     def reset(self):
         pass

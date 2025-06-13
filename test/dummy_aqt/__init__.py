@@ -1,6 +1,6 @@
-from .addonManager import AddonManager
+from .addons import AddonManager
 from .collection import Collection
-from .deck import Deck
+from .decks import Deck
 from .models import Model
 
 

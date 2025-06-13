@@ -4,7 +4,7 @@ from urllib.parse import urlencode
 
 from .._typing import AbstractQueryAPI, QueryWordData
 from ..constants import *
-from ..dictionary.youdao import Youdao
+from .. import dictionary
 
 logger = logging.getLogger('dict2Anki.queryApi.youdao')
 __all__ = ['API']
@@ -134,8 +134,8 @@ class Parser:
 class API(AbstractQueryAPI):
     name = '有道 API'
     # 重用 dictionary.Youdao 的 session
-    timeout = Youdao.timeout
-    session = Youdao.session
+    timeout = dictionary.youdao.Youdao.timeout
+    session = dictionary.youdao.Youdao.session
     url = 'https://dict.youdao.com/jsonapi'
     params = {"dicts": {"count": 99, "dicts": [["ec", "ee", "phrs", "pic_dict"], ["web_trans"], ["fanyi"], ["blng_sents_part"]]}}
     parser = Parser

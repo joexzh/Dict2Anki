@@ -1,12 +1,12 @@
 import pytest
 
 from ..addon.conf_model import Conf
-from .helper import fresh_config_dict
+from . import helper
 
 
 @pytest.fixture
 def new_conf():
-    return Conf(fresh_config_dict())
+    return Conf(helper.fresh_config_dict())
 
 
 def test_desk(new_conf):

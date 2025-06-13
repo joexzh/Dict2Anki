@@ -6,9 +6,8 @@ from typing import Optional
 import aqt
 from anki import models, notes
 
-from . import misc
+from . import conf_model, misc
 from ._typing import QueryWordData
-from .conf_model import Conf
 from .constants import *
 
 logger = logging.getLogger("dict2Anki.noteManager")
@@ -175,7 +174,7 @@ def getOrCreateModelCardTemplate(modelObject: models.NoteType):
     aqt.mw.col.models.add(modelObject)
 
 
-def addNoteToDeck(deckObject, modelObject, conf: Conf, oneQueryResult: QueryWordData):
+def addNoteToDeck(deckObject, modelObject, conf: conf_model.Conf, oneQueryResult: QueryWordData):
     assert aqt.mw.col
     modelObject["did"] = deckObject["id"]
 
@@ -200,7 +199,7 @@ def addNoteToDeck(deckObject, modelObject, conf: Conf, oneQueryResult: QueryWord
 
 
 def writeNoteDefinition(
-    note: notes.Note, queryData: Optional[QueryWordData], conf: Conf
+    note: notes.Note, queryData: Optional[QueryWordData], conf: conf_model.Conf
 ):
     if conf.definition:
         if queryData and queryData[F_DEFINITION]:
@@ -209,7 +208,7 @@ def writeNoteDefinition(
         note[F_DEFINITION] = ""
 
 
-def writeNotePhrase(note: notes.Note, queryData: Optional[QueryWordData], conf: Conf):
+def writeNotePhrase(note: notes.Note, queryData: Optional[QueryWordData], conf: conf_model.Conf):
     if conf.phrase:
         if queryData and queryData[F_PHRASE]:
             note[f"{F_PHRASE}Front"] = "<br>".join(
@@ -223,7 +222,7 @@ def writeNotePhrase(note: notes.Note, queryData: Optional[QueryWordData], conf: 
         clear_field(note, f"{F_PHRASE}Back")
 
 
-def writeNoteSentence(note: notes.Note, queryData: Optional[QueryWordData], conf: Conf):
+def writeNoteSentence(note: notes.Note, queryData: Optional[QueryWordData], conf: conf_model.Conf):
     if conf.sentence:
         if queryData and queryData[F_SENTENCE]:
             note[f"{F_SENTENCE}Front"] = (
@@ -246,7 +245,7 @@ def writeNoteSentence(note: notes.Note, queryData: Optional[QueryWordData], conf
         clear_field(note, f"{F_SENTENCE}Back")
 
 
-def writeNoteImage(note: notes.Note, queryData: Optional[QueryWordData], conf: Conf):
+def writeNoteImage(note: notes.Note, queryData: Optional[QueryWordData], conf: conf_model.Conf):
     if conf.image:
         if queryData and queryData[F_IMAGE]:
             note[F_IMAGE] = f'<img style="max-height:300px" src="{queryData[F_IMAGE]}">'
@@ -254,7 +253,7 @@ def writeNoteImage(note: notes.Note, queryData: Optional[QueryWordData], conf: C
         clear_field(note, F_IMAGE)
 
 
-def writeNotePron(note: notes.Note, queryData: Optional[QueryWordData], conf: Conf):
+def writeNotePron(note: notes.Note, queryData: Optional[QueryWordData], conf: conf_model.Conf):
     if conf.ame_pron:
         if queryData and queryData[F_AMEPRON]:
             note[F_AMEPRON] = make_pron_field(F_AMEPRON, queryData[F_TERM])
@@ -269,7 +268,7 @@ def writeNotePron(note: notes.Note, queryData: Optional[QueryWordData], conf: Co
 
 
 def writeNoteAmEPhonetic(
-    note: notes.Note, queryData: Optional[QueryWordData], conf: Conf
+    note: notes.Note, queryData: Optional[QueryWordData], conf: conf_model.Conf
 ):
     if conf.ame_phonetic:
         if queryData and queryData[F_AMEPHONETIC]:
@@ -279,7 +278,7 @@ def writeNoteAmEPhonetic(
 
 
 def writeNoteBrEPhonetic(
-    note: notes.Note, queryData: Optional[QueryWordData], conf: Conf
+    note: notes.Note, queryData: Optional[QueryWordData], conf: conf_model.Conf
 ):
     if conf.bre_phonetic:
         if queryData and queryData[F_BREPHONETIC]:
@@ -288,13 +287,13 @@ def writeNoteBrEPhonetic(
         clear_field(note, F_BREPHONETIC)
 
 
-writeNoteFnType = Callable[[notes.Note, Optional[QueryWordData], Conf], None]
+writeNoteFnType = Callable[[notes.Note, Optional[QueryWordData], conf_model.Conf], None]
 
 
 def writeNoteFields(
     note: notes.Note,
     queryData: Optional[QueryWordData],
-    conf: Conf,
+    conf: conf_model.Conf,
     modifyFieldFns: list[writeNoteFnType],
 ):
     for fn in modifyFieldFns:

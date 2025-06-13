@@ -75,19 +75,15 @@ Anki --> 工具 --> 附加组件 --> 获取插件
 
 ### Contribute Guide
 
-非常欢迎你的贡献，请PR前确保通过了全部单元测试
-
-```bash
-python -m pytest test
-```
+非常欢迎你的贡献，请PR前确保通过了全部单元测试 `pytest test`
 
 ### Development Guide
 
 Python 3.9
 
+在 `venv` 环境中，运行：
+
 ```bash
-export PYTHONPATH='xxx/Dict2Anki'
-export DEVDICT2ANKI=1
 pip install -r requirements.txt
-python __init__.py
+(cd .. && python -m Dict2Anki)
 ```

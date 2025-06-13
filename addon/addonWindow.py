@@ -13,7 +13,7 @@ from aqt import (QDialog, QIcon, QListWidgetItem, QPlainTextEdit, QPushButton,
 
 from . import misc, noteManager
 from ._typing import AbstractDictionary, AbstractQueryAPI, QueryWordData
-from .conf_model import Conf
+from . import conf_model
 from .constants import *
 from .dictionary import dictionaries
 from .logger import Handler
@@ -44,7 +44,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         self.remoteWords = []
 
         self.workerman = WorkerManager()
-        self.conf = Conf(ConfCtl.read())
+        self.conf = conf_model.Conf(ConfCtl.read())
 
         self.init_ui()
         self.setupLogger()
@@ -202,7 +202,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
             self.mainTab.setEnabled(True)
 
         group.buttonBox.accepted.connect(onAccepted)
-        group.buttonBox.rejected.connect(onRejected)
+        container.rejected.connect(onRejected)
         container.exec()
 
     def getRemoteWordList(self, groupNames: list[str]):
@@ -439,11 +439,11 @@ class ConfCtl:
             raise FileNotFoundError('missing config file')
 
     @staticmethod
-    def write(conf: Conf):
+    def write(conf: conf_model.Conf):
         aqt.mw.addonManager.writeConfig(__name__, conf.get_map())  # type: ignore
 
     @staticmethod
-    def init_ui(w: Windows, conf: Conf):
+    def init_ui(w: Windows, conf: conf_model.Conf):
         """Should be called only once!"""
 
         # init UI

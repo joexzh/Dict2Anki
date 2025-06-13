@@ -1,5 +1,5 @@
+from ..addon import conf_model
 from ..addon._typing import QueryWordData
-from ..addon.conf_model import Conf
 from ..addon.constants import *
 from .dummy_aqt import models, notes
 
@@ -20,7 +20,7 @@ def getOrCreateModelCardTemplate(modelObject):
     pass
 
 
-def addNoteToDeck(deckObject, modelObject, conf: Conf, oneQueryResult: QueryWordData):
+def addNoteToDeck(deckObject, modelObject, conf: conf_model.Conf, oneQueryResult: QueryWordData):
     pass
 
 
