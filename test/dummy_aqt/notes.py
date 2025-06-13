@@ -1,7 +1,7 @@
-from typing import NewType
+from ...addon.constants import *
 
 
-NoteId = NewType("NoteId", int)
+NoteId = int
 
 
 class Note:
@@ -9,12 +9,11 @@ class Note:
     def __init__(self, nid):
         self.nid = nid
 
-    @staticmethod
-    def note_type():
-        return dict()
+    def note_type(self):
+        return {"name": MODEL_NAME}
 
     def __getitem__(self, item):
-        pass
+        return "a"
 
     def __setitem__(self, key, value):
         pass

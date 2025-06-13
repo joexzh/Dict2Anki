@@ -1,6 +1,8 @@
-from ..addon._typing import QueryWordData, ConfigMap
+from ..addon import conf_model
+from ..addon._typing import QueryWordData
 from ..addon.constants import *
-from .dummy_anki import models
+from .dummy_aqt import models, notes
+
 
 def getDeckNames():
     return ['deck1', 'deck2']
@@ -18,7 +20,7 @@ def getOrCreateModelCardTemplate(modelObject):
     pass
 
 
-def addNoteToDeck(deckObject, modelObject, configMap: ConfigMap, oneQueryResult: QueryWordData):
+def addNoteToDeck(deckObject, modelObject, conf: conf_model.Conf, oneQueryResult: QueryWordData):
     pass
 
 
@@ -36,3 +38,10 @@ def removeNotes(noteIds):
 
 def media_path(fileName: str) -> str:
     return ''
+
+
+def writeNoteFields(*args, **kwargs):
+    pass
+
+def getNotesByDeckName(*args, **kwargs) -> list[notes.Note]:
+    return [notes.Note(1)]

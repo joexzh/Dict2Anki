@@ -9,9 +9,9 @@ from aqt import QObject, pyqtBoundSignal, pyqtSignal
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
+from . import misc
 from ._typing import AbstractDictionary, AbstractQueryAPI, QueryWordData
 from .constants import *
-from .misc import ThreadPool, congestGenerator
 
 
 class AbstractWorker(QObject):
@@ -33,7 +33,7 @@ class WorkerManager:
     _logger = logging.getLogger("dict2Anki.workers.WorkerManager")
 
     def __init__(self):
-        self._pool = ThreadPool(max_workers=os.cpu_count())
+        self._pool = misc.ThreadPool(max_workers=os.cpu_count())
         self._workers: list[AbstractWorker] = []
 
     def start(self, worker: AbstractWorker):
@@ -47,7 +47,6 @@ class WorkerManager:
         self._pool.exit()
 
     def _on_worker_done(self, worker):
-        self._logger.info("worker done: " + str(worker))
         self._workers.remove(worker)
 
 
@@ -119,7 +118,7 @@ class RemoteWordFetchingWorker(AbstractWorker):
 
                 totalPage = self.selectedDict.getTotalPage(groupName, groupId)
                 self.setProgress.emit(totalPage)
-                with ThreadPool(max_workers=3) as executor:
+                with misc.ThreadPool(max_workers=3) as executor:
                     for i in range(totalPage):
                         if self.interrupted:
                             return
@@ -159,8 +158,8 @@ class QueryWorker(AbstractWorker):
             return queryResult
 
         try:
-            with ThreadPool(max_workers=3) as executor:
-                congestGen = congestGenerator(self._congest)
+            with misc.ThreadPool(max_workers=3) as executor:
+                congestGen = misc.congestGenerator(self._congest)
                 for row, word in self._row_words:
                     if self.interrupted:
                         return
@@ -185,6 +184,19 @@ class NetworkWorker(AbstractWorker):
         super().__init__()
 
 
+def download_file(session: requests.Session, fileName, url):
+    r = session.get(url, stream=True)
+    with open(fileName, "wb") as f:
+        for chunk in r.iter_content(chunk_size=1024):
+            if chunk:
+                f.write(chunk)
+
+
+def rmv_file(fileName):
+    if os.path.isfile(fileName):
+        os.remove(fileName)
+
+
 def downloadSingleAudio(
     fileName: str,
     url: str,
@@ -194,17 +206,12 @@ def downloadSingleAudio(
 ):
     success = False
     try:
-        r = session.get(url, stream=True)
-        with open(fileName, "wb") as f:
-            for chunk in r.iter_content(chunk_size=1024):
-                if chunk:
-                    f.write(chunk)
+        download_file(session, fileName, url)
         success = True
         logger.info(f"发音下载完成：{fileName}, {url}")
     except Exception as e:
         logger.warning(f"下载{fileName}, {url}，异常: {e}")
-        if os.path.isfile(fileName):
-            os.remove(fileName)
+        rmv_file(fileName)
         success = False
     finally:
         tick.emit(fileName, url, success)
@@ -222,7 +229,7 @@ class AudioDownloadWorker(NetworkWorker):
     def run(self):
 
         try:
-            with ThreadPool(max_workers=3) as executor:
+            with misc.ThreadPool(max_workers=3) as executor:
                 for fileName, url in self._audios:
                     if self.interrupted:
                         return

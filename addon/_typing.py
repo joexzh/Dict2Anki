@@ -1,7 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Optional, TypedDict
-
-from bs4 import BeautifulSoup
+from typing import Any, Callable, Optional, TypedDict
 
 
 class Mask:
@@ -96,3 +94,22 @@ class AbstractQueryAPI(ABC):
         :return: 查询结果 dict(term, definition, phrase, image, sentence, BrEPhonetic, AmEPhonetic, BrEPron, AmEPron)
         """
         pass
+
+
+class ListenableModel:
+    def __init__(self):
+        self._listeners: dict[str, list[Callable[[Any], Any]]] = {}
+
+    def _notify(self, event: str, val):
+        if event in self._listeners:
+            for fn in self._listeners[event]:
+                fn(val)
+
+    def listen(self, event: str, fn: Callable[[Any], Any]):
+        if event not in self._listeners:
+            self._listeners[event] = []
+        self._listeners[event].append(fn)
+
+    def unlisten(self, event: str, fn: Callable[[Any], Any]):
+        if event in self._listeners:
+            self._listeners[event].remove(fn)
