@@ -85,5 +85,16 @@ Python 3.9
 
 ```bash
 pip install -r requirements.txt
+```
+
+单独运行 UI：
+
+```bash
 (cd .. && python -m Dict2Anki)
+```
+
+生成 UI 文件：
+
+```bash
+pyuic6 -o ./addon/UIForm/xxx.py ./addon/UIForm/xxx.ui
 ```
