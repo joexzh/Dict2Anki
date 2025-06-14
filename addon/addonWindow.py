@@ -70,6 +70,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         self.dictionaryComboBox.addItems([d.name for d in dictionaries])
         self.apiComboBox.addItems([d.name for d in apis])
         self.deckComboBox.addItems(noteManager.getDeckNames())
+        self.needDeleteWordsView = NeedDeleteWordsView(self.needDeleteCheckBox, self.needDeleteWordListWidget)
         ConfCtl.init_ui(self, self.conf)
 
     def closeEvent(self, event):
@@ -208,7 +209,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
     def getRemoteWordList(self, groupNames: list[str]):
         """根据选中到分组获取分组下到全部单词，并保存到self.remoteWords"""
         groupMap = dict(self.get_current_dict().groups)
-        
+
         # 启动单词获取线程
         worker = RemoteWordFetchingWorker(self.get_current_dict(),
                                           [(groupName, groupMap[groupName],) for groupName in groupNames])
@@ -257,6 +258,10 @@ class Windows(QDialog, mainUI.Ui_Dialog):
             self.newWordListWidget.addItem(item)
         self.newWordListWidget.clearSelection()
 
+        self.needDeleteWordsView.check_title_checkbox(
+            self.needDeleteWordListWidget.count() > 0
+        )
+
         self.dictionaryComboBox.setEnabled(True)
         self.apiComboBox.setEnabled(True)
         self.deckComboBox.setEnabled(True)
@@ -273,7 +278,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
     @pyqtSlot()
     def on_queryBtn_clicked(self):
         logger.info('点击查询按钮')
-        self.conf.print()
+        logger.info(self.conf.print())
         self.queryBtn.setEnabled(False)
         self.pullRemoteWordsBtn.setEnabled(False)
         self.syncBtn.setEnabled(False)
@@ -369,7 +374,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         if audiosDownloadTasks:
             self.syncBtn.setEnabled(False)
             self.resetProgressBar(len(audiosDownloadTasks))
-            
+
             worker = AudioDownloadWorker(audiosDownloadTasks)
             worker.tick.connect(lambda f,u,s: self.progressBar.setValue(self.progressBar.value() + 1))
             worker.done.connect(lambda _: aqt.utils.tooltip(f'发音下载完成'))
@@ -427,6 +432,30 @@ class Windows(QDialog, mainUI.Ui_Dialog):
             aqt.utils.tooltip("登录失败")
         self.resetProgressBar(1)
 
+
+class NeedDeleteWordsView:
+    def __init__(self, title_checkbox: aqt.QCheckBox, list_view: aqt.QListWidget):
+        self._checkbox = title_checkbox
+        self._list_view = list_view
+        self._listen_title_checkbox_checkbox()
+
+    def _listen_title_checkbox_checkbox(self):
+        def on_cb_change(state):
+            check_state = (
+                Qt.CheckState.Checked
+                if state == Qt.CheckState.Checked.value
+                else Qt.CheckState.Unchecked
+            )
+            for i in range(self._list_view.count()):
+                self._list_view.item(i).setCheckState(check_state)  # type: ignore
+
+        self._checkbox.stateChanged.connect(on_cb_change)
+
+    def check_title_checkbox(self, should_check: bool):
+        if should_check:
+            self._checkbox.blockSignals(True)
+            self._checkbox.setChecked(should_check)
+            self._checkbox.blockSignals(False)
 
 
 class ConfCtl:

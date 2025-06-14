@@ -117,7 +117,7 @@
             <enum>QLayout::SizeConstraint::SetDefaultConstraint</enum>
            </property>
            <item>
-            <widget class="QLabel" name="label_2">
+            <widget class="QCheckBox" name="needDeleteCheckBox">
              <property name="text">
               <string>待删除</string>
              </property>
@@ -384,7 +384,7 @@
                <number>999</number>
               </property>
               <property name="value">
-               <number>60</number>
+               <number>120</number>
               </property>
              </widget>
             </item>
@@ -404,6 +404,9 @@
            <widget class="QRadioButton" name="AmEPronRadioButton">
             <property name="text">
              <string>美式发音</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
             </property>
             <attribute name="buttonGroup">
              <string notr="true">pronButtonGroup</string>
@@ -426,7 +429,7 @@
              <string>无发音</string>
             </property>
             <property name="checked">
-             <bool>true</bool>
+             <bool>false</bool>
             </property>
             <attribute name="buttonGroup">
              <string notr="true">pronButtonGroup</string>
