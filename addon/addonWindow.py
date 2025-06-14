@@ -4,16 +4,15 @@ import os
 import sys
 from copy import deepcopy
 from tempfile import gettempdir
-from typing import Optional
+from typing import Iterable, Optional
 
 import aqt
 import aqt.utils
 from aqt import (QDialog, QIcon, QListWidgetItem, QPlainTextEdit, QPushButton,
                  Qt, QVBoxLayout, pyqtSlot)
 
-from . import misc, noteManager
+from . import conf_model, misc, noteManager
 from ._typing import AbstractDictionary, AbstractQueryAPI, QueryWordData
-from . import conf_model
 from .constants import *
 from .dictionary import dictionaries
 from .logger import Handler
@@ -186,7 +185,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
             """选择单词本弹窗确定事件"""
             # 清空 listWidget
             self.newWordListWidget.clear()
-            self.needDeleteWordListWidget.clear()
+            self.needDeleteWordsView.clear()
             self.mainTab.setEnabled(False)
 
             groupNames: list[str] = [group.wordGroupListWidget.item(index).text() for index in range(group.wordGroupListWidget.count()) if # type: ignore
@@ -242,15 +241,10 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         logger.info(f'待查: {newWords}')
         logger.info(f'待删: {needToDeleteWords}')
         waitIcon = QIcon(':/icons/wait.png')
-        delIcon = QIcon(':/icons/delete.png')
         self.newWordListWidget.clear()
-        self.needDeleteWordListWidget.clear()
+        self.needDeleteWordsView.clear()
 
-        for word in needToDeleteWords:
-            item = QListWidgetItem(word)
-            item.setCheckState(Qt.CheckState.Checked)
-            item.setIcon(delIcon)
-            self.needDeleteWordListWidget.addItem(item)
+        self.needDeleteWordsView.add_items(needToDeleteWords)
 
         for word in newWords:
             item = QListWidgetItem(word)
@@ -258,17 +252,15 @@ class Windows(QDialog, mainUI.Ui_Dialog):
             self.newWordListWidget.addItem(item)
         self.newWordListWidget.clearSelection()
 
-        self.needDeleteWordsView.check_title_checkbox(
-            self.needDeleteWordListWidget.count() > 0
-        )
+        self.needDeleteWordsView.check_title_checkbox_if_not_empty()
 
         self.dictionaryComboBox.setEnabled(True)
         self.apiComboBox.setEnabled(True)
         self.deckComboBox.setEnabled(True)
         self.pullRemoteWordsBtn.setEnabled(True)
         self.queryBtn.setEnabled(self.newWordListWidget.count() > 0)
-        self.syncBtn.setEnabled(self.newWordListWidget.count() == 0 and self.needDeleteWordListWidget.count() > 0)
-        if self.needDeleteWordListWidget.count() == self.newWordListWidget.count() == 0:
+        self.syncBtn.setEnabled(self.newWordListWidget.count() == 0 and not self.needDeleteWordsView.empty())
+        if self.needDeleteWordsView.empty() and self.newWordListWidget.count() == 0:
             logger.info('无需同步')
             aqt.utils.tooltip('无需同步')
         else:
@@ -382,13 +374,8 @@ class Windows(QDialog, mainUI.Ui_Dialog):
 
         self.newWordListWidget.clear()
 
-        needToDeleteWordItems = []
-        for i in range(self.needDeleteWordListWidget.count()):
-            item = self.needDeleteWordListWidget.item(i)
-            if item and item.checkState() == Qt.CheckState.Checked:
-                needToDeleteWordItems.append(item)
-
-        needToDeleteWords = [i.text() for i in needToDeleteWordItems]
+        needDeleteItems = self.needDeleteWordsView.checked_items()
+        needToDeleteWords = self.needDeleteWordsView.item_texts(needDeleteItems)
 
         deleted = 0
 
@@ -396,9 +383,8 @@ class Windows(QDialog, mainUI.Ui_Dialog):
             f'确定要删除这些单词吗:{needToDeleteWords[:3]}...({len(needToDeleteWords)}个)', title=ADDON_FULL_NAME, parent=self):
             noteIds = noteManager.getNoteIds(needToDeleteWords, self.conf.deck)
             noteManager.removeNotes(noteIds)
-            deleted += 1
-            for item in needToDeleteWordItems:
-                self.needDeleteWordListWidget.takeItem(self.needDeleteWordListWidget.row(item))
+            deleted = len(needToDeleteWords)
+            self.needDeleteWordsView.remove_items(needDeleteItems)
             logger.info('删除完成')
 
         aqt.mw.reset()
@@ -434,28 +420,56 @@ class Windows(QDialog, mainUI.Ui_Dialog):
 
 
 class NeedDeleteWordsView:
-    def __init__(self, title_checkbox: aqt.QCheckBox, list_view: aqt.QListWidget):
+    def __init__(self, title_checkbox: aqt.QCheckBox, list_widget: aqt.QListWidget):
         self._checkbox = title_checkbox
-        self._list_view = list_view
+        self._list_widget = list_widget
+        self._delIcon = QIcon(':/icons/delete.png')
         self._listen_title_checkbox_checkbox()
 
     def _listen_title_checkbox_checkbox(self):
         def on_cb_change(state):
-            check_state = (
-                Qt.CheckState.Checked
-                if state == Qt.CheckState.Checked.value
-                else Qt.CheckState.Unchecked
-            )
-            for i in range(self._list_view.count()):
-                self._list_view.item(i).setCheckState(check_state)  # type: ignore
+            check_state = Qt.CheckState(state)
+            for i in range(self._list_widget.count()):
+                self._list_widget.item(i).setCheckState(check_state)  # type: ignore
 
         self._checkbox.stateChanged.connect(on_cb_change)
 
-    def check_title_checkbox(self, should_check: bool):
-        if should_check:
+    def check_title_checkbox_if_not_empty(self):
+        if not self.empty():
             self._checkbox.blockSignals(True)
-            self._checkbox.setChecked(should_check)
+            self._checkbox.setChecked(True)
             self._checkbox.blockSignals(False)
+
+    def checked_items(self) -> list[aqt.QListWidgetItem]:
+        return list(
+            filter(
+                lambda item: item.checkState() == Qt.CheckState.Checked,  # type: ignore
+                (self._list_widget.item(i) for i in range(self._list_widget.count())),
+            )
+        )
+
+    def item_texts(self, items: Iterable[aqt.QListWidgetItem]) -> list[str]:
+        return [item.text() for item in items]
+
+    def add_items(self, texts: Iterable[str]):
+        for text in texts:
+            self.add_item(text)
+
+    def add_item(self, text: str):
+        item = QListWidgetItem(text)
+        item.setCheckState(Qt.CheckState.Checked)
+        item.setIcon(self._delIcon)
+        self._list_widget.addItem(item)
+
+    def remove_items(self, items: Iterable[aqt.QListWidgetItem]):
+        for item in items:
+            self._list_widget.takeItem(self._list_widget.row(item))
+
+    def empty(self):
+        return self._list_widget.count() == 0
+
+    def clear(self):
+        self._list_widget.clear()
 
 
 class ConfCtl:
