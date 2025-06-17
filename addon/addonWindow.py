@@ -158,7 +158,6 @@ class Windows(QDialog, mainUI.Ui_Dialog):
     @pyqtSlot(str)
     def onLogSuccess(self, cookie):
         self.conf.current_cookies = cookie
-        self.conf.print()
         currentDict = self.get_current_dict()
         currentDict.checkCookie(json.loads(cookie))
         currentDict.getGroups()
@@ -252,7 +251,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
             self.newWordListWidget.addItem(item)
         self.newWordListWidget.clearSelection()
 
-        self.needDeleteWordsView.check_title_checkbox_if_not_empty()
+        self.needDeleteWordsView.check_if_not_empty()
 
         self.dictionaryComboBox.setEnabled(True)
         self.apiComboBox.setEnabled(True)
@@ -331,7 +330,6 @@ class Windows(QDialog, mainUI.Ui_Dialog):
                     return
                 break
 
-        self.conf.print()
         model = noteManager.getOrCreateModel()
         noteManager.getOrCreateModelCardTemplate(model)
         deck = noteManager.getOrCreateDeck(self.conf.deck, model)
@@ -423,28 +421,34 @@ class NeedDeleteWordsView:
     def __init__(self, title_checkbox: aqt.QCheckBox, list_widget: aqt.QListWidget):
         self._checkbox = title_checkbox
         self._list_widget = list_widget
-        self._delIcon = QIcon(':/icons/delete.png')
-        self._listen_title_checkbox_checkbox()
+        self._delIcon = QIcon(":/icons/delete.png")
+        self._listen_checkbox_change()
 
-    def _listen_title_checkbox_checkbox(self):
+    def _listen_checkbox_change(self):
         def on_cb_change(state):
             check_state = Qt.CheckState(state)
-            for i in range(self._list_widget.count()):
-                self._list_widget.item(i).setCheckState(check_state)  # type: ignore
+            for item in self._items_iter():
+                item.setCheckState(check_state)
 
         self._checkbox.stateChanged.connect(on_cb_change)
 
-    def check_title_checkbox_if_not_empty(self):
+    def check_if_not_empty(self):
         if not self.empty():
             self._checkbox.blockSignals(True)
             self._checkbox.setChecked(True)
             self._checkbox.blockSignals(False)
 
+    def _items_iter(self) -> Iterable[aqt.QListWidgetItem]:
+        return (self._list_widget.item(i) for i in range(self._list_widget.count()))  # type: ignore
+
+    def items(self) -> list[aqt.QListWidgetItem]:
+        return list(self._items_iter())
+
     def checked_items(self) -> list[aqt.QListWidgetItem]:
         return list(
             filter(
-                lambda item: item.checkState() == Qt.CheckState.Checked,  # type: ignore
-                (self._list_widget.item(i) for i in range(self._list_widget.count())),
+                lambda item: item.checkState() == Qt.CheckState.Checked,
+                self._items_iter(),
             )
         )
 
