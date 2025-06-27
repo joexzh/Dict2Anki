@@ -1,7 +1,7 @@
 import json
 import sys
 import logging
-from PyQt6.QtCore import QUrl, pyqtSignal
+from PyQt6.QtCore import QUrl, pyqtSignal, Qt
 from .UIForm import loginDialog
 from PyQt6.QtWidgets import QDialog
 from PyQt6.QtWebEngineWidgets import QWebEngineView
@@ -19,6 +19,8 @@ class LoginDialog(QDialog, loginDialog.Ui_LoginDialog):
         self.url = QUrl(loginUrl)
         self.loginCheckCallbackFn = loginCheckCallbackFn
         self.setupUi(self)
+        self.setWindowFlags(self.windowFlags() | Qt.WindowType.WindowMaximizeButtonHint)
+        self.setWindowState(Qt.WindowState.WindowMaximized)
         self.page = LoginWebEngineView(self)
         self.pageContainer.addWidget(self.page)
         self.page.load(self.url)
