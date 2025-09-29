@@ -1,4 +1,6 @@
 import logging
+import os
+import tempfile
 import time
 from queue import Queue
 from threading import Thread
@@ -86,3 +88,7 @@ def congestGenerator(n=60):
 
 def audio_fname(prefix: str, term: str):
     return f"{prefix}_{term}.mp3"
+
+
+def tmp_audio_dir():
+    return os.path.join(tempfile.gettempdir(), "Dict2Anki", "audios")

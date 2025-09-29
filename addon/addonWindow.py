@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import shutil
 import sys
 from copy import deepcopy
 from tempfile import gettempdir
@@ -19,7 +20,7 @@ from .logger import Handler
 from .loginDialog import LoginDialog
 from .queryApi import apis
 from .UIForm import icons_rc, mainUI, wordGroup
-from .workers import (AudioDownloadWorker, LoginStateCheckWorker, QueryWorker,
+from .workers import (LoginStateCheckWorker, QueryAllWorker,
                       RemoteWordFetchingWorker, VersionCheckWorker,
                       WorkerManager)
 
@@ -76,6 +77,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         ConfCtl.write(self.conf)
         # 插件关闭时退出所有线程
         self.workerman.destroy()
+        shutil.rmtree(misc.tmp_audio_dir(), ignore_errors=True)
 
         event.accept()
 
@@ -284,12 +286,20 @@ class Windows(QDialog, mainUI.Ui_Dialog):
             row_words.append((row, wordItem.text())) # type: ignore
 
         logger.info(f'待查询单词{row_words}')
-        # 查询线程
         self.resetProgressBar(len(row_words))
-        worker = QueryWorker(row_words, self.get_current_api(), self.conf.congest)
+
+        # 查询线程
+        # 判断是否需要下载发音
+        if self.conf.no_pron:
+            logger.info('不下载发音')
+            whichPron = None
+        else:
+            whichPron = F_AMEPRON if self.conf.ame_pron else F_BREPRON
+            logger.info(f'下载发音{whichPron}')
+        worker = QueryAllWorker(row_words, whichPron, self.get_current_api(), self.conf.congest)
         worker.rowSuccess.connect(self.on_queryRowSuccess)
         worker.rowFail.connect(self.on_queryRowFail)
-        worker.tick.connect(lambda: self.progressBar.setValue(self.progressBar.value() + 1))
+        worker.query_word_tick.connect(lambda: self.progressBar.setValue(self.progressBar.value() + 1))
         worker.doneWithResult.connect(self.on_queryDone)
         self.workerman.start(worker)
 
@@ -313,8 +323,8 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         for row, word, queryResult in results:
             if not queryResult:
                 failed_words.append(word)
-            if failed_words:
-                logger.warning(f'查询失败:{failed_words}')
+        if failed_words:
+            logger.warning(f'查询失败:{failed_words}')
 
         self.pullRemoteWordsBtn.setEnabled(True)
         self.queryBtn.setEnabled(True)
@@ -330,20 +340,17 @@ class Windows(QDialog, mainUI.Ui_Dialog):
                     return
                 break
 
+        self.syncBtn.setEnabled(False)
+        logger.info('同步点击')
+
         model = noteManager.getOrCreateModel()
         noteManager.getOrCreateModelCardTemplate(model)
         deck = noteManager.getOrCreateDeck(self.conf.deck, model)
 
-        logger.info('同步点击')
-        audiosDownloadTasks = []
-
-        # 判断是否需要下载发音
         if self.conf.no_pron:
-            logger.info('不下载发音')
             whichPron = None
         else:
             whichPron = F_AMEPRON if self.conf.ame_pron else F_BREPRON
-            logger.info(f'下载发音{whichPron}')
 
         added = 0
         for i in range(self.newWordListWidget.count()):
@@ -352,23 +359,15 @@ class Windows(QDialog, mainUI.Ui_Dialog):
             if wordItemData:
                 noteManager.addNoteToDeck(deck, model, self.conf, wordItemData)
                 added += 1
-                # 添加发音任务
+                # 移动发音文件，从 {tmp}/Dict2Anki/audios 到 anki 媒体库文件夹
                 if whichPron and wordItemData.get(whichPron):
-                    # 我们不希望文件名被 mw.col.media.add_file 改变，因此直接下载到媒体库文件夹。
-                    # 后续不需要再调用 mw.col.media.add_file
-                    fpath = noteManager.media_path(misc.audio_fname(whichPron, wordItemData[F_TERM]))
-                    audiosDownloadTasks.append((fpath, wordItemData[whichPron],))
-
-        logger.info(f'发音下载任务:{audiosDownloadTasks}')
-
-        if audiosDownloadTasks:
-            self.syncBtn.setEnabled(False)
-            self.resetProgressBar(len(audiosDownloadTasks))
-
-            worker = AudioDownloadWorker(audiosDownloadTasks)
-            worker.tick.connect(lambda f,u,s: self.progressBar.setValue(self.progressBar.value() + 1))
-            worker.done.connect(lambda _: aqt.utils.tooltip(f'发音下载完成'))
-            self.workerman.start(worker)
+                    fname = misc.audio_fname(whichPron, wordItemData[F_TERM])
+                    audio_from = os.path.join(misc.tmp_audio_dir(), fname)
+                    audio_to = noteManager.media_path(fname)
+                    if os.path.isfile(audio_from):
+                        if os.path.isfile(audio_to):
+                            os.remove(audio_to)
+                        shutil.move(audio_from, audio_to)
 
         self.newWordListWidget.clear()
 
@@ -388,9 +387,8 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         aqt.mw.reset()
 
         logger.info('完成')
-
-        if not audiosDownloadTasks:
-            aqt.utils.tooltip(f'添加{added}个笔记\n删除{deleted}个笔记')
+        self.syncBtn.setEnabled(True)
+        aqt.utils.tooltip(f'添加{added}个笔记\n删除{deleted}个笔记')
 
     def simpleLogin(self):
         aqt.utils.showCritical("第一次登录或cookie失效！请重新登录")
