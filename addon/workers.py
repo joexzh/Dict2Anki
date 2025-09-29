@@ -51,11 +51,13 @@ class WorkerManager:
     def start(self, worker: AbstractWorker):
         worker.done.connect(self._on_worker_done)
         self._workers.append(worker)
+        # python automatically wraps the bounded method, so `submit(worker.run)` is also ok
         self._pool.submit(lambda: (lambda worker: worker.run())(worker))
 
     def destroy(self):
         for worker in self._workers:
             worker.interrupted = True
+            worker.disconnect()
         self._pool.exit()
 
     def _on_worker_done(self, worker):
