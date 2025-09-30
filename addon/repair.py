@@ -124,7 +124,7 @@ class Repair:
 
         return rf"""默认设置:
         Deck：{conf.deck}
-        线上单词本：{conf.current_selected_groups}
+        线上单词本：{self._w.get_current_dict().name}{conf.current_selected_groups}
         查词API：{self._w.get_current_api().name}
         释义：{conf.definition}
         例句：{conf.sentence}
