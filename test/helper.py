@@ -21,18 +21,7 @@ def fresh_config_dict():
   "selectedDict": 0,
   "selectedGroup": [[], []],
   "selectedApi": 0,
-  "credential": [
-    {
-      "username": "",
-      "password": "",
-      "cookie": ""
-    },
-    {
-      "username": "",
-      "password": "",
-      "cookie": ""
-    }
-  ],
+  "credential": [],
   "definition": true,
   "sentence": true,
   "image": true,

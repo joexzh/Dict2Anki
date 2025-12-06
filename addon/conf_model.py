@@ -38,7 +38,10 @@ class Conf(_typing.ListenableModel):
 
     @property
     def current_credential(self):
-        return self._map["credential"][self.selected_dict]
+        cred = self._map["credential"]
+        while len(cred) < self.selected_dict + 1:
+            cred.append(_typing.Credential(username="", password="", cookie=""))
+        return cred[self.selected_dict]
 
     @property
     def current_username(self):
