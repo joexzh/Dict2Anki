@@ -10,6 +10,8 @@
 
 ### Change log
 ___
+* v7.2.5
+  * 稍微增强配置兼容性（fixed issue [#7](https://github.com/joexzh/Dict2Anki/issues/7)）
 * v7.2.4
   * 修复可能会下载错误发音内容的问题（[#3](https://github.com/joexzh/Dict2Anki/issues/3)）
 * v7.2.3
