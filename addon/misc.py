@@ -1,3 +1,4 @@
+import base64
 import logging
 import os
 import tempfile
@@ -92,3 +93,23 @@ def audio_fname(prefix: str, term: str):
 
 def tmp_audio_dir():
     return os.path.join(tempfile.gettempdir(), "Dict2Anki", "audios")
+
+
+_XOR_MASK = 0xFF
+
+
+def enc_cookies(cookies: str) -> str:
+    """each byte xor 0xFF and encode to base64 string"""
+
+    bytes = bytearray(cookies, 'utf-8')
+    bytes[:] = (b ^ _XOR_MASK for b in bytes)
+    b64_str = base64.b64encode(bytes).decode('utf-8')
+    return b64_str
+
+
+def dec_cookies(cookies_enc: str) -> str:
+    """revert enc_cookies"""
+
+    bytes = bytearray(base64.b64decode(cookies_enc))
+    bytes[:] = (b ^ _XOR_MASK for b in bytes)
+    return bytes.decode('utf-8')

@@ -1,4 +1,5 @@
 {
+  "version": 2,
   "deck": "",
   "selectedDict": 0,
   "selectedGroup": [[], []],
@@ -7,12 +8,14 @@
     {
       "username": "",
       "password": "",
-      "cookie": ""
+      "cookie": "",
+      "cookie_encoded": ""
     },
     {
       "username": "",
       "password": "",
-      "cookie": ""
+      "cookie": "",
+      "cookie_encoded": ""
     }
   ],
   "definition": true,

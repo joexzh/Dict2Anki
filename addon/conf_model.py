@@ -1,5 +1,6 @@
 from . import _typing
 from .constants import *
+from .misc import dec_cookies, enc_cookies
 
 
 class Conf(_typing.ListenableModel):
@@ -9,8 +10,38 @@ class Conf(_typing.ListenableModel):
         """require valid `config` returned from `mw.addonManager.getConfig`"""
         self._map: _typing.ConfigMap = conf
 
+        if self.version >= 2:
+            # `cookie_encoded` is added at version 2. If it's not empty in
+            # config file, the raw `cookie` field must be empty. Then we should
+            # decode its value and set to `cookie` field.
+            creds = self._map["credential"]
+            for cred in creds:
+                if cred["cookie_encoded"] == "":
+                    continue
+                cred["cookie"] = dec_cookies(cred["cookie_encoded"])
+
+    def encode_cookies(self):
+        """Encode cookies to prevent disk scanning malware to easily collect
+        sensitive data.
+
+        We didn't track whether cookies are dirty, so this function must and
+        only be called just before saving to config file"""
+
+        # Store encode result in `cookie_encoded`, clear raw `cookies`
+        # afterwards.
+        creds = self._map["credential"]
+        for cred in creds:
+            if cred["cookie"] == "":
+                continue
+            cred["cookie_encoded"] = enc_cookies(cred["cookie"])
+            cred["cookie"] = ""
+
     def get_map(self):
         return self._map
+
+    @property
+    def version(self):
+        return self._map["version"]
 
     @property
     def deck(self):
@@ -40,7 +71,11 @@ class Conf(_typing.ListenableModel):
     def current_credential(self):
         cred = self._map["credential"]
         while len(cred) < self.selected_dict + 1:
-            cred.append(_typing.Credential(username="", password="", cookie=""))
+            cred.append(
+                _typing.Credential(username="",
+                                   password="",
+                                   cookie="",
+                                   cookie_encoded=""))
         return cred[self.selected_dict]
 
     @property

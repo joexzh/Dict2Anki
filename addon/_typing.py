@@ -17,9 +17,11 @@ class Credential(TypedDict):
     username: str
     password: str
     cookie: str
+    cookie_encoded: str
 
 
 class ConfigMap(TypedDict):
+    version: int
     deck: str
     selectedDict: int
     selectedGroup: list[list[str]]
@@ -46,7 +48,7 @@ class AbstractDictionary(ABC):
 
     @staticmethod
     @abstractmethod
-    def loginCheckCallbackFn(cookie: dict, content: str):
+    def loginCheckCallbackFn(cookie: dict, content: str) -> bool:
         pass
 
     @classmethod

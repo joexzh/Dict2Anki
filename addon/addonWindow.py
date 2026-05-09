@@ -485,6 +485,7 @@ class ConfCtl:
 
     @staticmethod
     def write(conf: conf_model.Conf):
+        conf.encode_cookies()
         aqt.mw.addonManager.writeConfig(__name__, conf.get_map())  # type: ignore
 
     @staticmethod
