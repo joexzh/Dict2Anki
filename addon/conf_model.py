@@ -41,6 +41,17 @@ class Conf(_typing.ListenableModel):
 
     @property
     def version(self):
+        """
+        `config.json` schema version number
+        """
+
+        # `config.json` file evolves, normally latest config.json is shipped
+        # with latest code. If something wrong happens to Anki's add-on update
+        # system, or user accidentally pastes in a config.json with older
+        # version, which it's an older file, we are able to look at the version
+        # number and do the proper thing.
+        if "version" not in self._map:
+            return 1
         return self._map["version"]
 
     @property
