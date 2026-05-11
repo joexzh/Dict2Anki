@@ -1,5 +1,9 @@
+from __future__ import annotations
+
 import copy
 import functools
+import threading
+import typing as T
 
 from . import _typing
 from .constants import *
@@ -18,6 +22,24 @@ def _set_dirty(method):
 
 
 class Conf(_typing.ListenableModel):
+    lock = threading.Lock()
+    default_user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+    instance: T.Optional[Conf] = None
+
+    @classmethod
+    def getinstance(cls, conf):
+        "Thread safe singleton instance"
+        if cls.instance is None:
+            with cls.lock:
+                if cls.instance is None:
+                    cls.instance = Conf(conf)
+        return cls.instance
+
+    @classmethod
+    def user_agent_or_default(cls):
+        if cls.instance is None:
+            return cls.default_user_agent
+        return cls.instance.user_agent
 
     def __init__(self, conf):
         super().__init__()
@@ -95,10 +117,10 @@ class Conf(_typing.ListenableModel):
         cred = self._map["credential"]
         while len(cred) < self.selected_dict + 1:
             cred.append(
-                _typing.Credential(username="",
-                                   password="",
-                                   cookie="",
-                                   cookie_encoded=""))
+                _typing.Credential(
+                    username="", password="", cookie="", cookie_encoded=""
+                )
+            )
         return cred[self.selected_dict]
 
     @property
@@ -235,6 +257,12 @@ class Conf(_typing.ListenableModel):
     @_set_dirty
     def congest(self, val: int):
         self._map[F_CONGEST] = val
+
+    @property
+    def user_agent(self):
+        if self.version >= 2:
+            return self._map["user_agent"]
+        return self.default_user_agent
 
     @property
     def current_selected_groups(self) -> list[str]:

@@ -9,7 +9,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from .._typing import AbstractDictionary
-from ..constants import USER_AGENT
+from ..conf_model import Conf
 
 logger = logging.getLogger('dict2Anki.dictionary.eudict')
 
@@ -19,7 +19,7 @@ class Eudict(AbstractDictionary):
     loginUrl = 'https://dict.eudic.net/account/login'
     timeout = 10
     headers = {
-        'User-Agent': USER_AGENT,
+        'User-Agent': Conf.user_agent_or_default(),
     }
     retries = Retry(total=5, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
     session = requests.Session()

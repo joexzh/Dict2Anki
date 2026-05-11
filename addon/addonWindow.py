@@ -44,7 +44,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         self.remoteWords = []
 
         self.workerman = WorkerManager()
-        self.conf = conf_model.Conf(ConfCtl.read())
+        self.conf = conf_model.Conf.getinstance(ConfCtl.read())
 
         self.init_ui()
         self.setupLogger()

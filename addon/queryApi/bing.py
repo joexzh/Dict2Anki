@@ -8,7 +8,7 @@ from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
 from .._typing import AbstractQueryAPI, QueryWordData
-from ..constants import USER_AGENT
+from ..conf_model import Conf
 
 logger = logging.getLogger('dict2Anki.queryApi.bing')
 __all__ = ['API']
@@ -73,7 +73,7 @@ class Parser:
 class API(AbstractQueryAPI):
     name = '必应 API'
     timeout = 10
-    headers = {'User-Agent': USER_AGENT}
+    headers = {'User-Agent': Conf.user_agent_or_default()}
     retries = Retry(total=5, backoff_factor=3, status_forcelist=[500, 502, 503, 504])
     session = requests.Session()
     session.mount('http://', HTTPAdapter(max_retries=retries))

@@ -37,6 +37,7 @@ class ConfigMap(TypedDict):
     AmEPron: bool
     noPron: bool
     congest: int
+    user_agent: str
 
 
 class AbstractDictionary(ABC):

@@ -6,7 +6,7 @@ from .UIForm import loginDialog
 from PyQt6.QtWidgets import QDialog
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebEngineCore import QWebEngineProfile
-from .constants import USER_AGENT
+from .conf_model import Conf
 
 logger = logging.getLogger('dict2Anki')
 
@@ -59,7 +59,7 @@ class LoginWebEngineView(QWebEngineView):
         # 绑定cookie被添加的信号槽
         self.profile = QWebEngineProfile.defaultProfile()
         self.profile.setHttpUserAgent( # type: ignore
-            USER_AGENT
+            Conf.user_agent_or_default()
         )
         self.cookieStore = self.profile.cookieStore() # type: ignore
         self.cookieStore.cookieAdded.connect(self.onCookieAdd) # type: ignore
