@@ -7,8 +7,8 @@ import aqt
 from anki import models, notes
 
 from . import conf_model, misc
+from . import constants as C
 from ._typing import QueryWordData
-from .constants import *
 
 logger = logging.getLogger("dict2Anki.noteManager")
 
@@ -46,7 +46,7 @@ def getNoteIds(wordList, deckName) -> list[notes.NoteId]:
 
 def noteFilterByModelName(note: notes.Note):
     model = note.note_type()
-    if model and model["name"] == MODEL_NAME:
+    if model and model["name"] == C.MODEL_NAME:
         return True
     return False
 
@@ -90,17 +90,17 @@ def getOrCreateDeck(deckName, model):
 
 def getOrCreateModel() -> models.NoteType:
     assert aqt.mw.col
-    model = aqt.mw.col.models.by_name(MODEL_NAME)
+    model = aqt.mw.col.models.by_name(C.MODEL_NAME)
     if model:
-        if set([f["name"] for f in model["flds"]]) == set(MODEL_FIELDS):
+        if set([f["name"] for f in model["flds"]]) == set(C.MODEL_FIELDS):
             return model
         else:
             logger.warning("模版字段异常，自动删除重建")
             aqt.mw.col.models.remove(model["id"])
 
-    logger.info(f"创建新模版:{MODEL_NAME}")
-    model = aqt.mw.col.models.new(MODEL_NAME)
-    for field_name in MODEL_FIELDS:
+    logger.info(f"创建新模版:{C.MODEL_NAME}")
+    model = aqt.mw.col.models.new(C.MODEL_NAME)
+    for field_name in C.MODEL_FIELDS:
         aqt.mw.col.models.add_field(model, aqt.mw.col.models.new_field(field_name))
     return model
 
@@ -179,7 +179,7 @@ def addNoteToDeck(deckObject, modelObject, conf: conf_model.Conf, oneQueryResult
     modelObject["did"] = deckObject["id"]
 
     newNote = aqt.mw.col.new_note(modelObject)
-    newNote[F_TERM] = oneQueryResult[F_TERM]
+    newNote[C.F_TERM] = oneQueryResult[C.F_TERM]
     writeNoteFields(
         newNote,
         oneQueryResult,
@@ -195,96 +195,96 @@ def addNoteToDeck(deckObject, modelObject, conf: conf_model.Conf, oneQueryResult
         ],
     )  # 写入所有字段
     aqt.mw.col.add_note(newNote, deckObject["id"])
-    logger.info(f"添加笔记{newNote[F_TERM]}")
+    logger.info(f"添加笔记{newNote[C.F_TERM]}")
 
 
 def writeNoteDefinition(
     note: notes.Note, queryData: Optional[QueryWordData], conf: conf_model.Conf
 ):
     if conf.definition:
-        if queryData and queryData[F_DEFINITION]:
-            note[F_DEFINITION] = "<br>".join(queryData[F_DEFINITION])
+        if queryData and queryData[C.F_DEFINITION]:
+            note[C.F_DEFINITION] = "<br>".join(queryData[C.F_DEFINITION])
     else:
-        note[F_DEFINITION] = ""
+        note[C.F_DEFINITION] = ""
 
 
 def writeNotePhrase(note: notes.Note, queryData: Optional[QueryWordData], conf: conf_model.Conf):
     if conf.phrase:
-        if queryData and queryData[F_PHRASE]:
-            note[f"{F_PHRASE}Front"] = "<br>".join(
-                [f"<i>{e.strip()}</i>" for e, _ in queryData[F_PHRASE]]
+        if queryData and queryData[C.F_PHRASE]:
+            note[f"{C.F_PHRASE}Front"] = "<br>".join(
+                [f"<i>{e.strip()}</i>" for e, _ in queryData[C.F_PHRASE]]
             )
-            note[f"{F_PHRASE}Back"] = "<br>".join(
-                [f"<i>{e.strip()}</i> {c.strip()}" for e, c in queryData[F_PHRASE]]
+            note[f"{C.F_PHRASE}Back"] = "<br>".join(
+                [f"<i>{e.strip()}</i> {c.strip()}" for e, c in queryData[C.F_PHRASE]]
             )
     else:
-        clear_field(note, f"{F_PHRASE}Front")
-        clear_field(note, f"{F_PHRASE}Back")
+        clear_field(note, f"{C.F_PHRASE}Front")
+        clear_field(note, f"{C.F_PHRASE}Back")
 
 
 def writeNoteSentence(note: notes.Note, queryData: Optional[QueryWordData], conf: conf_model.Conf):
     if conf.sentence:
-        if queryData and queryData[F_SENTENCE]:
-            note[f"{F_SENTENCE}Front"] = (
+        if queryData and queryData[C.F_SENTENCE]:
+            note[f"{C.F_SENTENCE}Front"] = (
                 "<ol>"
-                + "\n".join([f"<li>{e.strip()}</li>" for e, _ in queryData[F_SENTENCE]])
+                + "\n".join([f"<li>{e.strip()}</li>" for e, _ in queryData[C.F_SENTENCE]])
                 + "</ol>"
             )
-            note[f"{F_SENTENCE}Back"] = (
+            note[f"{C.F_SENTENCE}Back"] = (
                 "<ol>"
                 + "\n".join(
                     [
                         f"<li>{e.strip()}<br>{c.strip()}</li>"
-                        for e, c in queryData[F_SENTENCE]
+                        for e, c in queryData[C.F_SENTENCE]
                     ]
                 )
                 + "</ol>"
             )
     else:
-        clear_field(note, f"{F_SENTENCE}Front")
-        clear_field(note, f"{F_SENTENCE}Back")
+        clear_field(note, f"{C.F_SENTENCE}Front")
+        clear_field(note, f"{C.F_SENTENCE}Back")
 
 
 def writeNoteImage(note: notes.Note, queryData: Optional[QueryWordData], conf: conf_model.Conf):
     if conf.image:
-        if queryData and queryData[F_IMAGE]:
-            note[F_IMAGE] = f'<img style="max-height:300px" src="{queryData[F_IMAGE]}">'
+        if queryData and queryData[C.F_IMAGE]:
+            note[C.F_IMAGE] = f'<img style="max-height:300px" src="{queryData[C.F_IMAGE]}">'
     else:
-        clear_field(note, F_IMAGE)
+        clear_field(note, C.F_IMAGE)
 
 
 def writeNotePron(note: notes.Note, queryData: Optional[QueryWordData], conf: conf_model.Conf):
     if conf.ame_pron:
-        if queryData and queryData[F_AMEPRON]:
-            note[F_AMEPRON] = make_pron_field(F_AMEPRON, queryData[F_TERM])
+        if queryData and queryData[C.F_AMEPRON]:
+            note[C.F_AMEPRON] = make_pron_field(C.F_AMEPRON, queryData[C.F_TERM])
     else:
-        clear_field(note, F_AMEPRON)
+        clear_field(note, C.F_AMEPRON)
 
     if conf.bre_pron:
-        if queryData and queryData[F_BREPRON]:
-            note[F_BREPRON] = make_pron_field(F_BREPRON, queryData[F_TERM])
+        if queryData and queryData[C.F_BREPRON]:
+            note[C.F_BREPRON] = make_pron_field(C.F_BREPRON, queryData[C.F_TERM])
     else:
-        clear_field(note, F_BREPRON)
+        clear_field(note, C.F_BREPRON)
 
 
 def writeNoteAmEPhonetic(
     note: notes.Note, queryData: Optional[QueryWordData], conf: conf_model.Conf
 ):
     if conf.ame_phonetic:
-        if queryData and queryData[F_AMEPHONETIC]:
-            note[F_AMEPHONETIC] = queryData[F_AMEPHONETIC]
+        if queryData and queryData[C.F_AMEPHONETIC]:
+            note[C.F_AMEPHONETIC] = queryData[C.F_AMEPHONETIC]
     else:
-        clear_field(note, F_AMEPHONETIC)
+        clear_field(note, C.F_AMEPHONETIC)
 
 
 def writeNoteBrEPhonetic(
     note: notes.Note, queryData: Optional[QueryWordData], conf: conf_model.Conf
 ):
     if conf.bre_phonetic:
-        if queryData and queryData[F_BREPHONETIC]:
-            note[F_BREPHONETIC] = queryData[F_BREPHONETIC]
+        if queryData and queryData[C.F_BREPHONETIC]:
+            note[C.F_BREPHONETIC] = queryData[C.F_BREPHONETIC]
     else:
-        clear_field(note, F_BREPHONETIC)
+        clear_field(note, C.F_BREPHONETIC)
 
 
 writeNoteFnType = Callable[[notes.Note, Optional[QueryWordData], conf_model.Conf], None]

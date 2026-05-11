@@ -2,9 +2,9 @@ import logging
 from typing import Optional
 from urllib.parse import urlencode
 
-from .._typing import AbstractQueryAPI, QueryWordData
-from ..constants import *
+from .. import constants as C
 from .. import dictionary
+from .._typing import AbstractQueryAPI, QueryWordData
 
 logger = logging.getLogger('dict2Anki.queryApi.youdao')
 __all__ = ['API']
@@ -43,28 +43,28 @@ class Parser:
 
         url = 'http://dict.youdao.com/dictvoice?audio='
         pron = {
-            F_AMEPHONETIC: '',
-            F_AMEPRON: '',
-            F_BREPHONETIC: '',
-            F_BREPRON: ''
+            C.F_AMEPHONETIC: '',
+            C.F_AMEPRON: '',
+            C.F_BREPHONETIC: '',
+            C.F_BREPRON: ''
         }
         try:
-            pron[F_AMEPHONETIC] = self._result['simple']['word'][0]['usphone']
+            pron[C.F_AMEPHONETIC] = self._result['simple']['word'][0]['usphone']
         except KeyError:
             pass
 
         try:
-            pron[F_BREPHONETIC] = self._result['simple']['word'][0]['ukphone']
+            pron[C.F_BREPHONETIC] = self._result['simple']['word'][0]['ukphone']
         except KeyError:
             pass
 
         try:
-            pron[F_AMEPRON] = url + self._result['simple']['word'][0]['usspeech']
+            pron[C.F_AMEPRON] = url + self._result['simple']['word'][0]['usspeech']
         except (TypeError, KeyError):
             pass
 
         try:
-            pron[F_BREPRON] = url + self._result['simple']['word'][0]['ukspeech']
+            pron[C.F_BREPRON] = url + self._result['simple']['word'][0]['ukspeech']
         except (TypeError, KeyError):
             pass
 
@@ -74,22 +74,22 @@ class Parser:
     @property
     def BrEPhonetic(self) -> str:
         """英式音标"""
-        return self.pronunciations[F_BREPHONETIC]
+        return self.pronunciations[C.F_BREPHONETIC]
 
     @property
     def AmEPhonetic(self) -> str:
         """美式音标"""
-        return self.pronunciations[F_AMEPHONETIC]
+        return self.pronunciations[C.F_AMEPHONETIC]
 
     @property
     def BrEPron(self) -> str:
         """英式发音url"""
-        return self.pronunciations[F_BREPRON]
+        return self.pronunciations[C.F_BREPRON]
 
     @property
     def AmEPron(self)->str:
         """美式发音url"""
-        return self.pronunciations[F_AMEPRON]
+        return self.pronunciations[C.F_AMEPRON]
 
     @property
     def sentence(self) -> list[tuple[str, str]]:

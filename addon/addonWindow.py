@@ -2,27 +2,22 @@ import json
 import logging
 import os
 import shutil
-import sys
-from copy import deepcopy
 from tempfile import gettempdir
 from typing import Iterable, Optional
 
 import aqt
 import aqt.utils
-from aqt import (QDialog, QIcon, QListWidgetItem, QPlainTextEdit, QPushButton,
-                 Qt, QVBoxLayout, pyqtSlot)
+from aqt import QDialog, QIcon, QListWidgetItem, QPlainTextEdit, QPushButton, Qt, QVBoxLayout, pyqtSlot
 
 from . import conf_model, misc, noteManager
+from . import constants as C
 from ._typing import AbstractDictionary, AbstractQueryAPI, QueryWordData
-from .constants import *
 from .dictionary import dictionaries
 from .logger import Handler
 from .loginDialog import LoginDialog
 from .queryApi import apis
-from .UIForm import icons_rc, mainUI, wordGroup
-from .workers import (LoginStateCheckWorker, QueryAllWorker,
-                      RemoteWordFetchingWorker, VersionCheckWorker,
-                      WorkerManager)
+from .UIForm import mainUI, wordGroup
+from .workers import LoginStateCheckWorker, QueryAllWorker, RemoteWordFetchingWorker, VersionCheckWorker, WorkerManager
 
 logger = logging.getLogger('dict2Anki')
 
@@ -61,7 +56,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
 
     def init_ui(self):
         self.setupUi(self)
-        self.setWindowTitle(ADDON_FULL_NAME)
+        self.setWindowTitle(C.ADDON_FULL_NAME)
         self.usernameLineEdit.hide()
         self.usernameLabel.hide()
         self.passwordLabel.hide()
@@ -118,7 +113,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         @pyqtSlot(str, str)
         def on_haveNewVersion(version, changeLog):
             if aqt.utils.askUser(f'有新版本:{version}是否更新？\n\n{changeLog.strip()}'):
-                aqt.utils.openLink(RELEASE_URL)
+                aqt.utils.openLink(C.RELEASE_URL)
         worker = VersionCheckWorker()
         worker.haveNewVersion.connect(on_haveNewVersion)
         self.workerman.start(worker)
@@ -294,7 +289,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
             logger.info('不下载发音')
             whichPron = None
         else:
-            whichPron = F_AMEPRON if self.conf.ame_pron else F_BREPRON
+            whichPron = C.F_AMEPRON if self.conf.ame_pron else C.F_BREPRON
             logger.info(f'下载发音{whichPron}')
         worker = QueryAllWorker(row_words, whichPron, self.get_current_api(), self.conf.congest)
         worker.rowSuccess.connect(self.on_queryRowSuccess)
@@ -320,7 +315,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
     @pyqtSlot(list)
     def on_queryDone(self, results):
         failed_words = []
-        for row, word, queryResult in results:
+        for _row, word, queryResult in results:
             if not queryResult:
                 failed_words.append(word)
         if failed_words:
@@ -350,7 +345,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         if self.conf.no_pron:
             whichPron = None
         else:
-            whichPron = F_AMEPRON if self.conf.ame_pron else F_BREPRON
+            whichPron = C.F_AMEPRON if self.conf.ame_pron else C.F_BREPRON
 
         added = 0
         for i in range(self.newWordListWidget.count()):
@@ -361,7 +356,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
                 added += 1
                 # 移动发音文件，从 {tmp}/Dict2Anki/audios 到 anki 媒体库文件夹
                 if whichPron and wordItemData.get(whichPron):
-                    fname = misc.audio_fname(whichPron, wordItemData[F_TERM])
+                    fname = misc.audio_fname(whichPron, wordItemData[C.F_TERM])
                     audio_from = os.path.join(misc.tmp_audio_dir(), fname)
                     audio_to = noteManager.media_path(fname)
                     if os.path.isfile(audio_from):
@@ -377,7 +372,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         deleted = 0
 
         if needToDeleteWords and aqt.utils.askUser(
-            f'确定要删除这些单词吗:{needToDeleteWords[:3]}...({len(needToDeleteWords)}个)', title=ADDON_FULL_NAME, parent=self):
+            f'确定要删除这些单词吗:{needToDeleteWords[:3]}...({len(needToDeleteWords)}个)', title=C.ADDON_FULL_NAME, parent=self):
             noteIds = noteManager.getNoteIds(needToDeleteWords, self.conf.deck)
             noteManager.removeNotes(noteIds)
             deleted = len(needToDeleteWords)

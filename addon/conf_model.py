@@ -6,7 +6,7 @@ import threading
 import typing as T
 
 from . import _typing
-from .constants import *
+from . import constants as C
 from .misc import dec_cookies, enc_cookies
 
 
@@ -168,102 +168,102 @@ class Conf(_typing.ListenableModel):
 
     @property
     def definition(self):
-        return self._map[F_DEFINITION]
+        return self._map[C.F_DEFINITION]
 
     @definition.setter
     @_set_dirty
     def definition(self, val: bool):
-        self._map[F_DEFINITION] = val
+        self._map[C.F_DEFINITION] = val
 
     @property
     def image(self):
-        return self._map[F_IMAGE]
+        return self._map[C.F_IMAGE]
 
     @image.setter
     @_set_dirty
     def image(self, val: bool):
-        self._map[F_IMAGE] = val
+        self._map[C.F_IMAGE] = val
 
     @property
     def sentence(self):
-        return self._map[F_SENTENCE]
+        return self._map[C.F_SENTENCE]
 
     @sentence.setter
     @_set_dirty
     def sentence(self, val: bool):
-        self._map[F_SENTENCE] = val
+        self._map[C.F_SENTENCE] = val
 
     @property
     def phrase(self):
-        return self._map[F_PHRASE]
+        return self._map[C.F_PHRASE]
 
     @phrase.setter
     @_set_dirty
     def phrase(self, val: bool):
-        self._map[F_PHRASE] = val
+        self._map[C.F_PHRASE] = val
 
     @property
     def ame_phonetic(self):
-        return self._map[F_AMEPHONETIC]
+        return self._map[C.F_AMEPHONETIC]
 
     @ame_phonetic.setter
     @_set_dirty
     def ame_phonetic(self, val: bool):
-        self._map[F_AMEPHONETIC] = val
+        self._map[C.F_AMEPHONETIC] = val
 
     @property
     def bre_phonetic(self):
-        return self._map[F_BREPHONETIC]
+        return self._map[C.F_BREPHONETIC]
 
     @bre_phonetic.setter
     @_set_dirty
     def bre_phonetic(self, val: bool):
-        self._map[F_BREPHONETIC] = val
+        self._map[C.F_BREPHONETIC] = val
 
     @property
     def bre_pron(self):
-        return self._map[F_BREPRON]
+        return self._map[C.F_BREPRON]
 
     @bre_pron.setter
     @_set_dirty
     def bre_pron(self, val: bool):
-        self._map[F_BREPRON] = val
+        self._map[C.F_BREPRON] = val
         if val:
-            self._map[F_AMEPRON] = False
-            self._map[F_NOPRON] = False
+            self._map[C.F_AMEPRON] = False
+            self._map[C.F_NOPRON] = False
 
     @property
     def ame_pron(self):
-        return self._map[F_AMEPRON]
+        return self._map[C.F_AMEPRON]
 
     @ame_pron.setter
     @_set_dirty
     def ame_pron(self, val: bool):
-        self._map[F_AMEPRON] = val
+        self._map[C.F_AMEPRON] = val
         if val:
-            self._map[F_BREPRON] = False
-            self._map[F_NOPRON] = False
+            self._map[C.F_BREPRON] = False
+            self._map[C.F_NOPRON] = False
 
     @property
     def no_pron(self):
-        return self._map[F_NOPRON]
+        return self._map[C.F_NOPRON]
 
     @no_pron.setter
     @_set_dirty
     def no_pron(self, val: bool):
-        self._map[F_NOPRON] = val
+        self._map[C.F_NOPRON] = val
         if val:
-            self._map[F_BREPRON] = False
-            self._map[F_AMEPRON] = False
+            self._map[C.F_BREPRON] = False
+            self._map[C.F_AMEPRON] = False
 
     @property
     def congest(self):
-        return self._map[F_CONGEST]
+        return self._map[C.F_CONGEST]
 
     @congest.setter
     @_set_dirty
     def congest(self, val: int):
-        self._map[F_CONGEST] = val
+        self._map[C.F_CONGEST] = val
 
     @property
     def user_agent(self):

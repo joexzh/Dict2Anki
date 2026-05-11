@@ -7,9 +7,9 @@ import aqt
 import aqt.utils
 
 from . import conf_model, dictionary, misc, noteManager, queryApi, workers
+from . import constants as C
 from ._typing import ListenableModel, QueryWordData
 from .addonWindow import Windows
-from .constants import *
 
 _logger = logging.getLogger("dict2Anki.repair")
 
@@ -221,7 +221,7 @@ class Repair:
         )
         if len(self._notes) == 0:
             self._writeLogAndLabel(
-                f"没有要更新的笔记 . . . ", self._w.repairProgressNoteLabel
+                "没有要更新的笔记 . . . ", self._w.repairProgressNoteLabel
             )
             return self._complete(None, None)
 
@@ -237,7 +237,7 @@ class Repair:
 
         self._whichPron: Optional[str] = None
         if not self._w.conf.no_pron:
-            self._whichPron = F_AMEPRON if self._w.conf.ame_pron else F_BREPRON
+            self._whichPron = C.F_AMEPRON if self._w.conf.ame_pron else C.F_BREPRON
 
     def _removeOnly(self):
         ret = True
@@ -248,7 +248,7 @@ class Repair:
     def _queryWords(self, notes):
         row_words: list[Any] = [None] * len(notes)
         for i, note in enumerate(notes):
-            row_words[i] = (i, note[F_TERM])
+            row_words[i] = (i, note[C.F_TERM])
 
         self._w.resetProgressBar(len(row_words))
         self._model.queryGrp.reset(len(row_words))
@@ -288,7 +288,7 @@ class Repair:
     def _updateNotes(self, notes):
         """remove only"""
 
-        for i, note in enumerate(notes):
+        for _i, note in enumerate(notes):
             self._updateOneNote(note, None)
 
         # update notes to collection
@@ -305,7 +305,7 @@ class Repair:
             and not (
                 os.path.isfile(
                     filePath := noteManager.media_path(
-                        misc.audio_fname(self._whichPron, note[F_TERM])
+                        misc.audio_fname(self._whichPron, note[C.F_TERM])
                     )
                 )
             )

@@ -1,5 +1,4 @@
 import json
-import sys
 import logging
 from PyQt6.QtCore import QUrl, pyqtSignal, Qt
 from .UIForm import loginDialog
@@ -40,9 +39,9 @@ class LoginDialog(QDialog, loginDialog.Ui_LoginDialog):
             logger.debug(f'Cookie:{self.page.cookie}')
             logger.debug(f'Content{content}')
             if self.loginCheckCallbackFn(cookie=self.page.cookie, content=content):
-                logger.info(f'Login Success!')
+                logger.info('Login Success!')
                 self.onLoginSucceed()
-            logger.info(f'Login Fail!')
+            logger.info('Login Fail!')
 
         self.page.page().toHtml(contentLoaded) # type: ignore
 

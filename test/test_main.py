@@ -5,11 +5,10 @@ import aqt.utils
 import pytest
 import requests
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QApplication
 
+from ..addon import constants as C
 from ..addon import dictionary
 from ..addon.addonWindow import Windows, noteManager
-from ..addon.constants import *
 from .mock_helper import w_mock
 
 
@@ -17,8 +16,8 @@ def test_start_up_with_fresh_config(qtbot, w_mock):
     w: Windows = w_mock()
     qtbot.addWidget(w)
 
-    assert w.conf.no_pron == False
-    assert ADDON_FULL_NAME in w.windowTitle()
+    assert w.conf.no_pron is False
+    assert C.ADDON_FULL_NAME in w.windowTitle()
     assert aqt.mw.addonManager.getConfig.called > 0
     assert w.usernameLineEdit.text() == w.passwordLineEdit.text() == w.cookieLineEdit.text() == ''
 

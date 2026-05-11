@@ -3,9 +3,9 @@ from typing import Optional
 
 from bs4 import BeautifulSoup
 
-from .._typing import AbstractQueryAPI, QueryWordData
-from ..constants import *
+from .. import constants as C
 from .. import dictionary
+from .._typing import AbstractQueryAPI, QueryWordData
 
 logger = logging.getLogger('dict2Anki.queryApi.eudict')
 __all__ = ['API']
@@ -63,10 +63,10 @@ class Parser:
             return self._pronunciations
 
         pron = {
-            F_BREPHONETIC: '',
-            F_BREPRON: '',
-            F_AMEPHONETIC: '',
-            F_AMEPRON: ''
+            C.F_BREPHONETIC: '',
+            C.F_BREPRON: '',
+            C.F_AMEPHONETIC: '',
+            C.F_AMEPRON: ''
         }
 
         try:
@@ -75,23 +75,23 @@ class Parser:
                 phons = el_phon_line.select('.Phonitic')
 
                 if len(links) == 1: # 存在<a>标签，1个发音，例如 https://dict.eudic.net/dicts/en/hyperplane
-                    pron[F_BREPRON] = self.__make_pron_url(links[0]['data-rel'])
-                    pron[F_AMEPRON] = self.__make_pron_url(links[0]['data-rel'])
-                    pron[F_BREPHONETIC] = phons[0].get_text(strip=True)
-                    pron[F_AMEPHONETIC] = phons[0].get_text(strip=True)
+                    pron[C.F_BREPRON] = self.__make_pron_url(links[0]['data-rel'])
+                    pron[C.F_AMEPRON] = self.__make_pron_url(links[0]['data-rel'])
+                    pron[C.F_BREPHONETIC] = phons[0].get_text(strip=True)
+                    pron[C.F_AMEPHONETIC] = phons[0].get_text(strip=True)
                 elif len(links) > 1: # 存在<a>标签，2个发音
-                    pron[F_BREPRON] = self.__make_pron_url(links[0]['data-rel'])
-                    pron[F_AMEPRON] = self.__make_pron_url(links[1]['data-rel'])
-                    pron[F_BREPHONETIC] = phons[0].get_text(strip=True)
-                    pron[F_AMEPHONETIC] = phons[0].get_text(strip=True) if len(phons) == 1 else phons[1].get_text(strip=True)
+                    pron[C.F_BREPRON] = self.__make_pron_url(links[0]['data-rel'])
+                    pron[C.F_AMEPRON] = self.__make_pron_url(links[1]['data-rel'])
+                    pron[C.F_BREPHONETIC] = phons[0].get_text(strip=True)
+                    pron[C.F_AMEPHONETIC] = phons[0].get_text(strip=True) if len(phons) == 1 else phons[1].get_text(strip=True)
             elif link := self._soap.select_one('div .gv_details .voice-button'):
                 # 只有"全球发音"，没有音标
-                pron[F_BREPRON] = self.__make_pron_url(link['data-rel'])
-                pron[F_AMEPRON] = self.__make_pron_url(link['data-rel'])
+                pron[C.F_BREPRON] = self.__make_pron_url(link['data-rel'])
+                pron[C.F_AMEPRON] = self.__make_pron_url(link['data-rel'])
             elif link := self._soap.select_one('#tbOrgText a.voice-button'):
                 # 在“参考译文”中，例如 https://dict.eudic.net/dicts/en/azeroth
-                pron[F_BREPRON] = self.__make_pron_url(link['data-rel'])
-                pron[F_AMEPRON] = self.__make_pron_url(link['data-rel'])
+                pron[C.F_BREPRON] = self.__make_pron_url(link['data-rel'])
+                pron[C.F_AMEPRON] = self.__make_pron_url(link['data-rel'])
         except (TypeError, KeyError, IndexError):
             pass
 
@@ -101,22 +101,22 @@ class Parser:
     @property
     def BrEPhonetic(self) -> str:
         """英式音标"""
-        return self.pronunciations[F_BREPHONETIC]
+        return self.pronunciations[C.F_BREPHONETIC]
 
     @property
     def AmEPhonetic(self) -> str:
         """美式音标"""
-        return self.pronunciations[F_AMEPHONETIC]
+        return self.pronunciations[C.F_AMEPHONETIC]
 
     @property
     def BrEPron(self) -> str:
         """英式发音url"""
-        return self.pronunciations[F_BREPRON]
+        return self.pronunciations[C.F_BREPRON]
 
     @property
     def AmEPron(self) -> str:
         """美式发音url"""
-        return self.pronunciations[F_AMEPRON]
+        return self.pronunciations[C.F_AMEPRON]
 
     @property
     def sentence(self) -> list[tuple[str, str]]:

@@ -10,10 +10,10 @@ from aqt import QObject, pyqtBoundSignal, pyqtSignal
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
+from . import constants as C
 from . import misc
 from ._typing import AbstractDictionary, AbstractQueryAPI, QueryWordData
 from .conf_model import Conf
-from .constants import *
 
 
 class AbstractWorker(QObject):
@@ -75,14 +75,14 @@ class VersionCheckWorker(AbstractWorker):
     def run(self):
         try:
             self._logger.info("检查新版本")
-            rsp = requests.get(VERSION_CHECK_API, timeout=20).json()
+            rsp = requests.get(C.VERSION_CHECK_API, timeout=20).json()
             version = rsp["tag_name"]
             changeLog = rsp["body"]
-            if version != VERSION:
+            if version != C.VERSION:
                 self._logger.info(f"检查到新版本:{version}--{changeLog.strip()}")
                 self.haveNewVersion.emit(version.strip(), changeLog.strip())
             else:
-                self._logger.info(f"当前为最新版本:{VERSION}")
+                self._logger.info(f"当前为最新版本:{C.VERSION}")
         except Exception as e:
             self._logger.error(f"版本检查失败{e}")
 
@@ -255,7 +255,7 @@ class QueryAllWorker(NetworkWorker):
                 if result and self._which_pron and result.get(self._which_pron):
                     tmp_audio_path = os.path.join(
                         tmp_audio_dir,
-                        misc.audio_fname(self._which_pron, result[F_TERM]),
+                        misc.audio_fname(self._which_pron, result[C.F_TERM]),
                     )
                     downloadSingleAudio(
                         tmp_audio_path,

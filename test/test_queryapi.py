@@ -1,12 +1,22 @@
 import os
 import logging
 from ..addon.queryApi.eudict import API
-from ..addon.constants import *
+from ..addon import constants as C
 import pytest
 logger = logging.getLogger(__name__)
 api = API()
 
-keys = (F_TERM, F_DEFINITION, F_PHRASE, F_IMAGE, F_SENTENCE, F_BREPHONETIC, F_AMEPHONETIC, F_BREPRON, F_AMEPRON)
+keys = (
+    C.F_TERM,
+    C.F_DEFINITION,
+    C.F_PHRASE,
+    C.F_IMAGE,
+    C.F_SENTENCE,
+    C.F_BREPHONETIC,
+    C.F_AMEPHONETIC,
+    C.F_BREPRON,
+    C.F_AMEPRON,
+)
 
 
 @pytest.mark.skip
@@ -22,7 +32,7 @@ def get_missing_fileds_set(res):
 def test_eudict_no_phrase_and_image():
     res = api.query('stint')
     ret = get_missing_fileds_set(res)
-    expect = {F_IMAGE, F_PHRASE}
+    expect = {C.F_IMAGE, C.F_PHRASE}
     assert ret == expect
 
 
@@ -37,7 +47,7 @@ def test_eudict_with_all():
 def test_eudict_with_none():
     res = api.query('asafesdf')
     ret = get_missing_fileds_set(res)
-    assert ret == set(keys) - {F_TERM} # type: ignore
+    assert ret == set(keys) - {C.F_TERM} # type: ignore
 
 
 @pytest.mark.skip
@@ -45,7 +55,7 @@ def test_eudict_implication():
     # 不包含图片，定义不在正常规则内，包含 trans
     res = api.query('implication')
     ret = get_missing_fileds_set(res)
-    expect = {F_IMAGE}
+    expect = {C.F_IMAGE}
     assert ret == expect
 
 
@@ -54,7 +64,7 @@ def test_eudict_epitomize():
     # 不包含图片，定义不在正常规则内
     res = api.query('epitomize')
     ret = get_missing_fileds_set(res)
-    expect = {F_IMAGE, F_PHRASE}
+    expect = {C.F_IMAGE, C.F_PHRASE}
     assert ret == expect
 
 
@@ -71,7 +81,7 @@ def test_eudict_divisional():
     # 又一种特殊情况，只有一个音标
     res = api.query('divisional')
     ret = get_missing_fileds_set(res)
-    expect = {F_IMAGE}
+    expect = {C.F_IMAGE}
     assert expect == ret
 
 
