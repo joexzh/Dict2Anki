@@ -40,8 +40,8 @@ def test_version_check(qtbot, monkeypatch, w_mock):
 @pytest.mark.parametrize('index', [0, 1])
 def test_dictionary_combobox_change(index, monkeypatch, w_mock, qtbot):
     monkeypatch.setitem(aqt.mw.addonManager.getConfig.return_value, "credential", [
-        {'username': '0', 'password': '0', 'cookie': '0'},
-        {'username': '1', 'password': '1', 'cookie': '1'}])
+        {'username': '0', 'password': '0', 'cookie': '0', 'cookie_encoded': ''},
+        {'username': '1', 'password': '1', 'cookie': '1', 'cookie_encoded': ''}])
 
     w: Windows = w_mock()
     qtbot.addWidget(w)
