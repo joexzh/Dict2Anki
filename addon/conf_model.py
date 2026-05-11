@@ -48,14 +48,21 @@ class Conf(_typing.ListenableModel):
         self._dirty = False
 
         if self.version >= 2:
-            # `cookie_encoded` is added at version 2. If it's not empty in
-            # config file, the raw `cookie` field must be empty. Then we should
-            # decode its value and set to `cookie` field.
+            # `cookie_encoded` is added at version 2.
+            # Case 1: `cookie` is not empty. It's the first time from v1 to v2,
+            #   should encode `cookie` and write encoded result to
+            #   `cookie_encoded`
+            # Case 2: `cookie_encoded` is not empty. It's normal v2 config,
+            #   should decode `cookie_encoded` and write decoded result to
+            #   `cookie`
             creds = self._map["credential"]
             for cred in creds:
-                if cred["cookie_encoded"] == "":
-                    continue
-                cred["cookie"] = dec_cookies(cred["cookie_encoded"])
+                if cred["cookie"] != "":
+                    # case 1
+                    cred["cookie_encoded"] = enc_cookies(cred["cookie"])
+                elif cred["cookie_encoded"] != "":
+                    # case 2
+                    cred["cookie"] = dec_cookies(cred["cookie_encoded"])
 
     def get_map(self):
         return self._map
