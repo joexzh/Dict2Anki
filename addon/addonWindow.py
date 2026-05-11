@@ -485,8 +485,8 @@ class ConfCtl:
 
     @staticmethod
     def write(conf: conf_model.Conf):
-        conf.encode_cookies()
-        aqt.mw.addonManager.writeConfig(__name__, conf.get_map())  # type: ignore
+        if conf.is_dirty():
+            aqt.mw.addonManager.writeConfig(__name__, conf.get_saving_map())
 
     @staticmethod
     def init_ui(w: Windows, conf: conf_model.Conf):

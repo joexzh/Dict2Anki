@@ -1,14 +1,29 @@
+import copy
+import functools
+
 from . import _typing
 from .constants import *
 from .misc import dec_cookies, enc_cookies
+
+
+def _set_dirty(method):
+    "Conf setter decorator, sets self._dirty=True whenever it's called"
+
+    @functools.wraps(method)
+    def wrapper(self, *args, **kwargs):
+        self._dirty = True
+        return method(self, *args, **kwargs)
+
+    return wrapper
 
 
 class Conf(_typing.ListenableModel):
 
     def __init__(self, conf):
         super().__init__()
-        """require valid `config` returned from `mw.addonManager.getConfig`"""
+        # require valid `config` returned from `mw.addonManager.getConfig`
         self._map: _typing.ConfigMap = conf
+        self._dirty = False
 
         if self.version >= 2:
             # `cookie_encoded` is added at version 2. If it's not empty in
@@ -20,30 +35,24 @@ class Conf(_typing.ListenableModel):
                     continue
                 cred["cookie"] = dec_cookies(cred["cookie_encoded"])
 
-    def encode_cookies(self):
-        """Encode cookies to prevent disk scanning malware to easily collect
-        sensitive data.
-
-        We didn't track whether cookies are dirty, so this function must and
-        only be called just before saving to config file"""
-
-        # Store encode result in `cookie_encoded`, clear raw `cookies`
-        # afterwards.
-        creds = self._map["credential"]
-        for cred in creds:
-            if cred["cookie"] == "":
-                continue
-            cred["cookie_encoded"] = enc_cookies(cred["cookie"])
-            cred["cookie"] = ""
-
     def get_map(self):
         return self._map
 
+    def get_saving_map(self):
+        "Return a map specifically for saving to file"
+        map_cp = copy.deepcopy(self._map)
+        if self.version >= 2:
+            for cred in map_cp["credential"]:
+                cred["cookie"] = ""
+        return map_cp
+
+    def is_dirty(self):
+        "Is config changed since initial state?"
+        return self._dirty
+
     @property
     def version(self):
-        """
-        `config.json` schema version number
-        """
+        "`config.json` schema version number"
 
         # `config.json` file evolves, normally latest config.json is shipped
         # with latest code. If something wrong happens to Anki's add-on update
@@ -59,6 +68,7 @@ class Conf(_typing.ListenableModel):
         return self._map["deck"]
 
     @deck.setter
+    @_set_dirty
     def deck(self, val: str):
         self._map["deck"] = val
 
@@ -67,6 +77,7 @@ class Conf(_typing.ListenableModel):
         return self._map["selectedDict"]
 
     @selected_dict.setter
+    @_set_dirty
     def selected_dict(self, val: int):
         self._map["selectedDict"] = val
 
@@ -75,6 +86,7 @@ class Conf(_typing.ListenableModel):
         return self._map["selectedApi"]
 
     @selected_api.setter
+    @_set_dirty
     def selected_api(self, val: int):
         self._map["selectedApi"] = val
 
@@ -94,6 +106,7 @@ class Conf(_typing.ListenableModel):
         return self.current_credential["username"]
 
     @current_username.setter
+    @_set_dirty
     def current_username(self, val: str):
         self.current_credential["username"] = val
 
@@ -102,6 +115,7 @@ class Conf(_typing.ListenableModel):
         return self.current_credential["password"]
 
     @current_password.setter
+    @_set_dirty
     def current_password(self, val: str):
         self.current_credential["password"] = val
 
@@ -110,9 +124,17 @@ class Conf(_typing.ListenableModel):
         return self.current_credential["cookie"]
 
     @current_cookies.setter
+    @_set_dirty
     def current_cookies(self, val: str):
-        """setter triggers `current_cookies` event, property value as event argument"""
-        self.current_credential["cookie"] = val
+        "setter triggers `current_cookies` event, property value as event argument"
+        cred = self.current_credential
+        cred["cookie"] = val
+
+        if self.version >= 2:
+            # Encode cookies to prevent disk scanning malware to easily collect
+            # sensitive data.
+            cred["cookie_encoded"] = enc_cookies(cred["cookie"])
+
         self._notify("current_cookies", val)
 
     @property
@@ -120,6 +142,7 @@ class Conf(_typing.ListenableModel):
         return self._map[F_DEFINITION]
 
     @definition.setter
+    @_set_dirty
     def definition(self, val: bool):
         self._map[F_DEFINITION] = val
 
@@ -128,6 +151,7 @@ class Conf(_typing.ListenableModel):
         return self._map[F_IMAGE]
 
     @image.setter
+    @_set_dirty
     def image(self, val: bool):
         self._map[F_IMAGE] = val
 
@@ -136,6 +160,7 @@ class Conf(_typing.ListenableModel):
         return self._map[F_SENTENCE]
 
     @sentence.setter
+    @_set_dirty
     def sentence(self, val: bool):
         self._map[F_SENTENCE] = val
 
@@ -144,6 +169,7 @@ class Conf(_typing.ListenableModel):
         return self._map[F_PHRASE]
 
     @phrase.setter
+    @_set_dirty
     def phrase(self, val: bool):
         self._map[F_PHRASE] = val
 
@@ -152,6 +178,7 @@ class Conf(_typing.ListenableModel):
         return self._map[F_AMEPHONETIC]
 
     @ame_phonetic.setter
+    @_set_dirty
     def ame_phonetic(self, val: bool):
         self._map[F_AMEPHONETIC] = val
 
@@ -160,6 +187,7 @@ class Conf(_typing.ListenableModel):
         return self._map[F_BREPHONETIC]
 
     @bre_phonetic.setter
+    @_set_dirty
     def bre_phonetic(self, val: bool):
         self._map[F_BREPHONETIC] = val
 
@@ -168,6 +196,7 @@ class Conf(_typing.ListenableModel):
         return self._map[F_BREPRON]
 
     @bre_pron.setter
+    @_set_dirty
     def bre_pron(self, val: bool):
         self._map[F_BREPRON] = val
         if val:
@@ -179,6 +208,7 @@ class Conf(_typing.ListenableModel):
         return self._map[F_AMEPRON]
 
     @ame_pron.setter
+    @_set_dirty
     def ame_pron(self, val: bool):
         self._map[F_AMEPRON] = val
         if val:
@@ -190,6 +220,7 @@ class Conf(_typing.ListenableModel):
         return self._map[F_NOPRON]
 
     @no_pron.setter
+    @_set_dirty
     def no_pron(self, val: bool):
         self._map[F_NOPRON] = val
         if val:
@@ -201,6 +232,7 @@ class Conf(_typing.ListenableModel):
         return self._map[F_CONGEST]
 
     @congest.setter
+    @_set_dirty
     def congest(self, val: int):
         self._map[F_CONGEST] = val
 
@@ -211,14 +243,22 @@ class Conf(_typing.ListenableModel):
         except:
             return []
 
+    # Can't simply use @set_dirty decorator, this function will trigger
+    # every time when a user click "yes" to query online notebook, see
+    # `addonWindow`
     @current_selected_groups.setter
     def current_selected_groups(self, groups: list[str]):
-        if self._map["selectedGroup"] == None:
+        if "selectedGroup" not in self._map:
             self._map["selectedGroup"] = []
-        while len(self._map["selectedGroup"]) < self.selected_dict + 1:
-            self._map["selectedGroup"].append([])
 
-        self._map["selectedGroup"][self.selected_dict] = groups
+        selected_groups = self._map["selectedGroup"]
+
+        while len(selected_groups) < self.selected_dict + 1:
+            selected_groups.append([])
+
+        if selected_groups[self.selected_dict] != groups:
+            selected_groups[self.selected_dict] = groups
+            self._dirty = True
 
     def print(self):
         return str(self._map)
