@@ -23,7 +23,7 @@ def _set_dirty(method):
 
 class Conf(_typing.ListenableModel):
     lock = threading.Lock()
-    default_user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+    default_user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36'
     instance: T.Optional[Conf] = None
 
     @classmethod
@@ -55,24 +55,33 @@ class Conf(_typing.ListenableModel):
             # Case 2: `cookie_encoded` is not empty. It's normal v2 config,
             #   should decode `cookie_encoded` and write decoded result to
             #   `cookie`
-            creds = self._map["credential"]
+            creds = self._map['credential']
             for cred in creds:
-                if cred["cookie"] != "":
+                if cred['cookie'] != '':
                     # case 1
-                    cred["cookie_encoded"] = enc_cookies(cred["cookie"])
-                elif cred["cookie_encoded"] != "":
+                    cred['cookie_encoded'] = enc_cookies(cred['cookie'])
+                elif cred['cookie_encoded'] != '':
                     # case 2
-                    cred["cookie"] = dec_cookies(cred["cookie_encoded"])
+                    cred['cookie'] = dec_cookies(cred['cookie_encoded'])
 
     def get_map(self):
         return self._map
 
     def get_saving_map(self):
         "Return a map specifically for saving to file"
+
         map_cp = copy.deepcopy(self._map)
         if self.version >= 2:
-            for cred in map_cp["credential"]:
-                cred["cookie"] = ""
+            for cred in map_cp['credential']:
+                cred['cookie'] = ''
+
+            # According to https://addon-docs.ankiweb.net/addon-config.html ,
+            # mw.addonManager.getConfig() prefers keys in meta.json, then falls
+            # back to the default config.json, internally something like this:
+            # `defaults.update(meta_config)`
+            #
+            # So delete any key that must not override the default value
+            del map_cp['version']
         return map_cp
 
     def is_dirty(self):
@@ -88,83 +97,79 @@ class Conf(_typing.ListenableModel):
         # system, or user accidentally pastes in a config.json with older
         # version, which it's an older file, we are able to look at the version
         # number and do the proper thing.
-        if "version" not in self._map:
+        if 'version' not in self._map:
             return 1
-        return self._map["version"]
+        return self._map['version']
 
     @property
     def deck(self):
-        return self._map["deck"]
+        return self._map['deck']
 
     @deck.setter
     @_set_dirty
     def deck(self, val: str):
-        self._map["deck"] = val
+        self._map['deck'] = val
 
     @property
     def selected_dict(self):
-        return self._map["selectedDict"]
+        return self._map['selectedDict']
 
     @selected_dict.setter
     @_set_dirty
     def selected_dict(self, val: int):
-        self._map["selectedDict"] = val
+        self._map['selectedDict'] = val
 
     @property
     def selected_api(self):
-        return self._map["selectedApi"]
+        return self._map['selectedApi']
 
     @selected_api.setter
     @_set_dirty
     def selected_api(self, val: int):
-        self._map["selectedApi"] = val
+        self._map['selectedApi'] = val
 
     @property
     def current_credential(self):
-        cred = self._map["credential"]
+        cred = self._map['credential']
         while len(cred) < self.selected_dict + 1:
-            cred.append(
-                _typing.Credential(
-                    username="", password="", cookie="", cookie_encoded=""
-                )
-            )
+            cred.append(_typing.Credential(username='', password='', cookie='', cookie_encoded=''))
         return cred[self.selected_dict]
 
     @property
     def current_username(self):
-        return self.current_credential["username"]
+        return self.current_credential['username']
 
     @current_username.setter
     @_set_dirty
     def current_username(self, val: str):
-        self.current_credential["username"] = val
+        self.current_credential['username'] = val
 
     @property
     def current_password(self):
-        return self.current_credential["password"]
+        return self.current_credential['password']
 
     @current_password.setter
     @_set_dirty
     def current_password(self, val: str):
-        self.current_credential["password"] = val
+        self.current_credential['password'] = val
 
     @property
     def current_cookies(self):
-        return self.current_credential["cookie"]
+        return self.current_credential['cookie']
 
     @current_cookies.setter
     @_set_dirty
     def current_cookies(self, val: str):
         "setter triggers `current_cookies` event, property value as event argument"
         cred = self.current_credential
-        cred["cookie"] = val
+        cred['cookie'] = val
 
         if self.version >= 2:
             # Encode cookies to prevent disk scanning malware to easily collect
             # sensitive data.
-            cred["cookie_encoded"] = enc_cookies(cred["cookie"])
+            cred['cookie_encoded'] = enc_cookies(cred['cookie'])
 
-        self._notify("current_cookies", val)
+        self._notify('current_cookies', val)
 
     @property
     def definition(self):
@@ -268,13 +273,13 @@ class Conf(_typing.ListenableModel):
     @property
     def user_agent(self):
         if self.version >= 2:
-            return self._map["user_agent"]
+            return self._map['user_agent']
         return self.default_user_agent
 
     @property
     def current_selected_groups(self) -> list[str]:
         try:
-            return self._map["selectedGroup"][self.selected_dict]
+            return self._map['selectedGroup'][self.selected_dict]
         except:
             return []
 
@@ -283,10 +288,10 @@ class Conf(_typing.ListenableModel):
     # `addonWindow`
     @current_selected_groups.setter
     def current_selected_groups(self, groups: list[str]):
-        if "selectedGroup" not in self._map:
-            self._map["selectedGroup"] = []
+        if 'selectedGroup' not in self._map:
+            self._map['selectedGroup'] = []
 
-        selected_groups = self._map["selectedGroup"]
+        selected_groups = self._map['selectedGroup']
 
         while len(selected_groups) < self.selected_dict + 1:
             selected_groups.append([])
