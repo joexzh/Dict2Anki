@@ -280,7 +280,7 @@ class Conf(_typing.ListenableModel):
     def current_selected_groups(self) -> list[str]:
         try:
             return self._map['selectedGroup'][self.selected_dict]
-        except:
+        except (KeyError, IndexError):
             return []
 
     # Can't simply use @set_dirty decorator, this function will trigger
