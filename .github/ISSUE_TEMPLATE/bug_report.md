@@ -11,7 +11,7 @@ assignees: ''
 A clear and concise description of what the bug is.
 
 **Log**
-在此处粘贴“日志”内容，**注意隐去 cookie, username, password 等敏感信息**。
+在此处粘贴“日志”内容，**注意隐去 cookie, cookie_encode 等敏感信息**。
 e.g.
 ```log
 [01/05/2025 23:13:19][    INFO] -- 待查: set() - (dict2Anki)

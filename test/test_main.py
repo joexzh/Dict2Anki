@@ -19,7 +19,7 @@ def test_start_up_with_fresh_config(qtbot, w_mock):
     assert w.conf.no_pron is False
     assert C.ADDON_FULL_NAME in w.windowTitle()
     assert aqt.mw.addonManager.getConfig.called > 0
-    assert w.usernameLineEdit.text() == w.passwordLineEdit.text() == w.cookieLineEdit.text() == ''
+    assert w.cookieLineEdit.text() == ''
 
 def test_version_check(qtbot, monkeypatch, w_mock):
     new_tag = "v99999.0.0"
@@ -38,9 +38,7 @@ def test_version_check(qtbot, monkeypatch, w_mock):
 
 @pytest.mark.parametrize('index', [0, 1])
 def test_dictionary_combobox_change(index, monkeypatch, w_mock, qtbot):
-    monkeypatch.setitem(aqt.mw.addonManager.getConfig.return_value, "credential", [
-        {'username': '0', 'password': '0', 'cookie': '0', 'cookie_encoded': ''},
-        {'username': '1', 'password': '1', 'cookie': '1', 'cookie_encoded': ''}])
+    monkeypatch.setitem(aqt.mw.addonManager.getConfig.return_value, 'credential', [{'cookie': '0'}, {'cookie': '1'}])
 
     w: Windows = w_mock()
     qtbot.addWidget(w)
@@ -48,7 +46,7 @@ def test_dictionary_combobox_change(index, monkeypatch, w_mock, qtbot):
 
     assert w.conf.selected_dict == index
     assert w.dictionaryComboBox.currentText() in w.currentDictionaryLabel.text()
-    assert w.conf.current_cookies == aqt.mw.addonManager.getConfig.return_value['credential'][index]["cookie"]
+    assert w.conf.current_cookies == aqt.mw.addonManager.getConfig.return_value['credential'][index]['cookie']
     assert w.cookieLineEdit.text() == w.conf.current_cookies
 
 

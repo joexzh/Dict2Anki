@@ -140,26 +140,8 @@ class Conf(_typing.ListenableModel):
     def current_credential(self):
         cred = self._map['credential']
         while len(cred) < self.selected_dict + 1:
-            cred.append(_typing.Credential(username='', password='', cookie='', cookie_encoded=''))
+            cred.append(_typing.Credential(cookie='', cookie_encoded=''))
         return cred[self.selected_dict]
-
-    @property
-    def current_username(self):
-        return self.current_credential['username']
-
-    @current_username.setter
-    @_set_dirty
-    def current_username(self, val: str):
-        self.current_credential['username'] = val
-
-    @property
-    def current_password(self):
-        return self.current_credential['password']
-
-    @current_password.setter
-    @_set_dirty
-    def current_password(self, val: str):
-        self.current_credential['password'] = val
 
     @property
     def current_cookies(self):

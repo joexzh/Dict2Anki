@@ -35,20 +35,6 @@ def test_selected_api(new_conf):
     assert new_conf.is_dirty() is True
 
 
-def test_current_username(new_conf):
-    new_conf.current_username = 'test_username'
-
-    assert new_conf.current_username == 'test_username'
-    assert new_conf.is_dirty() is True
-
-
-def test_current_password(new_conf):
-    new_conf.current_password = 'test_password'
-
-    assert new_conf.current_password == 'test_password'
-    assert new_conf.is_dirty() is True
-
-
 def test_current_cookies(new_conf):
     new_conf.current_cookies = 'test_cookies'
 
@@ -215,8 +201,8 @@ def test_encode_cookies_at_init():
 
     conf_map = helper.fresh_config_dict()
     conf_map['credential'] = [
-        {'username': '', 'password': '', 'cookie': cookies},
-        {'username': '', 'password': '', 'cookie': ''},
+        {'cookie': cookies},
+        {'cookie': ''},
     ]
     conf = Conf(conf_map)
 
@@ -233,8 +219,8 @@ def test_decode_cookies_at_init():
 
     conf_map = helper.fresh_config_dict()
     conf_map['credential'] = [
-        {'username': '', 'password': '', 'cookie': '', 'cookie_encoded': cookies_enc},
-        {'username': '', 'password': '', 'cookie': ''},
+        {'cookie': '', 'cookie_encoded': cookies_enc},
+        {'cookie': ''},
     ]
     conf = Conf(conf_map)
 

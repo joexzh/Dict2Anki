@@ -7,15 +7,13 @@ class Mask:
         self.info = info
 
     def __repr__(self):
-        return "*******"
+        return '*******'
 
     def __str__(self):
         return self.info
 
 
 class Credential(TypedDict):
-    username: str
-    password: str
     cookie: str
     cookie_encoded: str
 

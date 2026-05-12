@@ -6,7 +6,6 @@ from ..addon import _typing
 
 
 class MockCallable:
-
     def __init__(self):
         self.called = 0
         self.called_with: typing.Any = None
@@ -38,7 +37,9 @@ _CONFIG_V1 = """{
 """
 
 # should different from `addon.Conf.default_user_agent`
-USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+USER_AGENT = (
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36'
+)
 
 _CONFIG_V2 = f"""{{
   "version": 2,
@@ -48,14 +49,10 @@ _CONFIG_V2 = f"""{{
   "selectedApi": 0,
   "credential": [
     {{
-      "username": "",
-      "password": "",
       "cookie": "",
       "cookie_encoded": ""
     }},
     {{
-      "username": "",
-      "password": "",
       "cookie": "",
       "cookie_encoded": ""
     }}
@@ -76,7 +73,7 @@ _CONFIG_V2 = f"""{{
 
 
 def env_conf_v():
-    return int(os.getenv("DICT2ANKI_CONFIGV", "1"))
+    return int(os.getenv('DICT2ANKI_CONFIGV', '1'))
 
 
 def fresh_config_dict() -> _typing.ConfigMap:
