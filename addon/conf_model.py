@@ -47,22 +47,24 @@ class Conf(_typing.ListenableModel):
         self._map: _typing.ConfigMap = conf
         self._dirty = False
 
-        if self.version >= 2:
-            # `cookie_encoded` is added at version 2.
-            # Case 1: `cookie` is not empty. It's the first time from v1 to v2,
-            #   should encode `cookie` and write encoded result to
-            #   `cookie_encoded`
-            # Case 2: `cookie_encoded` is not empty. It's normal v2 config,
-            #   should decode `cookie_encoded` and write decoded result to
-            #   `cookie`
-            creds = self._map['credential']
-            for cred in creds:
-                if cred['cookie'] != '':
-                    # case 1
-                    cred['cookie_encoded'] = enc_cookies(cred['cookie'])
-                elif cred['cookie_encoded'] != '':
-                    # case 2
-                    cred['cookie'] = dec_cookies(cred['cookie_encoded'])
+        # `cookie_encoded` is added at version 2.
+        # Case 1: `cookie` is not empty. It's the first time from v1 to v2,
+        #   should encode `cookie` and write encoded result to `cookie_encoded`.
+        # Case 2: `cookie_encoded` not in cred. It's the first time from v1 to
+        #   v2, set default value '' to it.
+        # Case 3: `cookie_encoded` is not empty. It's normal v2 config, should
+        #   decode `cookie_encoded` and write decoded result to `cookie`.
+        creds = self._map['credential']
+        for cred in creds:
+            if cred['cookie'] != '':
+                # case 1
+                cred['cookie_encoded'] = enc_cookies(cred['cookie'])
+            elif 'cookie_encoded' not in cred:
+                # case 2
+                cred['cookie_encoded'] = ''
+            elif cred['cookie_encoded'] != '':
+                # case 3
+                cred['cookie'] = dec_cookies(cred['cookie_encoded'])
 
     def get_map(self):
         return self._map
@@ -71,17 +73,16 @@ class Conf(_typing.ListenableModel):
         "Return a map specifically for saving to file"
 
         map_cp = copy.deepcopy(self._map)
-        if self.version >= 2:
-            for cred in map_cp['credential']:
-                cred['cookie'] = ''
+        for cred in map_cp['credential']:
+            cred['cookie'] = ''
 
-            # According to https://addon-docs.ankiweb.net/addon-config.html ,
-            # mw.addonManager.getConfig() prefers keys in meta.json, then falls
-            # back to the default config.json, internally something like this:
-            # `defaults.update(meta_config)`
-            #
-            # So delete any key that must not override the default value
-            del map_cp['version']
+        # According to https://addon-docs.ankiweb.net/addon-config.html ,
+        # mw.addonManager.getConfig() prefers keys in meta.json, then falls back
+        # to the default config.json, internally something like this:
+        # `defaults.update(meta_config)`
+        #
+        # So delete any key that must not override the default value
+        map_cp.pop('version', None)
         return map_cp
 
     def is_dirty(self):
@@ -90,13 +91,20 @@ class Conf(_typing.ListenableModel):
 
     @property
     def version(self):
-        "`config.json` schema version number"
+        """
+        `config.json` schema version number
 
-        # `config.json` file evolves, normally latest config.json is shipped
-        # with latest code. If something wrong happens to Anki's add-on update
-        # system, or user accidentally pastes in a config.json with older
-        # version, which it's an older file, we are able to look at the version
-        # number and do the proper thing.
+        New schema should never reuse a name on new field that was used by old
+        schema and then abandoned by a semi-old schema, unless the purpose and
+        usage is exactly the same as old schema. This guarantees backward and
+        forward compatibility, similar to Prototype Buffer's claim.
+
+        With great compatibility, usage of version is limited, merely to track
+        schema change history. If this is the case, schema definitions are
+        necessary. Schema history is useful for, e.g., making it clear where and
+        how to modify when dropping support for an old version.
+        """
+
         if 'version' not in self._map:
             return 1
         return self._map['version']
@@ -161,13 +169,13 @@ class Conf(_typing.ListenableModel):
     @_set_dirty
     def current_cookies(self, val: str):
         "setter triggers `current_cookies` event, property value as event argument"
+
         cred = self.current_credential
         cred['cookie'] = val
 
-        if self.version >= 2:
-            # Encode cookies to prevent disk scanning malware to easily collect
-            # sensitive data.
-            cred['cookie_encoded'] = enc_cookies(cred['cookie'])
+        # Encode cookies to prevent disk scanning malware from easily collecting
+        # sensitive data.
+        cred['cookie_encoded'] = enc_cookies(cred['cookie'])
 
         self._notify('current_cookies', val)
 
@@ -272,9 +280,9 @@ class Conf(_typing.ListenableModel):
 
     @property
     def user_agent(self):
-        if self.version >= 2:
-            return self._map['user_agent']
-        return self.default_user_agent
+        if 'user_agent' not in self._map:
+            self._map['user_agent'] = self.default_user_agent
+        return self._map['user_agent']
 
     @property
     def current_selected_groups(self) -> list[str]:
