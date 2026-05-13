@@ -466,7 +466,6 @@ class NeedDeleteWordsView:
 
 
 class ConfCtl:
-
     @staticmethod
     def read():
         if config := aqt.mw.addonManager.getConfig(__name__):
@@ -499,6 +498,11 @@ class ConfCtl:
         w.AmEPronRadioButton.setChecked(conf.ame_pron)
         w.noPronRadioButton.setChecked(conf.no_pron)
         w.congestSpinBox.setValue(conf.congest)
+        w.uaLineEdit.setText(conf.user_agent)
+        uaAction = w.uaLineEdit.addAction(
+            QIcon.fromTheme(QIcon.ThemeIcon.EditUndo), aqt.QLineEdit.ActionPosition.TrailingPosition
+        )
+        uaAction.setToolTip('回到默认')
 
         def _on_deck_combobox_change(text):
             conf.deck = text
@@ -549,6 +553,9 @@ class ConfCtl:
         def _on_congest_spinbox_change(value: int):
             conf.congest = value
 
+        def _on_ua_line_edit_changed(text):
+            conf.user_agent = text
+
         # register events
         w.deckComboBox.currentTextChanged.connect(_on_deck_combobox_change)
         w.dictionaryComboBox.currentIndexChanged.connect(_on_dict_combobox_change)
@@ -564,6 +571,8 @@ class ConfCtl:
         w.BrEPronRadioButton.toggled.connect(_on_bre_pron_radio_toggled)
         w.noPronRadioButton.toggled.connect(_on_no_pron_radio_toggled)
         w.congestSpinBox.valueChanged.connect(_on_congest_spinbox_change)
+        w.uaLineEdit.textChanged.connect(_on_ua_line_edit_changed)
+        uaAction.triggered.connect(lambda: w.uaLineEdit.setText(conf.default_user_agent))
 
         def update_cookies_line_edit(val: str):
             w.cookieLineEdit.blockSignals(True)
@@ -571,4 +580,4 @@ class ConfCtl:
             w.cookieLineEdit.blockSignals(False)
 
         # register model events. For now only `current_cookies` is actively modified by code (not by user)
-        conf.listen("current_cookies", update_cookies_line_edit)
+        conf.listen('current_cookies', update_cookies_line_edit)

@@ -105,9 +105,8 @@ class Conf(_typing.ListenableModel):
         how to modify when dropping support for an old version.
         """
 
-        if 'version' not in self._map:
-            return 1
-        return self._map['version']
+        # compatible to version 1
+        return self._map.get('version', 1)
 
     @property
     def deck(self):
@@ -262,9 +261,13 @@ class Conf(_typing.ListenableModel):
 
     @property
     def user_agent(self):
-        if 'user_agent' not in self._map:
-            self._map['user_agent'] = self.default_user_agent
-        return self._map['user_agent']
+        # compatible to version 1
+        return self._map.setdefault('user_agent', self.default_user_agent)
+
+    @user_agent.setter
+    @_set_dirty
+    def user_agent(self, val: str):
+        self._map['user_agent'] = val
 
     @property
     def current_selected_groups(self) -> list[str]:
@@ -278,10 +281,10 @@ class Conf(_typing.ListenableModel):
     # `addonWindow`
     @current_selected_groups.setter
     def current_selected_groups(self, groups: list[str]):
-        if 'selectedGroup' not in self._map:
-            self._map['selectedGroup'] = []
+        selected_groups = self._map.get('selectedGroup')
 
-        selected_groups = self._map['selectedGroup']
+        if selected_groups is None:
+            selected_groups = self._map['selectedGroup'] = []
 
         while len(selected_groups) < self.selected_dict + 1:
             selected_groups.append([])
