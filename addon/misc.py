@@ -95,21 +95,23 @@ def tmp_audio_dir():
     return os.path.join(tempfile.gettempdir(), "Dict2Anki", "audios")
 
 
-_XOR_MASK = 0xFF
+_RANDOM_MASK = b'0SiCw@kFBPY^4n'
 
 
 def enc_cookies(cookies: str) -> str:
-    """each byte xor 0xFF and encode to base64 string"""
+    """each byte xor mask and encode to base64 string"""
 
-    bytes = bytearray(cookies, 'utf-8')
-    bytes[:] = (b ^ _XOR_MASK for b in bytes)
-    b64_str = base64.b64encode(bytes).decode('utf-8')
+    byts = bytearray(cookies, 'utf-8')
+    for i in range(len(byts)):
+        byts[i] = byts[i] ^ _RANDOM_MASK[i % len(_RANDOM_MASK)]
+    b64_str = base64.b64encode(byts).decode('utf-8')
     return b64_str
 
 
 def dec_cookies(cookies_enc: str) -> str:
     """revert enc_cookies"""
 
-    bytes = bytearray(base64.b64decode(cookies_enc))
-    bytes[:] = (b ^ _XOR_MASK for b in bytes)
-    return bytes.decode('utf-8')
+    byts = bytearray(base64.b64decode(cookies_enc))
+    for i in range(len(byts)):
+        byts[i] = byts[i] ^ _RANDOM_MASK[i % len(_RANDOM_MASK)]
+    return byts.decode('utf-8')
