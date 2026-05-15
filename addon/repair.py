@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import json
 import logging
 import os
-from typing import Any, Callable, Optional
+import typing as T
 
 import aqt
 import aqt.utils
@@ -9,14 +11,14 @@ import aqt.utils
 from . import conf_model, dictionary, misc, noteManager, queryApi, workers
 from . import constants as C
 from ._typing import ListenableModel, QueryWordData
-from .addonWindow import Windows
+
+if T.TYPE_CHECKING:
+    from .addonWindow import Windows
 
 _logger = logging.getLogger("dict2Anki.repair")
 
 
-_write_fn_valid_map: dict[
-    noteManager.writeNoteFnType, Callable[[conf_model.Conf], bool]
-] = {
+_write_fn_valid_map: dict[noteManager.writeNoteFnType, T.Callable[[conf_model.Conf], bool]] = {
     noteManager.writeNoteDefinition: lambda conf: not conf.definition,
     noteManager.writeNoteSentence: lambda conf: not conf.sentence,
     noteManager.writeNotePhrase: lambda conf: not conf.phrase,
@@ -74,9 +76,9 @@ class RepairModel:
 
 class Repair:
 
-    def __init__(self, windows: Windows, model: RepairModel):
+    def __init__(self, windows: Windows):
         self._w = windows
-        self._model = model
+        self._model = RepairModel()
         self._register_model_events(self._model)
         self._notes = []
         self._write_fns = []
@@ -235,7 +237,7 @@ class Repair:
 
         self._queryWords(self._notes)
 
-        self._whichPron: Optional[str] = None
+        self._whichPron: T.Optional[str] = None
         if not self._w.conf.no_pron:
             self._whichPron = C.F_AMEPRON if self._w.conf.ame_pron else C.F_BREPRON
 
@@ -246,7 +248,7 @@ class Repair:
         return ret
 
     def _queryWords(self, notes):
-        row_words: list[Any] = [None] * len(notes)
+        row_words: list[T.Any] = [None] * len(notes)
         for i, note in enumerate(notes):
             row_words[i] = (i, note[C.F_TERM])
 
@@ -350,7 +352,3 @@ class AudioDownloadSingleWorker(workers.NetworkWorker):
             )
         finally:
             self.done.emit(self)
-
-
-def make_repair(win):
-    return Repair(win, RepairModel())

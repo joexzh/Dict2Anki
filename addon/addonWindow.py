@@ -16,6 +16,7 @@ from .dictionary import dictionaries
 from .logger import Handler
 from .loginDialog import LoginDialog
 from .queryApi import apis
+from .repair import Repair
 from .UIForm import mainUI, wordGroup
 from .workers import LoginStateCheckWorker, QueryAllWorker, RemoteWordFetchingWorker, VersionCheckWorker, WorkerManager
 
@@ -43,6 +44,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
 
         self.init_ui()
         self.setupLogger()
+        self.repair = Repair(self)
         # self.checkUpdate() # disable temporarily
         # self.__dev() # 以备调试时使用
 
@@ -71,7 +73,8 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         self.workerman.destroy()
         shutil.rmtree(misc.tmp_audio_dir(), ignore_errors=True)
 
-        event.accept()
+        # need super to emit finished event
+        super().closeEvent(event)
 
     def setupLogger(self):
         """初始化 Logger """

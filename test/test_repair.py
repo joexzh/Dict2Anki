@@ -7,19 +7,7 @@ from ..addon import noteManager, queryApi, repair, workers
 from ..addon.addonWindow import Windows
 from . import mock_helper
 from .dummy_aqt import notes
-
-
-class RepairMock:
-    def __init__(self, monkeypatch, w_mock: mock_helper.WindowMock):
-        self.w_mock = w_mock
-
-    def __call__(self, windows, model):
-        return repair.Repair(windows, model)
-
-
-@pytest.fixture
-def r_mock(monkeypatch):
-    return RepairMock(monkeypatch, mock_helper.WindowMock(monkeypatch))
+from .mock_helper import w_mock
 
 
 def test_model_init_zero():
@@ -46,7 +34,7 @@ def test_model_reset_listen():
         nonlocal assert_val
         assert_val = grp.total
 
-    g.listen("reset", callback)
+    g.listen('reset', callback)
     g.reset(expected)
 
     assert assert_val == expected
@@ -67,7 +55,7 @@ def test_model_incSuccessCnt_listen():
         nonlocal assert_val
         assert_val = grp.success_cnt
 
-    g.listen("incSuccessCnt", callback)
+    g.listen('incSuccessCnt', callback)
     g.incSuccessCnt()
 
     assert assert_val == expected
@@ -88,29 +76,29 @@ def test_model_incFailCnt_listen():
         nonlocal assert_val
         assert_val = grp.fail_cnt
 
-    g.listen("incFailCnt", callback)
+    g.listen('incFailCnt', callback)
     g.incFailCnt()
 
     assert assert_val == expected
 
 
-def test_selected_remove_only(qtbot, monkeypatch, r_mock):
-    w = Windows()
-    model = repair.RepairModel()
-    r: repair.Repair = r_mock(w, model)
+def test_selected_remove_only(qtbot, monkeypatch, w_mock):
+    w: Windows = w_mock()
+    r = w.repair
+    model = r._model
     qtbot.addWidget(w)
 
-    monkeypatch.setattr(r, "_checkLoginState", lambda *args, **kwargs: True)
+    monkeypatch.setattr(r, '_checkLoginState', lambda *args, **kwargs: True)
 
-    monkeypatch.setattr(w.conf, "definition", False)
-    monkeypatch.setattr(w.conf, "sentence", False)
-    monkeypatch.setattr(w.conf, "image", False)
-    monkeypatch.setattr(w.conf, "phrase", False)
-    monkeypatch.setattr(w.conf, "ame_phonetic", False)
-    monkeypatch.setattr(w.conf, "bre_phonetic", False)
-    monkeypatch.setattr(w.conf, "ame_pron", False)
-    monkeypatch.setattr(w.conf, "bre_pron", False)
-    monkeypatch.setattr(w.conf, "no_pron", True)
+    monkeypatch.setattr(w.conf, 'definition', False)
+    monkeypatch.setattr(w.conf, 'sentence', False)
+    monkeypatch.setattr(w.conf, 'image', False)
+    monkeypatch.setattr(w.conf, 'phrase', False)
+    monkeypatch.setattr(w.conf, 'ame_phonetic', False)
+    monkeypatch.setattr(w.conf, 'bre_phonetic', False)
+    monkeypatch.setattr(w.conf, 'ame_pron', False)
+    monkeypatch.setattr(w.conf, 'bre_pron', False)
+    monkeypatch.setattr(w.conf, 'no_pron', True)
 
     w.repairDefCB.setChecked(True)
     w.repairPhraseCB.setChecked(True)
@@ -130,17 +118,14 @@ def test_selected_remove_only(qtbot, monkeypatch, r_mock):
     assert model.noteGrp.total == 1
     assert model.noteGrp.success_cnt == 1
     assert (
-        w.repairProgressNoteLabel.text()
-        == f"更新本地笔记：{model.noteGrp.success_cnt} / {model.noteGrp.total} . . . "
+        w.repairProgressNoteLabel.text() == f'更新本地笔记：{model.noteGrp.success_cnt} / {model.noteGrp.total} . . . '
     )
     assert model.queryGrp.total == 0
     assert model.audioGrp.total == 0
 
 
-@pytest.mark.parametrize(
-    "num, query_fail_num, audio_download_fail", [(13, 0, 0), (17, 11, 5), (23, 0, 19)]
-)
-def test_query(monkeypatch, r_mock, qtbot, num, query_fail_num, audio_download_fail):
+@pytest.mark.parametrize('num, query_fail_num, audio_download_fail', [(13, 0, 0), (17, 11, 5), (23, 0, 19)])
+def test_query(monkeypatch, w_mock, qtbot, num, query_fail_num, audio_download_fail):
     """- all query succeed
     - mix success and failure
     - some audio succeed"""
@@ -148,7 +133,7 @@ def test_query(monkeypatch, r_mock, qtbot, num, query_fail_num, audio_download_f
     def mock_notes(*args, **kwargs):
         return [notes.Note(1)] * num
 
-    monkeypatch.setattr(noteManager, "getNotesByDeckName", mock_notes)
+    monkeypatch.setattr(noteManager, 'getNotesByDeckName', mock_notes)
 
     # mock query result
     def mock_query_data():
@@ -163,7 +148,7 @@ def test_query(monkeypatch, r_mock, qtbot, num, query_fail_num, audio_download_f
 
         return query_data
 
-    monkeypatch.setattr(queryApi.youdao.API, "query", mock_query_data())
+    monkeypatch.setattr(queryApi.youdao.API, 'query', mock_query_data())
 
     # mock download_file
     def mock_download_file():
@@ -173,19 +158,19 @@ def test_query(monkeypatch, r_mock, qtbot, num, query_fail_num, audio_download_f
             nonlocal i
             i += 1
             if i < audio_download_fail:
-                raise Exception("test: audio download failed")
+                raise Exception('test: audio download failed')
 
         return download_file
 
-    monkeypatch.setattr(workers, "download_file", mock_download_file())
-    monkeypatch.setattr(os.path, "isfile", lambda *args, **kwargs: False)
+    monkeypatch.setattr(workers, 'download_file', mock_download_file())
+    monkeypatch.setattr(os.path, 'isfile', lambda *args, **kwargs: False)
 
-    w = Windows()
-    model = repair.RepairModel()
-    r: repair.Repair = r_mock(w, model)
+    w: Windows = w_mock()
+    r = w.repair
+    model = r._model
     qtbot.addWidget(w)
 
-    monkeypatch.setattr(r, "_checkLoginState", lambda *args, **kwargs: True)
+    monkeypatch.setattr(r, '_checkLoginState', lambda *args, **kwargs: True)
 
     w.repairDefCB.setChecked(True)
     w.repairPhraseCB.setChecked(True)
@@ -205,7 +190,7 @@ def test_query(monkeypatch, r_mock, qtbot, num, query_fail_num, audio_download_f
     def check_audio_label():
         assert (
             w.repairProgressAudioLabel.text()
-            == f"下载发音，成功：{num - query_fail_num - audio_download_fail}，失败：{audio_download_fail} . . . "
+            == f'下载发音，成功：{num - query_fail_num - audio_download_fail}，失败：{audio_download_fail} . . . '
         )
 
     qtbot.waitUntil(check_audio_label)
@@ -213,8 +198,7 @@ def test_query(monkeypatch, r_mock, qtbot, num, query_fail_num, audio_download_f
     assert model.noteGrp.total == num
     assert model.noteGrp.success_cnt == num - query_fail_num
     assert (
-        w.repairProgressNoteLabel.text()
-        == f"更新本地笔记：{model.noteGrp.success_cnt} / {model.noteGrp.total} . . . "
+        w.repairProgressNoteLabel.text() == f'更新本地笔记：{model.noteGrp.success_cnt} / {model.noteGrp.total} . . . '
     )
 
     assert model.queryGrp.total == num
@@ -222,7 +206,7 @@ def test_query(monkeypatch, r_mock, qtbot, num, query_fail_num, audio_download_f
     assert model.queryGrp.fail_cnt == query_fail_num
     assert (
         w.repairProgressQueryLabel.text()
-        == f"调用{r._api_name}：{model.queryGrp.success_cnt + model.queryGrp.fail_cnt} / {model.queryGrp.total}，成功：{model.queryGrp.success_cnt}，失败：{r._model.queryGrp.fail_cnt} . . . "
+        == f'调用{r._api_name}：{model.queryGrp.success_cnt + model.queryGrp.fail_cnt} / {model.queryGrp.total}，成功：{model.queryGrp.success_cnt}，失败：{r._model.queryGrp.fail_cnt} . . . '
     )
 
     assert model.audioGrp.success_cnt == num - query_fail_num - audio_download_fail
