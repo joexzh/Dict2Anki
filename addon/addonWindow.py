@@ -66,6 +66,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
 
     def closeEvent(self, event):
         ConfCtl.write(self.conf)
+        conf_model.Conf.delinstance()
         # 插件关闭时退出所有线程
         self.workerman.destroy()
         shutil.rmtree(misc.tmp_audio_dir(), ignore_errors=True)

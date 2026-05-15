@@ -11,12 +11,20 @@ from .misc import dec_cookies, enc_cookies
 
 
 def _set_dirty(method):
-    "Conf setter decorator, sets self._dirty=True whenever it's called"
+    """
+    Conf setter decorator, sets self._dirty=True if value changed
+
+    Note: Qt will trigger change event no matter value is the same or not.
+    """
 
     @functools.wraps(method)
-    def wrapper(self, *args, **kwargs):
+    def wrapper(self: Conf, val, *args, **kwargs):
+        name = method.__name__
+        curr_val = getattr(self, name)
+        if curr_val == val:
+            return
         self._dirty = True
-        return method(self, *args, **kwargs)
+        return method(self, val, *args, **kwargs)
 
     return wrapper
 
@@ -34,6 +42,12 @@ class Conf(_typing.ListenableModel):
                 if cls.instance is None:
                     cls.instance = Conf(conf)
         return cls.instance
+
+    @classmethod
+    def delinstance(cls):
+        "Must call only when closing addon main window"
+        if cls.instance:
+            cls.instance = None
 
     @classmethod
     def user_agent_or_default(cls):
@@ -59,9 +73,11 @@ class Conf(_typing.ListenableModel):
             if cred['cookie'] != '':
                 # case 1
                 cred['cookie_encoded'] = enc_cookies(cred['cookie'])
+                self._dirty = True
             elif 'cookie_encoded' not in cred:
                 # case 2
                 cred['cookie_encoded'] = ''
+                self._dirty = True
             elif cred['cookie_encoded'] != '':
                 # case 3
                 cred['cookie'] = dec_cookies(cred['cookie_encoded'])
@@ -262,7 +278,7 @@ class Conf(_typing.ListenableModel):
     @property
     def user_agent(self):
         # compatible to version 1
-        return self._map.setdefault('user_agent', self.default_user_agent)
+        return self._map.get('user_agent', self.default_user_agent)
 
     @user_agent.setter
     @_set_dirty
@@ -276,10 +292,8 @@ class Conf(_typing.ListenableModel):
         except (KeyError, IndexError):
             return []
 
-    # Can't simply use @set_dirty decorator, this function will trigger
-    # every time when a user click "yes" to query online notebook, see
-    # `addonWindow`
     @current_selected_groups.setter
+    @_set_dirty
     def current_selected_groups(self, groups: list[str]):
         selected_groups = self._map.get('selectedGroup')
 
@@ -289,9 +303,7 @@ class Conf(_typing.ListenableModel):
         while len(selected_groups) < self.selected_dict + 1:
             selected_groups.append([])
 
-        if selected_groups[self.selected_dict] != groups:
-            selected_groups[self.selected_dict] = groups
-            self._dirty = True
+        selected_groups[self.selected_dict] = groups
 
     def print(self):
         return str(self._map)
