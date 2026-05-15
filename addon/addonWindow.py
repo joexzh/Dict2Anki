@@ -43,7 +43,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
 
         self.init_ui()
         self.setupLogger()
-        self.checkUpdate()
+        # self.checkUpdate() # disable temporarily
         # self.__dev() # 以备调试时使用
 
     def __dev(self):

@@ -21,6 +21,7 @@ def test_start_up_with_fresh_config(qtbot, w_mock):
     assert aqt.mw.addonManager.getConfig.called > 0
     assert w.cookieLineEdit.text() == ''
 
+@pytest.mark.skip(reason='disable temporarily')
 def test_version_check(qtbot, monkeypatch, w_mock):
     new_tag = "v99999.0.0"
     monkeypatch.setitem(requests.get("").json.return_value, "tag_name", new_tag)
