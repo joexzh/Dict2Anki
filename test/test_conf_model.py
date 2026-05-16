@@ -328,7 +328,7 @@ def test_dirty_at_init():
 
 
 def test_encode_cookies_at_init():
-    cookies = 'azAZ09~!@#$%^&*()_+-=[]{}\|;:\'",<.>/?~`'
+    cookies = """azAZ09~!@#$%^&*()_+-=[]{}\|;:'",<.>/?~`"""
     cookies_enc = misc.enc_cookies(cookies)
 
     conf_map = helper.fresh_config_dict()
@@ -346,7 +346,7 @@ def test_encode_cookies_at_init():
 
 
 def test_decode_cookies_at_init():
-    cookies = 'azAZ09~!@#$%^&*()_+-=[]{}\|;:\'",<.>/?~`'
+    cookies = """azAZ09~!@#$%^&*()_+-=[]{}\|;:'",<.>/?~`"""
     cookies_enc = misc.enc_cookies(cookies)
 
     conf_map = helper.fresh_config_dict()
