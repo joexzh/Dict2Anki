@@ -8,8 +8,34 @@
 > **Note:**  
 > 无论导入有道还是欧路词典的生词本，都推荐使用【查询 - 有道 API】。欧路词典API容易触发限流。
 
+### Features
+
+* 导入有道词典、欧路词典生词本
+* 检测词典软件的生词变化,并在Anki中相应的添加或删除删除卡片
+* 获取图片、发音、注解、音标、短语、例句
+
+### How to install
+
+Anki --> 工具 --> 附加组件 --> 获取插件  
+插件代码：107281012
+
+### How to use
+
+同步  
+![同步](https://raw.githubusercontent.com/joexzh/Dict2Anki/master/screenshots/sync.gif)
+
+同步删除  
+![同步删除](https://raw.githubusercontent.com/joexzh/Dict2Anki/master/screenshots/del.gif)
+
+字段修复  
+![字段修复](https://raw.githubusercontent.com/joexzh/Dict2Anki/master/screenshots/repair.png)
+
 ### Change log
-___
+
+* v7.3.0
+  * 【默认配置】新增【User-Agent】
+  * 加密本地保存的 cookies
+  * 若所有配置未修改，不再重复写入硬盘
 * v7.2.5
   * 稍微增强配置兼容性（fixed issue [#7](https://github.com/joexzh/Dict2Anki/issues/7)）
 * v7.2.4
@@ -59,50 +85,35 @@ ___
     * 重构代码，解决上版本奔溃问题
     * 添加单元测试
 
-### Features
-
-* 导入有道词典、欧路词典生词本
-* 检测词典软件的生词变化,并在Anki中相应的添加或删除删除卡片
-* 获取图片、发音、注解、音标、短语、例句
-
-### How to install
-
-Anki --> 工具 --> 附加组件 --> 获取插件  
-插件代码：107281012
-
-### How to use
-
-同步  
-![同步](https://raw.githubusercontent.com/joexzh/Dict2Anki/master/screenshots/sync.gif)
-
-同步删除  
-![同步删除](https://raw.githubusercontent.com/joexzh/Dict2Anki/master/screenshots/del.gif)
-
-字段修复  
-![字段修复](https://raw.githubusercontent.com/joexzh/Dict2Anki/master/screenshots/repair.png)
-
 ### Contribute Guide
 
-非常欢迎你的贡献，请PR前确保通过了全部单元测试 `pytest test`
+非常欢迎你的贡献，请PR前确保通过了全部单元测试 `./test.sh`
 
 ### Development Guide
 
-Python 3.9
+Python version: 3.9
 
-在 `venv` 环境中，运行：
+#### 安装依赖
 
 ```bash
+source ./venv/Scripts/activate
 pip install -r requirements.txt
 ```
 
-单独运行 UI：
+#### Debug
 
-```bash
-(cd .. && python -m Dict2Anki)
-```
+TODO
 
-生成 UI 文件：
+#### 编辑 UI
+
+使用 Qt Creator 导入 `./addon/UIForm/xxx.ui` 设计 UI，然后生成对应的 `xxx.py` 文件
 
 ```bash
 pyuic6 -o ./addon/UIForm/xxx.py ./addon/UIForm/xxx.ui
+```
+
+#### 单独运行 UI
+
+```bash
+(cd .. && python -m Dict2Anki)
 ```
