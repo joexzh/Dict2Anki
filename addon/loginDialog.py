@@ -15,6 +15,7 @@ class LoginDialog(QDialog, loginDialog.Ui_LoginDialog):
 
     def __init__(self, loginUrl, loginCheckCallbackFn, parent=None):
         super().__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.url = QUrl(loginUrl)
         self.loginCheckCallbackFn = loginCheckCallbackFn
         self.setupUi(self)

@@ -36,6 +36,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
 
     def __init__(self, parent=None):
         super(Windows, self).__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.localWords = []
         self.remoteWords = []
 
@@ -160,6 +161,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         currentDict.getGroups()
 
         container = QDialog(self)
+        container.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         group = wordGroup.Ui_Dialog()
         group.setupUi(container)
 
