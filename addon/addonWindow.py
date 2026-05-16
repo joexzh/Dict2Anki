@@ -70,6 +70,10 @@ class Windows(QDialog, mainUI.Ui_Dialog):
     def closeEvent(self, event):
         ConfCtl.write(self.conf)
         conf_model.Conf.delinstance()
+        # removeHandler in logTextBox.destroyed event is too late which may
+        # cause logging in new Windows emit to old logTextBox which is
+        # destroyed. So removeHandler here, earlier.
+        logger.removeHandler(self.QtHandler)
         # 插件关闭时退出所有线程
         self.workerman.destroy()
         shutil.rmtree(misc.tmp_audio_dir(), ignore_errors=True)
@@ -89,16 +93,9 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         layout = QVBoxLayout()
         layout.addWidget(logTextBox)
         self.logTab.setLayout(layout)
-        QtHandler = Handler(self)
-        logger.addHandler(QtHandler)
-        QtHandler.newRecord.connect(logTextBox.appendPlainText)
-
-        def onDestroyed():
-            QtHandler.newRecord.disconnect(logTextBox.appendPlainText)
-            logger.removeHandler(QtHandler)
-
-        # 日志Widget销毁时移除 Handlers
-        logTextBox.destroyed.connect(onDestroyed)
+        self.QtHandler = Handler(self)
+        logger.addHandler(self.QtHandler)
+        self.QtHandler.newRecord.connect(logTextBox.appendPlainText)
 
     def get_current_dict(self) -> type[AbstractDictionary]:
         return dictionaries[self.conf.selected_dict]
