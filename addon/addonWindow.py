@@ -502,9 +502,8 @@ class ConfCtl:
         w.noPronRadioButton.setChecked(conf.no_pron)
         w.congestSpinBox.setValue(conf.congest)
         w.uaLineEdit.setText(conf.user_agent)
-        uaAction = w.uaLineEdit.addAction(
-            QIcon.fromTheme(QIcon.ThemeIcon.EditUndo), aqt.QLineEdit.ActionPosition.TrailingPosition
-        )
+        undoicon = QIcon.fromTheme('edit-undo')
+        uaAction = w.uaLineEdit.addAction(undoicon, aqt.QLineEdit.ActionPosition.TrailingPosition)
         uaAction.setToolTip('回到默认')
 
         def _on_deck_combobox_change(text):
