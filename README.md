@@ -102,7 +102,57 @@ pip install -r requirements.txt
 
 #### Debug
 
-TODO
+1. 在 Anki addon 目录中创建本项目的 symbolic link：
+
+   - Windows:\
+     在 Command Prompt 中执行（如果策略组中没开启 Create Symbolic Link 权限，就需要管理员权限）
+
+     ```batch
+     mklink /D %APPDATA%\Anki2\addons21\Dict2Anki-ng-debug <full\path\to\this\project_root>
+     ```
+
+   - Linux:
+
+     ```sh
+     ln -s <full/path/to/this/project_root> "$HOME/.local/share/Anki2/addons21/Dict2Anki-ng-debug"
+     ```
+
+   - macOS: TODO
+
+2. 创建 debug 配置：以 vscode 为例，使用 `debugpy` 作为 debugger，其他 IDE / text editor 可作参考
+
+   ```jsonc
+   // .vscode/launch.json
+   {
+     "version": "0.2.0",
+     "configurations": [
+       {
+         "name": "debug anki",
+         "type": "debugpy",
+         "request": "launch",
+         "program": "${workspaceFolder}/runanki.py",
+         "python": "${workspaceFolder}/venv/Scripts/python",
+         "console": "internalConsole",
+         "env": {
+           "QT_FORCE_STDERR_LOGGING": "1"
+         },
+         "justMyCode": false
+       }
+     ]
+   }
+   ```
+
+   按 <kbd>F5</kbd> 进行调试并自动运行 venv 环境中的 Anki，在 Anki 菜单栏 - Tools 中会多一个 `Dict2Anki-ng-debug` 选项，打开它即可调试插件。
+
+   > 如果用 `pdb` 作为 debugger，可运行 `python -m pdb runanki.py` 进行调试。
+
+#### 测试
+
+```sh
+./test.sh
+```
+
+其中分别测试了 `config.json` version 1 和 version 2。
 
 #### 编辑 UI
 
@@ -112,7 +162,7 @@ TODO
 pyuic6 -o ./addon/UIForm/xxx.py ./addon/UIForm/xxx.ui
 ```
 
-#### 单独运行 UI
+#### 单独运行 UI（仅作为界面参考）
 
 ```bash
 (cd .. && python -m Dict2Anki)

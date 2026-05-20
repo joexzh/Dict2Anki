@@ -2,8 +2,13 @@ try:
     import aqt
 
     assert aqt.mw is not None
+
     from .addon import addonWindow
     from .addon.constants import ADDON_FULL_NAME
+
+    if (addon_name := aqt.addons.AddonManager.addon_from_module(__name__)) != '107281012':
+        # '107281012' is addon code on ankiweb.net
+        ADDON_FULL_NAME = addon_name
 
     w: addonWindow.Windows = None
 
