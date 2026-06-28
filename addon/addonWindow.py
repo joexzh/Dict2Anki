@@ -18,6 +18,7 @@ from .loginDialog import LoginDialog
 from .queryApi import apis
 from .repair import Repair
 from .UIForm import mainUI, wordGroup
+from .UIForm import icons_rc  # noqa: F401
 from .workers import LoginStateCheckWorker, QueryAllWorker, RemoteWordFetchingWorker, VersionCheckWorker, WorkerManager
 
 logger = logging.getLogger('dict2Anki')
