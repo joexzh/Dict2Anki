@@ -1,5 +1,4 @@
-
-## Dict2Anki-ng
+# Dict2Anki-ng
 
 **Dict2Anki-ng** is a fork from [Dict2Anki](https://github.com/megachweng/Dict2Anki)（原作者：[@megachweng](https://github.com/megachweng)），迁移到 Qt 6 和新版 anki，主要功能与原版一致。
 
@@ -8,18 +7,18 @@
 > **Note:**  
 > 无论导入有道还是欧路词典的生词本，都推荐使用【查询 - 有道 API】。欧路词典API容易触发限流。
 
-### Features
+## Features
 
 * 导入有道词典、欧路词典生词本
 * 检测词典软件的生词变化,并在Anki中相应的添加或删除删除卡片
 * 获取图片、发音、注解、音标、短语、例句
 
-### How to install
+## How to install
 
 Anki --> 工具 --> 附加组件 --> 获取插件  
 插件代码：107281012
 
-### How to use
+## How to use
 
 同步  
 ![同步](https://raw.githubusercontent.com/joexzh/Dict2Anki/master/screenshots/sync.gif)
@@ -30,8 +29,10 @@ Anki --> 工具 --> 附加组件 --> 获取插件
 字段修复  
 ![字段修复](https://raw.githubusercontent.com/joexzh/Dict2Anki/master/screenshots/repair.png)
 
-### Change log
+## Change log
 
+* v7.3.1
+  * 修复“新单词”列表查询成功、失败图标
 * v7.3.0
   * 【默认配置】新增【User-Agent】
   * 加密本地保存的 cookies
@@ -85,22 +86,22 @@ Anki --> 工具 --> 附加组件 --> 获取插件
     * 重构代码，解决上版本奔溃问题
     * 添加单元测试
 
-### Contribute Guide
+## Contribute Guide
 
 非常欢迎你的贡献，请PR前确保通过了全部单元测试 `./test.sh`
 
-### Development Guide
+## Development Guide
 
 Python version: 3.9
 
-#### 安装依赖
+### 安装依赖
 
 ```bash
 source ./venv/Scripts/activate
 pip install -r requirements.txt
 ```
 
-#### Debug
+### Debug
 
 1. 在 Anki addon 目录中创建本项目的 symbolic link：
 
@@ -108,13 +109,13 @@ pip install -r requirements.txt
      在 Command Prompt 中执行（如果策略组中没开启 Create Symbolic Link 权限，就需要管理员权限）
 
      ```batch
-     mklink /D %APPDATA%\Anki2\addons21\Dict2Anki-ng-debug <full\path\to\this\project_root>
+     mklink /D %APPDATA%\Anki2\addons21\Dict2Anki-ng-debug full\path\to\project_root
      ```
 
    - Linux:
 
      ```sh
-     ln -s <full/path/to/this/project_root> "$HOME/.local/share/Anki2/addons21/Dict2Anki-ng-debug"
+     ln -s full/path/to/project_root "$HOME/.local/share/Anki2/addons21/Dict2Anki-ng-debug"
      ```
 
    - macOS: TODO
@@ -146,7 +147,7 @@ pip install -r requirements.txt
 
    > 如果用 `pdb` 作为 debugger，可运行 `python -m pdb runanki.py` 进行调试。
 
-#### 测试
+### 测试
 
 ```sh
 ./test.sh
@@ -154,7 +155,7 @@ pip install -r requirements.txt
 
 其中分别测试了 `config.json` version 1 和 version 2。
 
-#### 编辑 UI
+### 编辑 UI
 
 使用 Qt Creator 导入 `./addon/UIForm/xxx.ui` 设计 UI，然后生成对应的 `xxx.py` 文件
 
@@ -162,7 +163,7 @@ pip install -r requirements.txt
 pyuic6 -o ./addon/UIForm/xxx.py ./addon/UIForm/xxx.ui
 ```
 
-#### 单独运行 UI（仅作为界面参考）
+### 单独运行 UI（仅作为界面参考）
 
 ```bash
 (cd .. && python -m Dict2Anki)
