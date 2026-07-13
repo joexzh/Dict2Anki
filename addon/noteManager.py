@@ -10,14 +10,14 @@ from . import conf_model, misc
 from . import constants as C
 from ._typing import QueryWordData
 
-logger = logging.getLogger("dict2Anki.noteManager")
+logger = logging.getLogger('dict2Anki.noteManager')
 
-__TEMPLATE_NAME = "default"
+__TEMPLATE_NAME = 'default'
 
 
 def getDeckNames():
     assert aqt.mw.col
-    return [deck["name"] for deck in aqt.mw.col.decks.all()]
+    return [deck['name'] for deck in aqt.mw.col.decks.all()]
 
 
 def getWordsByDeck(deckName) -> list[str]:
@@ -27,12 +27,8 @@ def getWordsByDeck(deckName) -> list[str]:
     for nid in noteIds:
         note = aqt.mw.col.get_note(nid)
         model = note.note_type()
-        if (
-            model
-            and model.get("name", "").lower().startswith("dict2anki")
-            and note["term"]
-        ):
-            words.append(note["term"])
+        if model and model.get('name', '').lower().startswith('dict2anki') and note['term']:
+            words.append(note['term'])
     return words
 
 
@@ -46,14 +42,12 @@ def getNoteIds(wordList, deckName) -> list[notes.NoteId]:
 
 def noteFilterByModelName(note: notes.Note):
     model = note.note_type()
-    if model and model["name"] == C.MODEL_NAME:
+    if model and model['name'] == C.MODEL_NAME:
         return True
     return False
 
 
-def getNotesByDeckName(
-    deckName: str, filter: Optional[Callable] = None
-) -> list[notes.Note]:
+def getNotesByDeckName(deckName: str, filter: Optional[Callable] = None) -> list[notes.Note]:
     assert aqt.mw.col
 
     noteIds = aqt.mw.col.find_notes(f'deck:"{deckName}"')
@@ -81,9 +75,9 @@ def getOrCreateDeck(deckName, model):
     assert aqt.mw.col
     deck_id = aqt.mw.col.decks.id(deckName)
     deck = aqt.mw.col.decks.get(deck_id)  # type: ignore
-    aqt.mw.col.decks.select(deck["id"])  # type: ignore
+    aqt.mw.col.decks.select(deck['id'])  # type: ignore
     aqt.mw.col.decks.save(deck)
-    model["did"] = deck["id"]  # type: ignore
+    model['did'] = deck['id']  # type: ignore
     aqt.mw.col.models.save(model)
     return deck
 
@@ -92,13 +86,13 @@ def getOrCreateModel() -> models.NoteType:
     assert aqt.mw.col
     model = aqt.mw.col.models.by_name(C.MODEL_NAME)
     if model:
-        if set([f["name"] for f in model["flds"]]) == set(C.MODEL_FIELDS):
+        if set([f['name'] for f in model['flds']]) == set(C.MODEL_FIELDS):
             return model
         else:
-            logger.warning("模版字段异常，自动删除重建")
-            aqt.mw.col.models.remove(model["id"])
+            logger.warning('模版字段异常，自动删除重建')
+            aqt.mw.col.models.remove(model['id'])
 
-    logger.info(f"创建新模版:{C.MODEL_NAME}")
+    logger.info(f'创建新模版:{C.MODEL_NAME}')
     model = aqt.mw.col.models.new(C.MODEL_NAME)
     for field_name in C.MODEL_FIELDS:
         aqt.mw.col.models.add_field(model, aqt.mw.col.models.new_field(field_name))
@@ -107,15 +101,12 @@ def getOrCreateModel() -> models.NoteType:
 
 def getOrCreateModelCardTemplate(modelObject: models.NoteType):
     assert aqt.mw.col
-    logger.info(f"添加卡片类型:{__TEMPLATE_NAME}")
-    existingCardTemplate = modelObject["tmpls"]
-    if __TEMPLATE_NAME in [t.get("name") for t in existingCardTemplate]:
+    logger.info(f'添加卡片类型:{__TEMPLATE_NAME}')
+    existingCardTemplate = modelObject['tmpls']
+    if __TEMPLATE_NAME in [t.get('name') for t in existingCardTemplate]:
         return
     cardTemplate = aqt.mw.col.models.new_template(__TEMPLATE_NAME)
-    cardTemplate[
-        "qfmt"
-    ] = """
-<table>
+    cardTemplate['qfmt'] = """<table>
     <tr>
         <td>
             <h1 class="term">{{term}}</h1>
@@ -134,9 +125,7 @@ def getOrCreateModelCardTemplate(modelObject: models.NoteType):
 例句：
 <div>{{sentenceFront}}</div>
     """
-    cardTemplate[
-        "afmt"
-    ] = """
+    cardTemplate['afmt'] = """
 <table>
     <tr>
         <td>
@@ -156,9 +145,7 @@ def getOrCreateModelCardTemplate(modelObject: models.NoteType):
 例句：
 <div>{{sentenceBack}}</div>
     """
-    modelObject[
-        "css"
-    ] = """
+    modelObject['css'] = """
 .card {
     font-family: 'Noto Sans', arial, sans-serif;
     font-size: 20px;
@@ -176,7 +163,7 @@ def getOrCreateModelCardTemplate(modelObject: models.NoteType):
 
 def addNoteToDeck(deckObject, modelObject, conf: conf_model.Conf, oneQueryResult: QueryWordData):
     assert aqt.mw.col
-    modelObject["did"] = deckObject["id"]
+    modelObject['did'] = deckObject['id']
 
     newNote = aqt.mw.col.new_note(modelObject)
     newNote[C.F_TERM] = oneQueryResult[C.F_TERM]
@@ -194,55 +181,56 @@ def addNoteToDeck(deckObject, modelObject, conf: conf_model.Conf, oneQueryResult
             writeNoteBrEPhonetic,
         ],
     )  # 写入所有字段
-    aqt.mw.col.add_note(newNote, deckObject["id"])
-    logger.info(f"添加笔记{newNote[C.F_TERM]}")
+    aqt.mw.col.add_note(newNote, deckObject['id'])
+    logger.info(f'添加笔记{newNote[C.F_TERM]}')
 
 
-def writeNoteDefinition(
-    note: notes.Note, queryData: Optional[QueryWordData], conf: conf_model.Conf
-):
+def writeNoteDefinition(note: notes.Note, queryData: Optional[QueryWordData], conf: conf_model.Conf):
     if conf.definition:
         if queryData and queryData[C.F_DEFINITION]:
-            note[C.F_DEFINITION] = "<br>".join(queryData[C.F_DEFINITION])
+            note[C.F_DEFINITION] = '<br>'.join(queryData[C.F_DEFINITION])
     else:
-        note[C.F_DEFINITION] = ""
+        note[C.F_DEFINITION] = ''
 
 
 def writeNotePhrase(note: notes.Note, queryData: Optional[QueryWordData], conf: conf_model.Conf):
     if conf.phrase:
         if queryData and queryData[C.F_PHRASE]:
-            note[f"{C.F_PHRASE}Front"] = "<br>".join(
-                [f"<i>{e.strip()}</i>" for e, _ in queryData[C.F_PHRASE]]
-            )
-            note[f"{C.F_PHRASE}Back"] = "<br>".join(
-                [f"<i>{e.strip()}</i> {c.strip()}" for e, c in queryData[C.F_PHRASE]]
+            note[f'{C.F_PHRASE}Front'] = '<br>'.join([f'<i>{e.strip()}</i>' for e, _ in queryData[C.F_PHRASE]])
+            note[f'{C.F_PHRASE}Back'] = '<br>'.join(
+                [f'<i>{e.strip()}</i> {c.strip()}' for e, c in queryData[C.F_PHRASE]]
             )
     else:
-        clear_field(note, f"{C.F_PHRASE}Front")
-        clear_field(note, f"{C.F_PHRASE}Back")
+        clear_field(note, f'{C.F_PHRASE}Front')
+        clear_field(note, f'{C.F_PHRASE}Back')
 
 
 def writeNoteSentence(note: notes.Note, queryData: Optional[QueryWordData], conf: conf_model.Conf):
+    f_front = f'{C.F_SENTENCE}Front'
+    f_back = f'{C.F_SENTENCE}Back'
+
     if conf.sentence:
         if queryData and queryData[C.F_SENTENCE]:
-            note[f"{C.F_SENTENCE}Front"] = (
-                "<ol>"
-                + "\n".join([f"<li>{e.strip()}</li>" for e, _ in queryData[C.F_SENTENCE]])
-                + "</ol>"
-            )
-            note[f"{C.F_SENTENCE}Back"] = (
-                "<ol>"
-                + "\n".join(
-                    [
-                        f"<li>{e.strip()}<br>{c.strip()}</li>"
-                        for e, c in queryData[C.F_SENTENCE]
-                    ]
-                )
-                + "</ol>"
-            )
+            s_front_backs = [(e.strip(), c.strip()) for e, c in queryData[C.F_SENTENCE] if e.strip() or c.strip()]
+
+            if s_fronts := [e for e, _ in s_front_backs if e]:
+                note[f_front] = '<ul>' + ''.join((f'<li>{e}</li>' for e in s_fronts)) + '</ul>'
+
+            if s_front_backs:
+                chunks = []
+                chunks.append('<ul>')
+                for e, c in s_front_backs:
+                    chunks.append('<li>')
+                    if e:
+                        chunks.append(f'<div>{e}</div>')
+                    if c:
+                        chunks.append(f'<div>{c}</div>')
+                    chunks.append('</li>')
+                chunks.append('</ul>')
+                note[f_back] = ''.join(chunks)
     else:
-        clear_field(note, f"{C.F_SENTENCE}Front")
-        clear_field(note, f"{C.F_SENTENCE}Back")
+        clear_field(note, f_front)
+        clear_field(note, f_back)
 
 
 def writeNoteImage(note: notes.Note, queryData: Optional[QueryWordData], conf: conf_model.Conf):
@@ -267,9 +255,7 @@ def writeNotePron(note: notes.Note, queryData: Optional[QueryWordData], conf: co
         clear_field(note, C.F_BREPRON)
 
 
-def writeNoteAmEPhonetic(
-    note: notes.Note, queryData: Optional[QueryWordData], conf: conf_model.Conf
-):
+def writeNoteAmEPhonetic(note: notes.Note, queryData: Optional[QueryWordData], conf: conf_model.Conf):
     if conf.ame_phonetic:
         if queryData and queryData[C.F_AMEPHONETIC]:
             note[C.F_AMEPHONETIC] = queryData[C.F_AMEPHONETIC]
@@ -277,9 +263,7 @@ def writeNoteAmEPhonetic(
         clear_field(note, C.F_AMEPHONETIC)
 
 
-def writeNoteBrEPhonetic(
-    note: notes.Note, queryData: Optional[QueryWordData], conf: conf_model.Conf
-):
+def writeNoteBrEPhonetic(note: notes.Note, queryData: Optional[QueryWordData], conf: conf_model.Conf):
     if conf.bre_phonetic:
         if queryData and queryData[C.F_BREPHONETIC]:
             note[C.F_BREPHONETIC] = queryData[C.F_BREPHONETIC]
@@ -310,8 +294,8 @@ def media_path(fileName: Optional[str]):
 
 
 def make_pron_field(prefix: str, term: str):
-    return f"[sound:{misc.audio_fname(prefix, term)}]"
+    return f'[sound:{misc.audio_fname(prefix, term)}]'
 
 
 def clear_field(note: notes.Note, field_name: str):
-    note[field_name] = ""
+    note[field_name] = ''
