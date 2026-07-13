@@ -28,6 +28,7 @@ Definition = T.TypedDict(
         'pos': str,  # part of speech
         'pos_color': str,
         'definition': str,
+        'group': int,  # maybe useful to group definitions
         'example': list[str],  # strs with html tag
         'synonyms': list[DefInstance],
         'antonyms': list[DefInstance],
@@ -73,6 +74,7 @@ def make_empty_definition() -> Definition:
         'pos': '',
         'pos_color': '',
         'definition': '',
+        'group': 0,
         'example': [],
         'synonyms': [],
         'antonyms': [],
@@ -196,23 +198,29 @@ def parse_def_instance(ins_tag: Tag) -> list[DefInstance]:
 def parse_def(soup: BeautifulSoup) -> list[Definition]:
     ret_defs = []
     def_li_tags = soup.select('.word-definitions > ol > li')
+    group = 0
 
     for li_tag in def_li_tags:
         ret_def = make_empty_definition()
 
-        pos_clss = list(filter(lambda c: c.startswith('pos_'), li_tag.get('class', [])))
+        li_classes: list[str] = li_tag.get('class', [])
+        pos_cls = next(filter(lambda c: c.startswith('pos_'), li_classes), None)
+
+        if 'ord1' in li_classes and 'sord1' in li_classes:
+            # beginning of a new group
+            group += 1
+        ret_def['group'] = group
 
         if def_tag := li_tag.find(class_='definition'):
-            if def_tag.find(class_='pos-icon') and pos_clss:
-                cls = pos_clss[0]
+            if def_tag.find(class_='pos-icon') and pos_cls:
                 # `pos`
-                ret_def['pos'] = _pos_map[cls]['name']
+                ret_def['pos'] = _pos_map[pos_cls]['name']
                 # `pos_color`
-                ret_def['pos_color'] = _pos_map[cls]['color']
+                ret_def['pos_color'] = _pos_map[pos_cls]['color']
 
             # `definition`
-            ret_def['definition'] = '; '.join(
-                (str(child).strip() for child in def_tag.children if isinstance(child, NavigableString))
+            ret_def['definition'] = next(
+                (str(child).strip() for child in def_tag.children if isinstance(child, NavigableString)), ''
             )
 
         if defContent_tag := li_tag.find(class_='defContent'):

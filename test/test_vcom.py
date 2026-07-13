@@ -1,147 +1,15 @@
 import json
 
+from ..addon.queryApi import vcom_funny
 from ..addon.queryApi.webapi import vcom
+from . import mock_helper
+
+# https://corpus.vocabulary.com/api/1.0/examples/random.json?maxResults=4&query=crusader&startOffset=0
+json_str_word_good = """{"sentences":[{"corpusId":"LIT","offsets":[41,45],"sentence":"“Not as dangerous as a man with only one good hand and arm.”","volume":{"asin":"0316299435","author":"Jewell Parker Rhodes","corpus":{"id":"LIT","name":"Literature"},"dateAdded":1780435154617,"datePublished":1735689600000,"domain":"F","domains":["F"],"id":6823037,"isbn":"9780316299435","sentenceCount":1210,"title":"Will’s Race for Home","wordCount":14510},"volumeId":6823037,"volumeOffset":850},{"corpusId":"LIT","offsets":[35,39],"sentence":"In San Francisco, Phineas is not a good invalid.","volume":{"asin":"0618494782","author":"John Fleischman","corpus":{"id":"LIT","name":"Literature"},"dateAdded":1780435439849,"datePublished":1235520000000,"domain":"A","domains":["A"],"id":6823038,"isbn":"9780618494781","sentenceCount":707,"title":"Phineas Gage","wordCount":11965},"volumeId":6823038,"volumeOffset":471},{"corpusId":"LIT","offsets":[18,22],"sentence":"“I’ve still got a good hand,” Caesar says ruefully.","volume":{"asin":"0316299435","author":"Jewell Parker Rhodes","corpus":{"id":"LIT","name":"Literature"},"dateAdded":1780435154617,"datePublished":1735689600000,"domain":"F","domains":["F"],"id":6823037,"isbn":"9780316299435","sentenceCount":1210,"title":"Will’s Race for Home","wordCount":14510},"volumeId":6823037,"volumeOffset":623},{"corpusId":"LIT","offsets":[33,37],"sentence":"“Will’s going to do it! You’re a good man, George!”","volume":{"asin":"0316299435","author":"Jewell Parker Rhodes","corpus":{"id":"LIT","name":"Literature"},"dateAdded":1780435154617,"datePublished":1735689600000,"domain":"F","domains":["F"],"id":6823037,"isbn":"9780316299435","sentenceCount":1210,"title":"Will’s Race for Home","wordCount":14510},"volumeId":6823037,"volumeOffset":909}],"totalHits":7706}"""
 
 
-def test_parse_sentences():
-    # https://corpus.vocabulary.com/api/1.0/examples/random.json?maxResults=4&query=crusader&startOffset=0
-    json_str = """{
-  "sentences": [
-    {
-      "corpusId": "LIT",
-      "offsets": [
-        75,
-        84
-      ],
-      "sentence": "Royal had read of the man’s exploits in the newspaper—lawyer, abolitionist crusader, bane of slavers and those who did their dirty work.",
-      "volume": {
-        "asin": "0385542364",
-        "author": "Colson Whitehead",
-        "corpus": {
-          "id": "LIT",
-          "name": "Literature"
-        },
-        "dateAdded": 1516744234387,
-        "datePublished": 1470096000000,
-        "domain": "F",
-        "domains": [
-          "F"
-        ],
-        "id": 4000512,
-        "isbn": "9780385542364",
-        "sentenceCount": 6298,
-        "title": "The Underground Railroad: A Novel",
-        "wordCount": 86874
-      },
-      "volumeId": 4000512,
-      "volumeOffset": 5366
-    },
-    {
-      "corpusId": "LIT",
-      "offsets": [
-        103,
-        111
-      ],
-      "sentence": "What’s more, here was a way for Hoover, a deskbound functionary, to cast himself as a dashing figure—a crusader for the modern scientific age.",
-      "volume": {
-        "asin": "0307742482",
-        "author": "David Grann",
-        "corpus": {
-          "id": "LIT",
-          "name": "Literature"
-        },
-        "dateAdded": 1597937534829,
-        "datePublished": 1492473600000,
-        "domain": "F",
-        "domains": [
-          "F"
-        ],
-        "id": 5467904,
-        "isbn": "9780307742483",
-        "sentenceCount": 3719,
-        "title": "Killers of the Flower Moon",
-        "wordCount": 75151
-      },
-      "volumeId": 5467904,
-      "volumeOffset": 2032
-    },
-    {
-      "corpusId": "LIT",
-      "offsets": [
-        20,
-        29
-      ],
-      "sentence": "He saw himself as a crusader, a champion of the underdog, an enemy of sinister authority.",
-      "volume": {
-        "asin": "0393338827",
-        "author": "Michael Lewis",
-        "corpus": {
-          "id": "LIT",
-          "name": "Literature"
-        },
-        "dateAdded": 1762884839876,
-        "datePublished": 1268611200000,
-        "domain": "A",
-        "domains": [
-          "A"
-        ],
-        "id": 6748699,
-        "isbn": "9780393338829",
-        "sentenceCount": 3904,
-        "title": "The Big Short",
-        "wordCount": 82419
-      },
-      "volumeId": 6748699,
-      "volumeOffset": 2316
-    },
-    {
-      "corpusId": "LIT",
-      "offsets": [
-        77,
-        85
-      ],
-      "sentence": "Next, if you wanted some peculiar person to ride by, there might have come a crusader who had promised to deliver the grave of God.",
-      "volume": {
-        "asin": "0441627404",
-        "author": "T. H. White",
-        "corpus": {
-          "id": "LIT",
-          "name": "Literature"
-        },
-        "dateAdded": 1470155460313,
-        "datePublished": -378691200000,
-        "domain": "F",
-        "domains": [
-          "F"
-        ],
-        "id": 3111240,
-        "isbn": "9780441627400",
-        "sentenceCount": 11781,
-        "title": "The Once and Future King",
-        "wordCount": 236358
-      },
-      "volumeId": 3111240,
-      "volumeOffset": 9496
-    }
-  ],
-  "totalHits": 879
-}"""
-    json_obj = json.loads(json_str)
-    sentences = vcom.parse_sentences(json_obj)
-
-    assert len(sentences) == 4
-
-    sentence4 = sentences[3]
-    assert sentence4['offsets'] == (77, 85)
-    assert sentence4['sentence']
-    assert sentence4['author'] == 'T. H. White'
-    assert sentence4['title'] == 'The Once and Future King'
-    assert sentence4['date'] == -378691200000
-
-
-def test_parse_page_word_good():
-    # https://www.vocabulary.com/dictionary/good
-    html_str = """
+# https://www.vocabulary.com/dictionary/good
+html_str_word_good = """
 
 
 
@@ -5119,8 +4987,25 @@ Module.after(['vcom/dictionary/citation'], function(){
 		
 """
 
+
+def test_parse_sentences():
+    json_obj = json.loads(json_str_word_good)
+    sentences = vcom.parse_sentences(json_obj)
+
+    assert len(sentences) == 4
+
+    sentence4 = sentences[3]
+    assert sentence4['offsets'] == (33, 37)
+    assert sentence4['sentence'] == '“Will’s going to do it! You’re a good man, George!”'
+    assert sentence4['author'] == 'Jewell Parker Rhodes'
+    assert sentence4['title'] == 'Will’s Race for Home'
+    assert sentence4['date'] == 1735689600000
+
+
+def test_parse_page_word_good():
+
     vcom_word = vcom.make_empty_vcomword('good')
-    vcom.parse_page(html_str, vcom_word)
+    vcom.parse_page(html_str_word_good, vcom_word)
 
     assert vcom_word['phonetics_us'] == '/gʊd/'
     assert vcom_word['phonetics_uk'] == '/gʊd/'
@@ -5158,3 +5043,18 @@ Module.after(['vcom/dictionary/citation'], function(){
     wf1 = wfs[0]
     assert wf1['word'] == 'good'
     assert wf1['freq'] == 4
+
+
+def test_vcom_funny_api(monkeypatch):
+    mock_helper.mock_session_get(monkeypatch, vcom._session, html_str_word_good, json.loads(json_str_word_good))
+    word_data = vcom_funny.API.query('good')
+
+    assert word_data is not None
+    assert word_data['term'] == 'good'
+    assert word_data['definition'] == [
+        """<div>1 <span style="color:#007BC4">adj</span> <span style="color:#0FA646">n</span> <span style="color:#7B61FF">adv</span> 2 <span style="color:#007BC4">adj</span> <span style="color:#7B61FF">adv</span> 3 <span style="color:#007BC4">adj</span> 4 <span style="color:#0FA646">n</span></div><p>We all know what <i>good</i> means as an adjective––pleasing, favorable, nice. But did you know that <i>good</i> is also a noun, meaning something that can be sold? This means a shopkeeper’s ideal is to have really <i>good goods</i>.</p><p><i>Good</i> comes from an old German root for gathering, and in its original sense it means that something fits well. If something is good for you, it fits you well, or is healthy for you to eat. A long walk through a crowded city is good for someone who likes people-watching, but if you are a misanthrope and you hate people, that wouldn't be so good. If food has spoiled, it’s no longer good.</p>"""
+    ]
+    assert len(word_data['sentence']) == 4
+    assert word_data['AmEPhonetic'] == '/gʊd/'
+    assert word_data['AmEPron'] == 'https://audio.vocabulary.com/1.0/us/G/1C361RWL0RWKM.mp3'
+    assert word_data['BrEPhonetic'] == '/gʊd/'

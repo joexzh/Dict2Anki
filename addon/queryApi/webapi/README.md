@@ -115,6 +115,8 @@ const def_lis = document.querySelectorAll('.word-definitions > ol > li');
 const def_li = def_lis[0];
 const def_li_def = def_li.querySelector('.definition');
 
+// `group`: if def_li has class ord1 and sord1, it's the start of a new group
+
 // `pos`: get the text content of it
 const pos_el = def_li_def.querySelector('.pos-icon');
 

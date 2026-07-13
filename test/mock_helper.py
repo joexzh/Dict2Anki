@@ -49,6 +49,20 @@ def mock_requests(monkeypatch):
     monkeypatch.setattr(requests, 'get', lambda *args, **kwargs: MockResponse)
 
 
+def mock_session_get(monkeypatch: pytest.MonkeyPatch, session: requests.Session, r_text='', r_json_obj=dict()):
+    j = helper.MockCallable()
+    j.return_value = r_json_obj
+
+    r_raise_for_status = helper.MockCallable()
+
+    class MockResponse:
+        text = r_text
+        json = j
+        raise_for_status = r_raise_for_status
+
+    monkeypatch.setattr(session, 'get', lambda *args, **kwargs: MockResponse)
+
+
 query_data_mock = {
     'term': 'test',
     'definition': ['测试'],
