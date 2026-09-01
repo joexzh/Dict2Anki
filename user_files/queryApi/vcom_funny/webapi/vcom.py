@@ -10,7 +10,7 @@ from bs4.element import NavigableString, Tag
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
-from ... import global_vars as V
+from .....addon import global_vars as V
 
 logger = logging.getLogger('dict2Anki.queryApi.webapi.vcom')
 __all__ = ['fetch_parse']

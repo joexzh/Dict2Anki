@@ -1,7 +1,7 @@
 import json
 
-from ..addon.queryApi import vcom_funny
-from ..addon.queryApi.webapi import vcom
+from ..user_files.queryApi import vcom_funny
+from ..user_files.queryApi.vcom_funny.webapi import vcom
 from . import mock_helper
 
 # https://corpus.vocabulary.com/api/1.0/examples/random.json?maxResults=4&query=good&startOffset=0

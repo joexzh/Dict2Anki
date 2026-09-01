@@ -2,14 +2,14 @@ import datetime
 import logging
 from typing import Optional
 
-from .._typing import AbstractQueryAPI, QueryWordData
+from ....addon import _typing as _T
 from .webapi.vcom import VCOMWord, fetch_parse
 
 logger = logging.getLogger('dict2Anki.queryApi.vcom_funny')
 __all__ = ['API']
 
 
-def parse(vcom_word: VCOMWord) -> Optional[QueryWordData]:
+def parse(vcom_word: VCOMWord) -> Optional[_T.QueryWordData]:
     term = vcom_word['word']
 
     chunks: list[str] = []
@@ -77,7 +77,7 @@ def parse(vcom_word: VCOMWord) -> Optional[QueryWordData]:
     pron_us = vcom_word['pron_audio_us']
     # pron_uk not supported, it's a mp4 file
 
-    return QueryWordData(
+    return _T.QueryWordData(
         term=term,
         definition=definition,
         phrase=[],
@@ -90,7 +90,7 @@ def parse(vcom_word: VCOMWord) -> Optional[QueryWordData]:
     )
 
 
-class API(AbstractQueryAPI):
+class API(_T.AbstractQueryAPI):
     """
     Other fields not listed are empty:
     - term
@@ -104,7 +104,7 @@ class API(AbstractQueryAPI):
     name = 'Vocabulary.com API'
 
     @classmethod
-    def query(cls, word: str) -> Optional[QueryWordData]:
+    def query(cls, word: str) -> Optional[_T.QueryWordData]:
         queryResult = None
         try:
             vcom_word = fetch_parse(word)

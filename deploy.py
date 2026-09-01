@@ -17,10 +17,33 @@ print(addon_id)
 
 def create_zip():
     file_paths = []
-    exclude_dirs = ['test', '__pycache__', '.git', '.idea', '.pytest_cache', 'screenshots', 'venv', '.venv',
-                    '.github', '.vscode']
-    exclude_files = ['README.md', '.gitignore', '.travis.yml', 'deploy.py', 'requirements.txt', '.DS_Store',
-                     'meta.json', '__main__.py', 'test.sh', 'ruff.toml', 'runanki.py']
+    exclude_dirs = [
+        '.git',
+        '.github',
+        '.idea',
+        '.pytest_cache',
+        '.venv',
+        '.vscode',
+        '__pycache__',
+        'screenshots',
+        'test',
+        'venv',
+    ]
+    exclude_files = [
+        '.DS_Store',
+        '.gitignore',
+        '.gitkeep',
+        '.travis.yml',
+        'README.md',
+        '__main__.py',
+        'deploy.py',
+        'meta.json',
+        'pyproject.toml',
+        'requirements.txt',
+        'ruff.toml',
+        'runanki.py',
+        'test.sh',
+    ]
     exclude_ext = ['.png', '.ui', '.qrc', '.log', '.zip', '.tpl']
     for dirname, sub_dirs, files in os.walk("."):
         for d in exclude_dirs:

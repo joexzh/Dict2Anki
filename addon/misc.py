@@ -1,12 +1,15 @@
 import base64
+import importlib
 import logging
 import os
+import pkgutil
 import tempfile
 import time
+import typing as T
 from queue import Queue
 from threading import Thread
 
-logger = logging.getLogger("dict2Anki.misc")
+logger = logging.getLogger('dict2Anki.misc')
 
 
 class Worker(Thread):
@@ -36,9 +39,13 @@ class ThreadPool:
     def __init__(self, max_workers):
         self._q = Queue(max_workers)
         self.results_q = Queue()
+
         self.result = []
-        """each item of result is a tuple ( args, kwargs, ret ).
-        'args', 'kwargs' are the unnamed and named arguments you pass to submit function"""
+        """
+        each item of result is a tuple ( args, kwargs, ret ).
+        'args', 'kwargs' are the unnamed and named arguments you pass to submit function
+        """
+
         self._workers: list[Worker] = []
         # Create Worker Thread
         for _ in range(max_workers):
@@ -88,11 +95,11 @@ def congestGenerator(n=60):
 
 
 def audio_fname(prefix: str, term: str):
-    return f"{prefix}_{term}.mp3"
+    return f'{prefix}_{term}.mp3'
 
 
 def tmp_audio_dir():
-    return os.path.join(tempfile.gettempdir(), "Dict2Anki", "audios")
+    return os.path.join(tempfile.gettempdir(), 'Dict2Anki', 'audios')
 
 
 _RANDOM_MASK = b'0SiCw@kFBPY^4n'
@@ -115,3 +122,22 @@ def dec_cookies(cookies_enc: str) -> str:
     for i in range(len(byts)):
         byts[i] = byts[i] ^ _RANDOM_MASK[i % len(_RANDOM_MASK)]
     return byts.decode('utf-8')
+
+
+def load_all_modules(rel_package: str, package: T.Optional[str]):
+    """
+    Load and yield all modules found in package path `rel_package`, relative to
+    caller's `__package__`.
+
+    Usage:
+
+    ```py
+    mods = load_all_modules('...user_files.queryApi', __package__)
+    ```
+
+    """
+    pkg = importlib.import_module(rel_package, package)
+
+    for _, mod_name, _ in pkgutil.iter_modules(pkg.__path__):
+        full_name = f'{pkg.__name__}.{mod_name}'
+        yield importlib.import_module(full_name)
