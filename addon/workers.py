@@ -13,7 +13,7 @@ from urllib3 import Retry
 from . import constants as C
 from . import misc
 from ._typing import AbstractDictionary, AbstractQueryAPI, QueryWordData
-from .conf_model import Conf
+from . import global_vars as V
 
 
 class AbstractWorker(QObject):
@@ -36,7 +36,7 @@ class NetworkWorker(AbstractWorker):
     session = requests.Session()
     session.mount("http://", HTTPAdapter(max_retries=retries))
     session.mount("https://", HTTPAdapter(max_retries=retries))
-    session.headers.update({"User-Agent": Conf.user_agent_or_default()})
+    session.headers.update({"User-Agent": V.user_agent()})
 
     def __init__(self):
         super().__init__()

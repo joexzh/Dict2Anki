@@ -49,7 +49,10 @@ def mock_requests(monkeypatch):
     monkeypatch.setattr(requests, 'get', lambda *args, **kwargs: MockResponse)
 
 
-def mock_session_get(monkeypatch: pytest.MonkeyPatch, session: requests.Session, r_text='', r_json_obj=dict()):
+def mock_session_get(monkeypatch: pytest.MonkeyPatch, session: requests.Session, r_text='', r_json_obj=None):
+    if r_json_obj is None:
+        r_json_obj = dict()
+
     j = helper.MockCallable()
     j.return_value = r_json_obj
 

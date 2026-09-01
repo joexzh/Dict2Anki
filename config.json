@@ -1,19 +1,10 @@
 {
-  "version": 2,
+  "version": 3,
   "deck": "",
-  "selectedDict": 0,
-  "selectedGroup": [[], []],
-  "selectedApi": 0,
-  "credential": [
-    {
-      "cookie": "",
-      "cookie_encoded": ""
-    },
-    {
-      "cookie": "",
-      "cookie_encoded": ""
-    }
-  ],
+  "selected_dict": "欧路词典",
+  "dict_saved_groups": {},
+  "selected_api": "有道 API",
+  "credentials": {},
   "definition": true,
   "sentence": true,
   "image": true,
@@ -24,5 +15,5 @@
   "AmEPron": true,
   "noPron": false,
   "congest": 120,
-  "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+  "user_agent": ""
 }

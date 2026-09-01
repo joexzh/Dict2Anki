@@ -62,8 +62,8 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         self.setupUi(self)
         self.setWindowTitle(C.ADDON_FULL_NAME)
         self.dummyBtn.hide()
-        self.dictionaryComboBox.addItems([d.name for d in dictionaries])
-        self.apiComboBox.addItems([d.name for d in apis])
+        self.dictionaryComboBox.addItems((k for k in dictionaries))
+        self.apiComboBox.addItems((k for k in apis))
         self.deckComboBox.addItems(noteManager.getDeckNames())
         self.needDeleteWordsView = NeedDeleteWordsView(self.needDeleteCheckBox, self.needDeleteWordListWidget)
         ConfCtl.init_ui(self, self.conf)
@@ -488,9 +488,9 @@ class ConfCtl:
 
         # init UI
         w.deckComboBox.setCurrentText(conf.deck)
-        w.dictionaryComboBox.setCurrentIndex(conf.selected_dict)
+        w.dictionaryComboBox.setCurrentText(conf.selected_dict)
         w.currentDictionaryLabel.setText(f'当前选择词典: {w.dictionaryComboBox.currentText()}')
-        w.apiComboBox.setCurrentIndex(conf.selected_api)
+        w.apiComboBox.setCurrentText(conf.selected_api)
         w.cookieLineEdit.setText(conf.current_cookies)
         w.definitionCheckBox.setChecked(conf.definition)
         w.imageCheckBox.setChecked(conf.image)
@@ -510,15 +510,15 @@ class ConfCtl:
         def _on_deck_combobox_change(text):
             conf.deck = text
 
-        def _on_dict_combobox_change(index):
-            conf.selected_dict = index
+        def _on_dict_combobox_change(text):
+            conf.selected_dict = text
             w.currentDictionaryLabel.setText(f'当前选择词典: {w.dictionaryComboBox.currentText()}')
             w.cookieLineEdit.blockSignals(True)
             w.cookieLineEdit.setText(conf.current_cookies)
             w.cookieLineEdit.blockSignals(False)
 
-        def _on_api_combobox_change(index):
-            conf.selected_api = index
+        def _on_api_combobox_change(text):
+            conf.selected_api = text
 
         def _on_cookie_line_edit_change(text):
             conf.current_cookies = text
@@ -561,8 +561,8 @@ class ConfCtl:
 
         # register events
         w.deckComboBox.currentTextChanged.connect(_on_deck_combobox_change)
-        w.dictionaryComboBox.currentIndexChanged.connect(_on_dict_combobox_change)
-        w.apiComboBox.currentIndexChanged.connect(_on_api_combobox_change)
+        w.dictionaryComboBox.currentTextChanged.connect(_on_dict_combobox_change)
+        w.apiComboBox.currentTextChanged.connect(_on_api_combobox_change)
         w.cookieLineEdit.textChanged.connect(_on_cookie_line_edit_change)
         w.definitionCheckBox.stateChanged.connect(_on_definition_cb_change)
         w.sentenceCheckBox.stateChanged.connect(_on_sentence_cb_change)

@@ -8,18 +8,18 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from .._typing import AbstractDictionary
-from ..conf_model import Conf
+from .. import global_vars
 
 logger = logging.getLogger('dict2Anki.dictionary.youdao')
 
 
-class Youdao(AbstractDictionary):
+class Dict(AbstractDictionary):
     name = '有道词典'
     loginUrl = 'http://account.youdao.com/login?service=dict&back_url=http://dict.youdao.com/wordbook/wordlist%3Fkeyfrom%3Dnull'
     timeout = 10
     headers = {
         'Host': 'dict.youdao.com',
-        'User-Agent': Conf.user_agent_or_default(),
+        'User-Agent': global_vars.user_agent()
     }
     retries = Retry(total=5, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
     session = requests.Session()

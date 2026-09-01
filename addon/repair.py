@@ -195,9 +195,9 @@ class Repair:
         currentDict = self._w.get_current_dict()
 
         if currentApi == queryApi.eudict.API:
-            if currentDict != dictionary.eudict.Eudict:
+            if currentDict != dictionary.eudict.Dict:
                 aqt.utils.showCritical(
-                    f"当前选择的是[{queryApi.eudict.API.name}]，请前往[同步]页面选择[{dictionary.eudict.Eudict.name}]以获取登录信息"
+                    f"当前选择的是[{queryApi.eudict.API.name}]，请前往[同步]页面选择[{dictionary.eudict.Dict.name}]以获取登录信息"
                 )
                 return False
             else:

@@ -20,7 +20,7 @@ def parse(vcom_word: VCOMWord) -> Optional[QueryWordData]:
 
     if definitions := vcom_word['definitions']:
         # mimic the POS list above the short definition in the offline
-        # dictionary "Vocabulary.com Dictionary by dfsfd@pdawikiBuild at
+        # dictionary "Vocabulary.com Dictionary by dfsfd@pdawikiBuild in
         # 2018/4/17"
 
         chunks.append('<div>')
@@ -29,17 +29,17 @@ def parse(vcom_word: VCOMWord) -> Optional[QueryWordData]:
         group_iter = map(lambda d: d['group'], definitions)
         first_group = next(group_iter)
         only_one_group = all(g == first_group for g in group_iter)
-        pos = ''
+        last_pos = ''
 
         for d in definitions:
             if not only_one_group and group != d['group']:
                 group = d['group']
-                pos = ''
+                last_pos = ''
                 chunks.append(f'{group} ')
-            if pos != d['pos']:
+            if last_pos != (pos := d['pos']):
                 # don't duplicate pos for the same group
-                pos = d['pos']
-                chunks.append(f'<span style="color:{d["pos_color"]}">{d["pos"]}</span> ')
+                last_pos = pos
+                chunks.append(f'<span class="pos-{pos}">{pos}</span> ')
 
         chunks[-1] = chunks[-1][:-1]  # remove trailing space
         chunks.append('</div>')

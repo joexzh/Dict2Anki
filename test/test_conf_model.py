@@ -1,17 +1,20 @@
 import typing as T
 
-from ..addon import misc
+from ..addon import conf_migration, dictionary, misc, queryApi
 from ..addon.conf_model import Conf
 from . import helper
+from ..addon import global_vars as V
+from ..addon import constants as C
 
 
 def new_conf():
-    return Conf(helper.fresh_config_dict())
+    return Conf(helper.fresh_latest_confmap())
 
 
 def same_val_should_not_dirty(attr, val, conf: T.Optional[Conf] = None):
     if conf is None:
         conf = new_conf()
+
     attr_name = getattr(attr, 'fget', attr).__name__
     setattr(conf, attr_name, val)
     # force reset dirty to False
@@ -36,9 +39,9 @@ def test_desk_dirty():
 
 def test_selected_dict():
     conf = new_conf()
-    conf.selected_dict = 1
+    conf.selected_dict = '1'
 
-    assert conf.selected_dict == 1
+    assert conf.selected_dict == '1'
     assert conf.is_dirty() is True
 
 
@@ -48,9 +51,9 @@ def test_selected_dict_dirty():
 
 def test_selected_api():
     conf = new_conf()
-    conf.selected_api = 1
+    conf.selected_api = '1'
 
-    assert conf.selected_api == 1
+    assert conf.selected_api == '1'
     assert conf.is_dirty() is True
 
 
@@ -64,7 +67,8 @@ def test_current_cookies():
     conf.current_cookies = val
 
     assert conf.current_cookies == val
-    assert conf.current_credential['cookie_encoded'] != ''
+    cookie_encoded = conf.current_credential['cookie_encoded']
+    assert cookie_encoded != '' and cookie_encoded != val
     assert conf.is_dirty() is True
 
 
@@ -192,7 +196,7 @@ def test_bre_pron_dirty():
 
 def test_ame_pron():
     # json file defaults to True
-    conf_map = helper.fresh_config_dict()
+    conf_map = helper.fresh_latest_confmap()
     conf_map['AmEPron'] = False
     conf_map['BrEPron'] = False
     conf_map['noPron'] = True
@@ -208,7 +212,7 @@ def test_ame_pron():
 
 def test_ame_pron_dirty():
     # json file defaults to True
-    conf_map = helper.fresh_config_dict()
+    conf_map = helper.fresh_latest_confmap()
     conf_map['AmEPron'] = False
     conf_map['BrEPron'] = False
     conf_map['noPron'] = True
@@ -244,27 +248,19 @@ def test_congest_dirty():
 
 
 def test_user_agent_has_instance():
-    """
-    For v1: should match default value
-
-    For v2: should match the value in user config
-    """
 
     # don't forget to clear the singleton instance before this test ends
-    Conf.getinstance(helper.fresh_config_dict())
-    assert_ua = Conf.user_agent_or_default()
+    Conf.getinstance(helper.fresh_latest_confmap())
+    assert_ua = V.user_agent()
 
-    if helper.env_conf_v() >= 2:
-        assert assert_ua == helper.USER_AGENT
-    else:
-        assert assert_ua == Conf.default_user_agent
+    assert assert_ua == C.USER_AGENT
 
-    Conf.instance = None
+    V.conf_instance = None
 
 
 def test_user_agent_no_instance():
-    Conf.instance = None
-    assert Conf.user_agent_or_default() == Conf.default_user_agent
+    V.conf_instance = None
+    assert V.user_agent() == C.USER_AGENT
 
 
 def test_user_agent_dirty():
@@ -284,80 +280,50 @@ def test_current_selected_groups_dirty():
     same_val_should_not_dirty(Conf.current_selected_groups, [])
 
 
-def test_saving_map():
-    "should delete `version` and clear `cookie`"
+def test_migration_v1_v2():
+    confmap = helper.fresh_v1_confmap()
+    confmap['credential'] = [{'cookie': '0'}, {'cookie': '1'}]
+    cookie0_encoded = misc.enc_cookies('0')
+    cookie1_encoded = misc.enc_cookies('1')
 
-    conf = new_conf()
-    conf.current_cookies = 'test_cookies'
-    map_cp = conf.get_saving_map()
+    conf_migration.migrate_v1_v2(confmap)
+    creds = confmap['credential']
 
-    assert 'version' not in map_cp
-    assert not any(map(lambda cred: cred['cookie'], map_cp['credential']))
+    assert 'cookie' not in creds[0]
+    assert creds[0]['cookie_encoded'] == cookie0_encoded
 
-
-def test_dirty_at_init():
-    # case 1
-    conf_map = helper.fresh_config_dict()
-    conf_map['credential'] = [
-        {'cookie': 'test_cookies'},
-        {'cookie': ''},
-    ]
-    conf = Conf(conf_map)
-
-    assert conf.is_dirty() is True
-
-    # case 2
-    conf_map = helper.fresh_config_dict()
-    conf_map['credential'] = [
-        {'cookie': ''},
-        {'cookie': ''},
-    ]
-    conf = Conf(conf_map)
-
-    assert conf.is_dirty() is True
-
-    # case 3
-    conf_map = helper.fresh_config_dict()
-    conf_map['credential'] = [
-        {'cookie': '', 'cookie_encoded': 'UTEK'},  # enc_cookies('abc') == 'UTEK'
-        {'cookie': '', 'cookie_encoded': ''},
-    ]
-    conf = Conf(conf_map)
-
-    assert conf.is_dirty() is False
+    assert 'cookie' not in creds[1]
+    assert creds[1]['cookie_encoded'] == cookie1_encoded
 
 
-def test_encode_cookies_at_init():
-    cookies = """azAZ09~!@#$%^&*()_+-=[]{}\|;:'",<.>/?~`"""
-    cookies_enc = misc.enc_cookies(cookies)
+def test_migration_v2_v3():
+    confmap = helper.fresh_v2_confmap()
+    conf_migration.migrate_v2_v3(confmap)
 
-    conf_map = helper.fresh_config_dict()
-    conf_map['credential'] = [
-        {'cookie': cookies},
-        {'cookie': ''},
-    ]
-    conf = Conf(conf_map)
+    assert 'selectedDict' not in confmap
+    assert 'selectedApi' not in confmap
+    assert 'selectedGroup' not in confmap
+    assert 'credential' not in confmap
 
-    conf.selected_dict = 0
-    assert conf.current_credential['cookie_encoded'] == cookies_enc
-
-    conf.selected_dict = 1
-    assert conf.current_credential['cookie_encoded'] == ''
+    assert confmap['selected_dict'] == dictionary.eudict.Dict.name
+    assert confmap['selected_api'] == queryApi.youdao.API.name
+    assert confmap['dict_saved_groups'][dictionary.eudict.Dict.name] == []
+    assert confmap['credentials'][dictionary.eudict.Dict.name]['cookie_encoded'] == ''
 
 
 def test_decode_cookies_at_init():
     cookies = """azAZ09~!@#$%^&*()_+-=[]{}\|;:'",<.>/?~`"""
     cookies_enc = misc.enc_cookies(cookies)
 
-    conf_map = helper.fresh_config_dict()
-    conf_map['credential'] = [
-        {'cookie': '', 'cookie_encoded': cookies_enc},
-        {'cookie': ''},
-    ]
-    conf = Conf(conf_map)
+    confmap = helper.fresh_v3_confmap()
+    confmap['credentials'] = {
+        dictionary.eudict.Dict.name: {'cookie_encoded': cookies_enc},
+        dictionary.youdao.Dict.name: {'cookie_encoded': ''},
+    }
+    conf = Conf(confmap)
 
-    conf.selected_dict = 0
+    conf.selected_dict = dictionary.eudict.Dict.name
     assert conf.current_cookies == cookies
 
-    conf.selected_dict = 1
+    conf.selected_dict = dictionary.youdao.Dict.name
     assert conf.current_cookies == ''

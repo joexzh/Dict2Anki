@@ -7,7 +7,7 @@ import requests
 from PyQt6.QtCore import Qt
 
 from ..addon import constants as C
-from ..addon import dictionary
+from ..addon import dictionary, misc
 from ..addon.addonWindow import Windows, noteManager
 from .mock_helper import w_mock
 
@@ -37,18 +37,33 @@ def test_version_check(qtbot, monkeypatch, w_mock):
     assert requests.get("").json.called > 0
 
 
-@pytest.mark.parametrize('index', [0, 1])
-def test_dictionary_combobox_change(index, monkeypatch, w_mock, qtbot):
-    monkeypatch.setitem(aqt.mw.addonManager.getConfig.return_value, 'credential', [{'cookie': '0'}, {'cookie': '1'}])
+@pytest.mark.parametrize('text', [dictionary.youdao.Dict.name, dictionary.eudict.Dict.name])
+def test_dictionary_combobox_change(text, monkeypatch, w_mock, qtbot):
+    cookie0 = '0'
+    cookie1 = '1'
+    cookie0_enc = misc.enc_cookies(cookie0)
+    cookie1_enc = misc.enc_cookies(cookie1)
+
+    monkeypatch.setitem(
+        aqt.mw.addonManager.getConfig.return_value,
+        'credentials',
+        {
+            dictionary.youdao.Dict.name: {'cookie_encoded': cookie0_enc},
+            dictionary.eudict.Dict.name: {'cookie_encoded': cookie1_enc},
+        },
+    )
 
     w: Windows = w_mock()
     qtbot.addWidget(w)
-    w.dictionaryComboBox.setCurrentIndex(index)
+    w.dictionaryComboBox.setCurrentText(text)
 
-    assert w.conf.selected_dict == index
+    assert w.conf.selected_dict == text
     assert w.dictionaryComboBox.currentText() in w.currentDictionaryLabel.text()
-    assert w.conf.current_cookies == aqt.mw.addonManager.getConfig.return_value['credential'][index]['cookie']
-    assert w.cookieLineEdit.text() == w.conf.current_cookies
+    cookie_decoded = w.conf.current_cookies
+    assert cookie_decoded == misc.dec_cookies(
+        aqt.mw.addonManager.getConfig.return_value['credentials'][text]['cookie_encoded']
+    )
+    assert w.cookieLineEdit.text() == cookie_decoded
 
 
 def test_get_deck_list(qtbot, monkeypatch, w_mock):
@@ -73,13 +88,13 @@ def test_get_deck_list(qtbot, monkeypatch, w_mock):
 ])
 def test_fetch_word_and_compare(monkeypatch, w_mock, qtbot, local_words, remote_words, test_index):
     monkeypatch.setattr(noteManager, "getWordsByDeck", lambda x: copy.deepcopy(local_words))
-    monkeypatch.setattr(dictionary.eudict.Eudict, "getTotalPage", lambda x, y: 1)
-    monkeypatch.setattr(dictionary.eudict.Eudict, "getWordsByPage", lambda x,y,z: copy.deepcopy(remote_words))
+    monkeypatch.setattr(dictionary.eudict.Dict, "getTotalPage", lambda x, y: 1)
+    monkeypatch.setattr(dictionary.eudict.Dict, "getWordsByPage", lambda x,y,z: copy.deepcopy(remote_words))
 
     w: Windows = w_mock()
     qtbot.addWidget(w)
 
-    w.conf.selected_dict = dictionary.dictionaries.index(dictionary.eudict.Eudict)
+    w.conf.selected_dict = dictionary.eudict.Dict.name
     # value of w.conf is from monkeypatch, also need monkeypatch to modify it
     monkeypatch.setattr(w.conf, "current_selected_groups", ["group_1"]) # "group_1" is dummy value
     w.get_current_dict().groups = [(w.conf.current_selected_groups[0], "1")] # "1" is dummy value

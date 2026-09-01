@@ -171,8 +171,8 @@ class API(AbstractQueryAPI):
 
     name = '欧路词典 API'
     # 重用 dictionary.Eudict 的 session。因为如果未登录，网页会返回反爬虫的版本
-    timeout = dictionary.eudict.Eudict.timeout
-    session = dictionary.eudict.Eudict.session
+    timeout = dictionary.eudict.Dict.timeout
+    session = dictionary.eudict.Dict.session
     url = 'https://dict.eudic.net/dicts/en/{}'
     parser = Parser
 

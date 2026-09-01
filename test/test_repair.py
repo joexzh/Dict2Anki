@@ -126,9 +126,11 @@ def test_selected_remove_only(qtbot, monkeypatch, w_mock):
 
 @pytest.mark.parametrize('num, query_fail_num, audio_download_fail', [(13, 0, 0), (17, 11, 5), (23, 0, 19)])
 def test_query(monkeypatch, w_mock, qtbot, num, query_fail_num, audio_download_fail):
-    """- all query succeed
+    """
+    - all query succeed
     - mix success and failure
-    - some audio succeed"""
+    - some audio succeed
+    """
 
     def mock_notes(*args, **kwargs):
         return [notes.Note(1)] * num

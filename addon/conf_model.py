@@ -3,11 +3,12 @@ from __future__ import annotations
 import copy
 import functools
 import threading
-import typing as T
 
-from . import _typing
+from . import _typing as _T
 from . import constants as C
+from .conf_migration import migrate_version
 from .misc import dec_cookies, enc_cookies
+from . import global_vars as V
 
 
 def _set_dirty(method):
@@ -29,58 +30,31 @@ def _set_dirty(method):
     return wrapper
 
 
-class Conf(_typing.ListenableModel):
+class Conf(_T.ListenableModel):
     lock = threading.Lock()
-    default_user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36'
-    instance: T.Optional[Conf] = None
 
     @classmethod
-    def getinstance(cls, conf):
+    def getinstance(cls, confmap: _T.ConfigMap):
         "Thread safe singleton instance"
-        if cls.instance is None:
+        if V.conf_instance is None:
             with cls.lock:
-                if cls.instance is None:
-                    cls.instance = Conf(conf)
-        return cls.instance
+                if V.conf_instance is None:
+                    V.conf_instance = Conf(confmap)
+        return V.conf_instance
 
     @classmethod
     def delinstance(cls):
         "Must call only when closing addon main window"
-        if cls.instance:
-            cls.instance = None
-
-    @classmethod
-    def user_agent_or_default(cls):
-        if cls.instance is None:
-            return cls.default_user_agent
-        return cls.instance.user_agent
+        if V.conf_instance is not None:
+            V.conf_instance = None
 
     def __init__(self, conf):
         super().__init__()
         # require valid `config` returned from `mw.addonManager.getConfig`
-        self._map: _typing.ConfigMap = conf
+        self._map: _T.ConfigMap = conf
         self._dirty = False
 
-        # `cookie_encoded` is added at version 2.
-        # Case 1: `cookie` is not empty. It's the first time from v1 to v2,
-        #   should encode `cookie` and write encoded result to `cookie_encoded`.
-        # Case 2: `cookie_encoded` not in cred. It's the first time from v1 to
-        #   v2, set default value '' to it.
-        # Case 3: `cookie_encoded` is not empty. It's normal v2 config, should
-        #   decode `cookie_encoded` and write decoded result to `cookie`.
-        creds = self._map['credential']
-        for cred in creds:
-            if cred['cookie'] != '':
-                # case 1
-                cred['cookie_encoded'] = enc_cookies(cred['cookie'])
-                self._dirty = True
-            elif 'cookie_encoded' not in cred:
-                # case 2
-                cred['cookie_encoded'] = ''
-                self._dirty = True
-            elif cred['cookie_encoded'] != '':
-                # case 3
-                cred['cookie'] = dec_cookies(cred['cookie_encoded'])
+        migrate_version(self)
 
     def get_map(self):
         return self._map
@@ -89,16 +63,6 @@ class Conf(_typing.ListenableModel):
         "Return a map specifically for saving to file"
 
         map_cp = copy.deepcopy(self._map)
-        for cred in map_cp['credential']:
-            cred['cookie'] = ''
-
-        # According to https://addon-docs.ankiweb.net/addon-config.html ,
-        # mw.addonManager.getConfig() prefers keys in meta.json, then falls back
-        # to the default config.json, internally something like this:
-        # `defaults.update(meta_config)`
-        #
-        # So delete any key that must not override the default value
-        map_cp.pop('version', None)
         return map_cp
 
     def is_dirty(self):
@@ -121,8 +85,7 @@ class Conf(_typing.ListenableModel):
         how to modify when dropping support for an old version.
         """
 
-        # compatible to version 1
-        return self._map.get('version', 1)
+        return self._map['version']
 
     @property
     def deck(self):
@@ -135,44 +98,45 @@ class Conf(_typing.ListenableModel):
 
     @property
     def selected_dict(self):
-        return self._map['selectedDict']
+        return self._map['selected_dict']
 
     @selected_dict.setter
     @_set_dirty
-    def selected_dict(self, val: int):
-        self._map['selectedDict'] = val
+    def selected_dict(self, val: str):
+        self._map['selected_dict'] = val
 
     @property
     def selected_api(self):
-        return self._map['selectedApi']
+        return self._map['selected_api']
 
     @selected_api.setter
     @_set_dirty
-    def selected_api(self, val: int):
-        self._map['selectedApi'] = val
+    def selected_api(self, val: str):
+        self._map['selected_api'] = val
 
     @property
     def current_credential(self):
-        cred = self._map['credential']
-        while len(cred) < self.selected_dict + 1:
-            cred.append(_typing.Credential(cookie='', cookie_encoded=''))
-        return cred[self.selected_dict]
+        return self._map['credentials'].setdefault(self.selected_dict, _T.Credential(cookie_encoded=''))
 
     @property
     def current_cookies(self):
-        return self.current_credential['cookie']
+        """return decoded cookies"""
+        return dec_cookies(self.current_credential['cookie_encoded'])
 
     @current_cookies.setter
-    @_set_dirty
     def current_cookies(self, val: str):
-        "setter triggers `current_cookies` event, property value as event argument"
+        """
+        val is plain text, encode it first
+        Setter triggers `current_cookies` event, event argument is the plain val
+        """
 
         cred = self.current_credential
-        cred['cookie'] = val
+        old = cred['cookie_encoded']
+        new = enc_cookies(val)
+        cred['cookie_encoded'] = new
 
-        # Encode cookies to prevent disk scanning malware from easily collecting
-        # sensitive data.
-        cred['cookie_encoded'] = enc_cookies(cred['cookie'])
+        if old != new:
+            self._dirty = True
 
         self._notify('current_cookies', val)
 
@@ -277,8 +241,8 @@ class Conf(_typing.ListenableModel):
 
     @property
     def user_agent(self):
-        # compatible to version 1
-        return self._map.get('user_agent', self.default_user_agent)
+        ua = self._map.get('user_agent')
+        return ua if ua else C.USER_AGENT
 
     @user_agent.setter
     @_set_dirty
@@ -287,23 +251,12 @@ class Conf(_typing.ListenableModel):
 
     @property
     def current_selected_groups(self) -> list[str]:
-        try:
-            return self._map['selectedGroup'][self.selected_dict]
-        except (KeyError, IndexError):
-            return []
+        return self._map['dict_saved_groups'].setdefault(self.selected_dict, [])
 
     @current_selected_groups.setter
     @_set_dirty
     def current_selected_groups(self, groups: list[str]):
-        selected_groups = self._map.get('selectedGroup')
-
-        if selected_groups is None:
-            selected_groups = self._map['selectedGroup'] = []
-
-        while len(selected_groups) < self.selected_dict + 1:
-            selected_groups.append([])
-
-        selected_groups[self.selected_dict] = groups
+        self._map['dict_saved_groups'][self.selected_dict] = groups
 
     def print(self):
         return str(self._map)

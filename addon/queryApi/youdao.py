@@ -134,8 +134,8 @@ class Parser:
 class API(AbstractQueryAPI):
     name = '有道 API'
     # 重用 dictionary.Youdao 的 session
-    timeout = dictionary.youdao.Youdao.timeout
-    session = dictionary.youdao.Youdao.session
+    timeout = dictionary.youdao.Dict.timeout
+    session = dictionary.youdao.Dict.session
     url = 'https://dict.youdao.com/jsonapi'
     params = {"dicts": {"count": 99, "dicts": [["ec", "ee", "phrs", "pic_dict"], ["web_trans"], ["fanyi"], ["blng_sents_part"]]}}
     parser = Parser

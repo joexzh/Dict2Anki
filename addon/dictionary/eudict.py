@@ -9,18 +9,16 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from .._typing import AbstractDictionary
-from ..conf_model import Conf
+from .. import global_vars
 
 logger = logging.getLogger('dict2Anki.dictionary.eudict')
 
 
-class Eudict(AbstractDictionary):
+class Dict(AbstractDictionary):
     name = '欧路词典'
     loginUrl = 'https://dict.eudic.net/account/login'
     timeout = 10
-    headers = {
-        'User-Agent': Conf.user_agent_or_default(),
-    }
+    headers = {'User-Agent': global_vars.user_agent()}
     retries = Retry(total=5, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
     session = requests.Session()
     session.mount('http://', HTTPAdapter(max_retries=retries))
@@ -29,7 +27,6 @@ class Eudict(AbstractDictionary):
     groups: list[tuple[str, str]] = []
 
     _indexSoup: Optional[BeautifulSoup] = None
-
 
     @classmethod
     def checkCookie(cls, cookie: dict) -> bool:
@@ -40,7 +37,7 @@ class Eudict(AbstractDictionary):
         """
         rsp = requests.get('https://my.eudic.net/studylist', cookies=cookie, headers=cls.headers)
         if 'dict.eudic.net/account/login' not in rsp.url:
-            cls._indexSoup = BeautifulSoup(rsp.text, features="html.parser")
+            cls._indexSoup = BeautifulSoup(rsp.text, features='html.parser')
             logger.info('Cookie有效')
             cookiesJar = requests.utils.cookiejar_from_dict(cookie, cookiejar=None, overwrite=True)
             cls.session.cookies = cookiesJar
@@ -81,9 +78,7 @@ class Eudict(AbstractDictionary):
         """
         try:
             r = cls.session.post(
-                url='https://my.eudic.net/StudyList/WordsDataSource',
-                timeout=cls.timeout,
-                data={'categoryid': groupId}
+                url='https://my.eudic.net/StudyList/WordsDataSource', timeout=cls.timeout, data={'categoryid': groupId}
             )
             records = r.json()['recordsTotal']
             totalPages = ceil(records / 100)
@@ -105,11 +100,7 @@ class Eudict(AbstractDictionary):
         }
         try:
             logger.info(f'获取单词本({groupName}-{groupId})第:{pageNo + 1}页')
-            r = cls.session.post(
-                url='https://my.eudic.net/StudyList/WordsDataSource',
-                timeout=cls.timeout,
-                data=data
-            )
+            r = cls.session.post(url='https://my.eudic.net/StudyList/WordsDataSource', timeout=cls.timeout, data=data)
             wl = r.json()
             wordList = list(set(word['uuid'] for word in wl['data']))
         except Exception as error:

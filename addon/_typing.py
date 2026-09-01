@@ -1,5 +1,5 @@
+import typing as T
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Optional, TypedDict
 
 
 class Mask:
@@ -13,18 +13,35 @@ class Mask:
         return self.info
 
 
-class Credential(TypedDict):
-    cookie: str
+class Credential(T.TypedDict):
     cookie_encoded: str
 
 
-class ConfigMap(TypedDict):
+class ConfigMap(T.TypedDict):
     version: int
     deck: str
+
     selectedDict: int
+    'deprecated'
+
+    selected_dict: str
+    'dict name'
+
     selectedGroup: list[list[str]]
+    'deprecated'
+
+    dict_saved_groups: dict[str, list[str]]
+
     selectedApi: int
+    'deprecated'
+
+    selected_api: str
+    'api name'
+
     credential: list[Credential]
+    'deprecated'
+
+    credentials: dict[str, Credential]
     definition: bool
     sentence: bool
     image: bool
@@ -40,6 +57,8 @@ class ConfigMap(TypedDict):
 
 class AbstractDictionary(ABC):
     name: str
+    '`name` has to be unique and never changes, otherwise may cause unexpected result somewhere'
+
     loginUrl: str
     timeout: int
     headers: dict[str, str]
@@ -71,7 +90,7 @@ class AbstractDictionary(ABC):
         pass
 
 
-class QueryWordData(TypedDict):
+class QueryWordData(T.TypedDict):
     term: str
     definition: list[str]
     phrase: list[tuple[str, str]]
@@ -85,10 +104,11 @@ class QueryWordData(TypedDict):
 
 class AbstractQueryAPI(ABC):
     name: str
+    '`name` has to be unique and never changes, otherwise may cause unexpected result somewhere'
 
     @classmethod
     @abstractmethod
-    def query(cls, word: str) -> Optional[QueryWordData]:
+    def query(cls, word: str) -> T.Optional[QueryWordData]:
         """
         查询
         :param word: 单词
@@ -99,18 +119,18 @@ class AbstractQueryAPI(ABC):
 
 class ListenableModel:
     def __init__(self):
-        self._listeners: dict[str, list[Callable[[Any], Any]]] = {}
+        self._listeners: dict[str, list[T.Callable[[T.Any], T.Any]]] = {}
 
     def _notify(self, event: str, val):
         if event in self._listeners:
             for fn in self._listeners[event]:
                 fn(val)
 
-    def listen(self, event: str, fn: Callable[[Any], Any]):
+    def listen(self, event: str, fn: T.Callable[[T.Any], T.Any]):
         if event not in self._listeners:
             self._listeners[event] = []
         self._listeners[event].append(fn)
 
-    def unlisten(self, event: str, fn: Callable[[Any], Any]):
+    def unlisten(self, event: str, fn: T.Callable[[T.Any], T.Any]):
         if event in self._listeners:
             self._listeners[event].remove(fn)

@@ -10,7 +10,7 @@ from bs4.element import NavigableString, Tag
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
-from ...conf_model import Conf
+from ... import global_vars as V
 
 logger = logging.getLogger('dict2Anki.queryApi.webapi.vcom')
 __all__ = ['fetch_parse']
@@ -100,9 +100,7 @@ def make_empty_vcomword(word: str) -> VCOMWord:
 
 
 def make_session():
-    headers = {
-        'User-Agent': Conf.user_agent_or_default(),
-    }
+    headers = {'User-Agent': V.user_agent()}
     retries = Retry(total=5, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
     session = requests.Session()
     session.mount('http://', HTTPAdapter(max_retries=retries))
