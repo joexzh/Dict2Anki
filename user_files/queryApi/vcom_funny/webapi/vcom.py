@@ -109,7 +109,7 @@ def make_session():
     return session
 
 
-_session = make_session()
+session = make_session()
 _pos_map = {
     'pos_n': {'name': 'n', 'color': '#0FA646'},
     'pos_v': {'name': 'v', 'color': '#CD4D03'},
@@ -287,14 +287,14 @@ def parse_sentences(json_obj: dict[str, T.Any]) -> list[Sentence]:
 
 def fetch_parse_sentences(word: str) -> list[Sentence]:
     url = f'https://corpus.vocabulary.com/api/1.0/examples/random.json?maxResults=4&query={word}&startOffset=0'
-    r = _session.get(url, timeout=10)
+    r = session.get(url, timeout=10)
     r.raise_for_status()
     return parse_sentences(r.json())
 
 
 def fetch_parse(word: str) -> VCOMWord:
     url = f'https://www.vocabulary.com/dictionary/{word}'
-    r = _session.get(url, timeout=10)
+    r = session.get(url, timeout=10)
     r.raise_for_status()
 
     vcom_word = make_empty_vcomword(word)

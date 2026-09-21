@@ -5046,7 +5046,7 @@ def test_parse_page_word_good():
 
 
 def test_vcom_funny_api(monkeypatch):
-    mock_helper.mock_session_get(monkeypatch, vcom._session, html_str_word_good, json.loads(json_str_word_good))
+    mock_helper.mock_session_get(monkeypatch, vcom.session, html_str_word_good, json.loads(json_str_word_good))
     word_data = vcom_funny.API.query('good')
 
     assert word_data is not None

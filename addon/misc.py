@@ -3,18 +3,22 @@ import importlib
 import logging
 import os
 import pkgutil
+import shutil
 import tempfile
 import time
 import typing as T
 from queue import Queue
 from threading import Thread
+from types import ModuleType
+
+import requests
 
 logger = logging.getLogger('dict2Anki.misc')
 
 
 class Worker(Thread):
     def __init__(self, queue, result_queue):
-        super(Worker, self).__init__()
+        super().__init__()
         self._q = queue
         self.result_queue = result_queue
         self.daemon = True
@@ -29,8 +33,9 @@ class Worker(Thread):
                     return
                 result = f(*args, **kwargs)
                 self.result_queue.put((args, kwargs, result))
-            except Exception as e:
-                logger.exception(e)
+            except Exception:
+                # it will auto log the exception inside except block
+                logger.exception('Error in thread pool worker')
             finally:
                 self._q.task_done()
 
@@ -56,7 +61,7 @@ class ThreadPool:
 
     def wait_complete(self):
         self._q.join()
-        while not self.results_q.qsize() == 0:
+        while self.results_q.qsize() != 0:
             self.result.append(self.results_q.get())
 
         return self.result
@@ -70,7 +75,7 @@ class ThreadPool:
         for worker in self._workers:
             worker.interrupted = True  # run in GIL, presume thread safe?
         for _ in range(len(self._workers)):
-            self._q.put((lambda: None, tuple(), dict()))
+            self._q.put((lambda: None, (), {}))
 
     def __enter__(self):
         return self
@@ -126,18 +131,42 @@ def dec_cookies(cookies_enc: str) -> str:
 
 def load_all_modules(rel_package: str, package: T.Optional[str]):
     """
-    Load and yield all modules found in package path `rel_package`, relative to
+    Load and return all modules found in package path `rel_package`, relative to
     caller's `__package__`.
 
     Usage:
 
-    ```py
+    ```python
     mods = load_all_modules('...user_files.queryApi', __package__)
     ```
-
     """
+    mods: list[ModuleType] = []
     pkg = importlib.import_module(rel_package, package)
 
-    for _, mod_name, _ in pkgutil.iter_modules(pkg.__path__):
+    for _finder, mod_name, _ispkg in pkgutil.iter_modules(pkg.__path__):
         full_name = f'{pkg.__name__}.{mod_name}'
-        yield importlib.import_module(full_name)
+        mods.append(importlib.import_module(full_name))
+    return mods
+
+
+def download_file(session: requests.Session, fileName: str, url: str):
+    r = session.get(url, stream=True)
+    if not r.ok:
+        raise PermissionError(f'http status code: {r.status_code}')
+    with open(fileName, 'wb') as f:
+        for chunk in r.iter_content(chunk_size=1024):
+            if chunk:
+                f.write(chunk)
+
+
+def rm_file(fpath: str):
+    if os.path.isfile(fpath):
+        os.remove(fpath)
+
+
+def mv_file(src: str, dst: str):
+    if os.path.isfile(src):
+        rm_file(dst)
+        shutil.move(src, dst)
+        return True
+    return False

@@ -7,8 +7,11 @@ apis: dict[str, type[AbstractQueryAPI]] = {
     eudict.API.name: eudict.API,
 }
 
-# load apis from user_files/queryApi
-# TODO: provide user option to load
-# if enable_load: load
-for mod in misc.load_all_modules('...user_files.queryApi', __package__):
-    apis[mod.API.name] = mod.API
+default_api = youdao.API
+
+
+def load_usr_mod():
+    "load user modules in user_files/queryApi"
+    for mod in misc.load_all_modules('...user_files.queryApi', __package__):
+        if hasattr(mod, 'API') and isinstance(mod.API, type) and issubclass(mod.API, AbstractQueryAPI):
+            apis[mod.API.name] = mod.API

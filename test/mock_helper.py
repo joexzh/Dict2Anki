@@ -7,22 +7,15 @@ from ..addon import constants as C
 from . import dummy_aqt, dummy_noteManager, helper
 
 
+def mock_module(monkeypatch, target_mod, mod):
+    "replace attributes in target_mod with those found in mod"
+    for name in dir(mod):
+        if not name.startswith('_'):
+            monkeypatch.setattr(target_mod, name, getattr(mod, name))
+
+
 def mock_noteManager(monkeypatch):
-    monkeypatch.setattr(noteManager, 'getDeckNames', dummy_noteManager.getDeckNames)
-    monkeypatch.setattr(noteManager, 'getOrCreateDeck', dummy_noteManager.getOrCreateDeck)
-    monkeypatch.setattr(noteManager, 'getOrCreateModel', dummy_noteManager.getOrCreateModel)
-    monkeypatch.setattr(
-        noteManager,
-        'getOrCreateModelCardTemplate',
-        dummy_noteManager.getOrCreateModelCardTemplate,
-    )
-    monkeypatch.setattr(noteManager, 'addNoteToDeck', dummy_noteManager.addNoteToDeck)
-    monkeypatch.setattr(noteManager, 'getWordsByDeck', dummy_noteManager.getWordsByDeck)
-    monkeypatch.setattr(noteManager, 'getNoteIds', dummy_noteManager.getNoteIds)
-    monkeypatch.setattr(noteManager, 'removeNotes', dummy_noteManager.removeNotes)
-    monkeypatch.setattr(noteManager, 'media_path', dummy_noteManager.media_path)
-    monkeypatch.setattr(noteManager, 'writeNoteFields', dummy_noteManager.writeNoteFields)
-    monkeypatch.setattr(noteManager, 'getNotesByDeckName', dummy_noteManager.getNotesByDeckName)
+    mock_module(monkeypatch, noteManager, dummy_noteManager)
 
 
 def mock_aqt_mw(monkeypatch):

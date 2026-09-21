@@ -3,7 +3,7 @@ import logging
 from typing import Optional
 
 from ....addon import _typing as _T
-from .webapi.vcom import VCOMWord, fetch_parse
+from .webapi.vcom import VCOMWord, fetch_parse, session
 
 logger = logging.getLogger('dict2Anki.queryApi.vcom_funny')
 __all__ = ['API']
@@ -102,6 +102,7 @@ class API(_T.AbstractQueryAPI):
     """
 
     name = 'Vocabulary.com API'
+    session = session
 
     @classmethod
     def query(cls, word: str) -> Optional[_T.QueryWordData]:

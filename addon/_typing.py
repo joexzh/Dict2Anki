@@ -1,6 +1,8 @@
 import typing as T
 from abc import ABC, abstractmethod
 
+import requests
+
 
 class Mask:
     def __init__(self, info):
@@ -15,6 +17,19 @@ class Mask:
 
 class Credential(T.TypedDict):
     cookie_encoded: str
+
+
+class Advanced_Fields(T.TypedDict):
+    enabled: bool
+    enable_user_modules: bool
+    definition: str
+    sentence: str
+    image: str
+    phrase: str
+    AmEPhonetic: str
+    BrEPhonetic: str
+    BrEPron: str
+    AmEPron: str
 
 
 class ConfigMap(T.TypedDict):
@@ -53,6 +68,8 @@ class ConfigMap(T.TypedDict):
     noPron: bool
     congest: int
     user_agent: str
+
+    advanced_fields: Advanced_Fields
 
 
 class AbstractDictionary(ABC):
@@ -105,6 +122,9 @@ class QueryWordData(T.TypedDict):
 class AbstractQueryAPI(ABC):
     name: str
     '`name` has to be unique and never changes, otherwise may cause unexpected result somewhere'
+
+    session: requests.Session
+    'mostly for audio download'
 
     @classmethod
     @abstractmethod

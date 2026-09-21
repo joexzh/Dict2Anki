@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import typing as T
 
+from . import _typing as _T
 from . import dictionary, queryApi
 from .misc import enc_cookies
-from . import _typing as _T
 
 if T.TYPE_CHECKING:
     from .conf_model import Conf
@@ -56,19 +56,17 @@ def migrate_v2_v3(confmap: _T.ConfigMap):
 
     if confmap['selectedDict'] == 0:
         confmap['selected_dict'] = dictionary.eudict.Dict.name
-    elif confmap['selectedDict'] == 1:
-        confmap['selected_dict'] = dictionary.youdao.Dict.name
     else:
-        confmap['selected_dict'] = ''
+        # default is youdao
+        confmap['selected_dict'] = dictionary.youdao.Dict.name
 
     del confmap['selectedDict']
 
-    if confmap['selectedApi'] == 0:
-        confmap['selected_api'] = queryApi.youdao.API.name
-    elif confmap['selectedApi'] == 1:
+    if confmap['selectedApi'] == 1:
         confmap['selected_api'] = queryApi.eudict.API.name
     else:
-        confmap['selected_api'] = ''
+        # default is youdao
+        confmap['selected_api'] = queryApi.youdao.API.name
 
     del confmap['selectedApi']
 
@@ -91,6 +89,10 @@ def migrate_v2_v3(confmap: _T.ConfigMap):
     del confmap['credential']
 
 
+def migrate_v3_v4(confmap: _T.ConfigMap):
+    confmap['version'] = 4
+
+
 def migrate_version(conf: Conf):
     """
     Migrate to latest version
@@ -101,4 +103,8 @@ def migrate_version(conf: Conf):
     if 'selectedDict' in conf._map:
         migrate_v1_v2(conf._map)
         migrate_v2_v3(conf._map)
+        conf._dirty = True
+
+    if conf.version == 3:
+        migrate_v3_v4(conf._map)
         conf._dirty = True

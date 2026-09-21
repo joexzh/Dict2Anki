@@ -1,13 +1,14 @@
+from __future__ import annotations
+
 import logging
 import os
-from collections.abc import Callable
-from typing import Optional
+import typing as T
 
 import aqt
 from anki import models, notes
 
-from . import conf_model, misc
 from . import constants as C
+from . import misc
 from ._typing import QueryWordData
 
 logger = logging.getLogger('dict2Anki.noteManager')
@@ -32,41 +33,46 @@ def getWordsByDeck(deckName) -> list[str]:
     return words
 
 
-def getNoteIds(wordList, deckName) -> list[notes.NoteId]:
+def get_note_ids(deckName: str, other_cond: T.Optional[str] = None):
+    """Don't forget to escape `"` in `other_cond`.
+    E.g., `other_cond = f'term:"{word} flag:1"'`, caller must escape
+    double-quotes in `word`, replace `"` with `\\"`.
+    """
+    assert aqt.mw.col is not None
+
+    if other_cond is None:
+        other_cond = ''
+
+    escaped_deckName = deckName.replace('"', '\\"')
+
+    # ensure notes have the field "term"
+    search_str = f'deck:"{escaped_deckName}" term:* {other_cond}'
+    return aqt.mw.col.find_notes(search_str)
+
+
+def getNoteIds(wordList: T.Iterable[str], deckName: str) -> list[notes.NoteId]:
     assert aqt.mw.col
     noteIds = []
     for word in wordList:
-        noteIds.extend(aqt.mw.col.find_notes(f'deck:"{deckName}" term:"{word}"'))
+        escaped_word = word.replace('"', '\\"')
+        noteIds.extend(get_note_ids(deckName, f'term:"{escaped_word}"'))
     return noteIds
 
 
-def noteFilterByModelName(note: notes.Note):
-    model = note.note_type()
-    if model and model['name'] == C.MODEL_NAME:
-        return True
-    return False
+def getNotesByDeckName(deckName: str, other_cond: T.Optional[str] = None):
+    """Don't forget to escape `"` in `other_cond`.
+    E.g., `other_cond = f'term:"{word}"'`, you must escape double-quotes in `word`.
+    """
+    assert aqt.mw.col is not None
+    return (aqt.mw.col.get_note(nid) for nid in get_note_ids(deckName, other_cond))
 
 
-def getNotesByDeckName(deckName: str, filter: Optional[Callable] = None) -> list[notes.Note]:
-    assert aqt.mw.col
-
-    noteIds = aqt.mw.col.find_notes(f'deck:"{deckName}"')
-    notes = []
-    for noteId in noteIds:
-        note = aqt.mw.col.get_note(noteId)
-        if not filter:
-            notes.append(note)
-        elif filter(note):
-            notes.append(note)
-    return notes
-
-
-def removeNotes(noteIds):
+def removeNotes(noteIds: T.Sequence[notes.NoteId]):
     assert aqt.mw.col
     aqt.mw.col.remove_notes(noteIds)
 
 
-def updateNotes(notes):
+def updateNotes(notes: T.Sequence[notes.Note]):
     assert aqt.mw.col
     aqt.mw.col.update_notes(notes)
 
@@ -161,130 +167,164 @@ def getOrCreateModelCardTemplate(modelObject: models.NoteType):
     aqt.mw.col.models.add(modelObject)
 
 
-def addNoteToDeck(deckObject, modelObject, conf: conf_model.Conf, oneQueryResult: QueryWordData):
-    assert aqt.mw.col
-    modelObject['did'] = deckObject['id']
+def new_note(word: str, model: T.Optional[models.NotetypeDict] = None):
+    assert aqt.mw.col is not None
 
-    newNote = aqt.mw.col.new_note(modelObject)
-    newNote[C.F_TERM] = oneQueryResult[C.F_TERM]
-    writeNoteFields(
-        newNote,
-        oneQueryResult,
-        conf,
-        [
-            writeNoteDefinition,
-            writeNotePhrase,
-            writeNoteSentence,
-            writeNoteImage,
-            writeNotePron,
-            writeNoteAmEPhonetic,
-            writeNoteBrEPhonetic,
-        ],
-    )  # 写入所有字段
-    aqt.mw.col.add_note(newNote, deckObject['id'])
-    logger.info(f'添加笔记{newNote[C.F_TERM]}')
+    if model is None:
+        model = getOrCreateModel()
+        getOrCreateModelCardTemplate(model)
+
+    note = aqt.mw.col.new_note(model)
+    note[C.F_TERM] = word
+    return note
 
 
-def writeNoteDefinition(note: notes.Note, queryData: Optional[QueryWordData], conf: conf_model.Conf):
-    if conf.definition:
-        if queryData and queryData[C.F_DEFINITION]:
-            note[C.F_DEFINITION] = '<br>'.join(queryData[C.F_DEFINITION])
-    else:
-        note[C.F_DEFINITION] = ''
+def set_flag(notes: T.Iterable[notes.Note], flag: int):
+    """set flag for cards of notes"""
+    assert aqt.mw.col is not None
+    for note in notes:
+        card_ids = note.card_ids()
+        aqt.mw.col.set_user_flag_for_cards(flag, card_ids)
 
 
-def writeNotePhrase(note: notes.Note, queryData: Optional[QueryWordData], conf: conf_model.Conf):
-    if conf.phrase:
-        if queryData and queryData[C.F_PHRASE]:
-            note[f'{C.F_PHRASE}Front'] = '<br>'.join([f'<i>{e.strip()}</i>' for e, _ in queryData[C.F_PHRASE]])
-            note[f'{C.F_PHRASE}Back'] = '<br>'.join(
-                [f'<i>{e.strip()}</i> {c.strip()}' for e, c in queryData[C.F_PHRASE]]
+def set_field_definition(note: notes.Note, query_data: QueryWordData) -> bool:
+    if query_data[C.F_DEFINITION]:
+        note[C.F_DEFINITION] = ''.join(
+            (f'<div class="definition">{definition.strip()}</div>' for definition in query_data[C.F_DEFINITION])
+        )
+        return True
+    return False
+
+
+def empty_field_definition(note: notes.Note):
+    note[C.F_DEFINITION] = ''
+
+
+def set_field_phrase(note: notes.Note, query_data: QueryWordData) -> bool:
+    if query_data[C.F_PHRASE]:
+        note[C.F_PHRASE_FRONT] = ''.join(
+            [f'<div class="phrase-front">{front.strip()}</div>' for front, _ in query_data[C.F_PHRASE]]
+        )
+        note[C.F_PHRASE_BACK] = ''.join(
+            [
+                f'<div><span class="phrase-front">{front.strip()}</span> <span class="phrase-back">{back.strip()}</span></div>'
+                for front, back in query_data[C.F_PHRASE]
+            ]
+        )
+        return True
+    return False
+
+
+def empty_field_phrase(note: notes.Note):
+    clear_field(note, C.F_PHRASE_FRONT)
+    clear_field(note, C.F_PHRASE_BACK)
+
+
+def set_field_sentence(note: notes.Note, query_data: QueryWordData) -> bool:
+    if query_data[C.F_SENTENCE]:
+        s_front_backs = [
+            (front.strip(), back.strip()) for front, back in query_data[C.F_SENTENCE] if front.strip() or back.strip()
+        ]
+
+        if s_fronts := [front for front, _ in s_front_backs if front]:
+            note[C.F_SENTENCE_FRONT] = (
+                '<ul>'
+                + ''.join((f'<li><div class="sentence-front">{front}</div></li>' for front in s_fronts))
+                + '</ul>'
             )
-    else:
-        clear_field(note, f'{C.F_PHRASE}Front')
-        clear_field(note, f'{C.F_PHRASE}Back')
+
+        if s_front_backs:
+            chunks = []
+            chunks.append('<ul>')
+            for front, back in s_front_backs:
+                chunks.append('<li>')
+                if front:
+                    chunks.append(f'<div class="sentence-front">{front}</div>')
+                if back:
+                    chunks.append(f'<div class="sentence-back">{back}</div>')
+                chunks.append('</li>')
+            chunks.append('</ul>')
+            note[C.F_SENTENCE_BACK] = ''.join(chunks)
+
+        return True
+    return False
 
 
-def writeNoteSentence(note: notes.Note, queryData: Optional[QueryWordData], conf: conf_model.Conf):
-    f_front = f'{C.F_SENTENCE}Front'
-    f_back = f'{C.F_SENTENCE}Back'
-
-    if conf.sentence:
-        if queryData and queryData[C.F_SENTENCE]:
-            s_front_backs = [(e.strip(), c.strip()) for e, c in queryData[C.F_SENTENCE] if e.strip() or c.strip()]
-
-            if s_fronts := [e for e, _ in s_front_backs if e]:
-                note[f_front] = '<ul>' + ''.join((f'<li>{e}</li>' for e in s_fronts)) + '</ul>'
-
-            if s_front_backs:
-                chunks = []
-                chunks.append('<ul>')
-                for e, c in s_front_backs:
-                    chunks.append('<li>')
-                    if e:
-                        chunks.append(f'<div>{e}</div>')
-                    if c:
-                        chunks.append(f'<div>{c}</div>')
-                    chunks.append('</li>')
-                chunks.append('</ul>')
-                note[f_back] = ''.join(chunks)
-    else:
-        clear_field(note, f_front)
-        clear_field(note, f_back)
+def empty_field_sentence(note: notes.Note):
+    clear_field(note, C.F_SENTENCE_FRONT)
+    clear_field(note, C.F_SENTENCE_BACK)
 
 
-def writeNoteImage(note: notes.Note, queryData: Optional[QueryWordData], conf: conf_model.Conf):
-    if conf.image:
-        if queryData and queryData[C.F_IMAGE]:
-            note[C.F_IMAGE] = f'<img style="max-height:300px" src="{queryData[C.F_IMAGE]}">'
-    else:
-        clear_field(note, C.F_IMAGE)
+def set_field_image(note: notes.Note, query_data: QueryWordData) -> bool:
+    if query_data[C.F_IMAGE]:
+        note[C.F_IMAGE] = f'<img class="image" src="{query_data[C.F_IMAGE]}">'
+        return True
+    return False
 
 
-def writeNotePron(note: notes.Note, queryData: Optional[QueryWordData], conf: conf_model.Conf):
-    if conf.ame_pron:
-        if queryData and queryData[C.F_AMEPRON]:
-            note[C.F_AMEPRON] = make_pron_field(C.F_AMEPRON, queryData[C.F_TERM])
-    else:
-        clear_field(note, C.F_AMEPRON)
-
-    if conf.bre_pron:
-        if queryData and queryData[C.F_BREPRON]:
-            note[C.F_BREPRON] = make_pron_field(C.F_BREPRON, queryData[C.F_TERM])
-    else:
-        clear_field(note, C.F_BREPRON)
+def empty_field_image(note: notes.Note):
+    clear_field(note, C.F_IMAGE)
 
 
-def writeNoteAmEPhonetic(note: notes.Note, queryData: Optional[QueryWordData], conf: conf_model.Conf):
-    if conf.ame_phonetic:
-        if queryData and queryData[C.F_AMEPHONETIC]:
-            note[C.F_AMEPHONETIC] = queryData[C.F_AMEPHONETIC]
-    else:
-        clear_field(note, C.F_AMEPHONETIC)
+def set_field_BrEPron(note: notes.Note, query_data: QueryWordData) -> bool:
+    if query_data[C.F_BREPRON]:
+        note[C.F_BREPRON] = make_pron_field(C.F_BREPRON, query_data[C.F_TERM])
+        return True
+    return False
 
 
-def writeNoteBrEPhonetic(note: notes.Note, queryData: Optional[QueryWordData], conf: conf_model.Conf):
-    if conf.bre_phonetic:
-        if queryData and queryData[C.F_BREPHONETIC]:
-            note[C.F_BREPHONETIC] = queryData[C.F_BREPHONETIC]
-    else:
-        clear_field(note, C.F_BREPHONETIC)
+def empty_field_BrEPron(note: notes.Note):
+    clear_field(note, C.F_BREPRON)
 
 
-writeNoteFnType = Callable[[notes.Note, Optional[QueryWordData], conf_model.Conf], None]
+def set_field_AmEPron(note: notes.Note, query_data: QueryWordData) -> bool:
+    if query_data[C.F_AMEPRON]:
+        note[C.F_AMEPRON] = make_pron_field(C.F_AMEPRON, query_data[C.F_TERM])
+        return True
+    return False
 
 
-def writeNoteFields(
-    note: notes.Note,
-    queryData: Optional[QueryWordData],
-    conf: conf_model.Conf,
-    modifyFieldFns: list[writeNoteFnType],
-):
-    for fn in modifyFieldFns:
-        fn(note, queryData, conf)
+def empty_field_AmEPron(note: notes.Note):
+    clear_field(note, C.F_AMEPRON)
 
 
-def media_path(fileName: Optional[str]):
+def set_field_AmEPhonetic(note: notes.Note, query_data: QueryWordData) -> bool:
+    if query_data[C.F_AMEPHONETIC]:
+        note[C.F_AMEPHONETIC] = query_data[C.F_AMEPHONETIC]
+        return True
+    return False
+
+
+def empty_field_AmEPhonetic(note: notes.Note):
+    clear_field(note, C.F_AMEPHONETIC)
+
+
+def set_field_BrEPhonetic(note: notes.Note, query_data: QueryWordData) -> bool:
+    if query_data[C.F_BREPHONETIC]:
+        note[C.F_BREPHONETIC] = query_data[C.F_BREPHONETIC]
+        return True
+    return False
+
+
+def empty_field_BrEPhonetic(note: notes.Note):
+    clear_field(note, C.F_BREPHONETIC)
+
+
+def set_field(note: notes.Note, field: str, query_data: QueryWordData) -> bool:
+    set_field_fn = globals().get(f'set_field_{field}')
+    if set_field_fn is None:
+        raise AttributeError(f'set_field: missing function set_field_{field}')
+    return set_field_fn(note, query_data)
+
+
+def empty_field(note: notes.Note, field: str):
+    empty_field_fn = globals().get(f'empty_field_{field}')
+    if empty_field_fn is None:
+        raise AttributeError(f'empty_field: missing function empty_field_{field}')
+    empty_field_fn(note)
+
+
+def media_path(fileName: T.Optional[str] = None):
     """如果有文件名，返回完整文件路径，否则返回媒体库dir"""
     assert aqt.mw.col
     media_dir = aqt.mw.col.media.dir()

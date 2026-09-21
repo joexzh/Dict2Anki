@@ -1,5 +1,9 @@
+import typing as T
+
 try:
     import aqt
+    import aqt.addons
+    import aqt.gui_hooks
 
     assert aqt.mw is not None
 
@@ -10,7 +14,7 @@ try:
         # '107281012' is addon code on ankiweb.net
         ADDON_FULL_NAME = addon_name
 
-    w: addonWindow.Windows = None
+    w: T.Optional[addonWindow.Windows] = None
 
     def showWindow():
 

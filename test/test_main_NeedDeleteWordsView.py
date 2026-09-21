@@ -1,9 +1,10 @@
-from ..addon import addonWindow
-from .mock_helper import w_mock
 import pytest
 
+from ..addon import addonWindow
+from .mock_helper import w_mock
 
-@pytest.mark.parametrize("texts", [[], ["a", "b", "c"]])
+
+@pytest.mark.parametrize('texts', [[], ['a', 'b', 'c']])
 def test_add_remove_items(qtbot, w_mock, texts):
     w: addonWindow.Windows = w_mock()
     qtbot.addWidget(w)
@@ -17,11 +18,11 @@ def test_add_remove_items(qtbot, w_mock, texts):
 
 
 def test_check_uncheck(qtbot, w_mock):
-    texts = ["a", "b", "c"]
+    texts = ['a', 'b', 'c']
     w: addonWindow.Windows = w_mock()
     qtbot.addWidget(w)
     w.needDeleteWordsView.add_items(texts)
-    w.needDeleteWordsView.check_if_not_empty()
+    w.needDeleteWordsView.check_head_cb_if_not_empty()
 
     w.needDeleteCheckBox.setChecked(False)
     assert w.needDeleteWordsView.checked_items() == []
@@ -30,7 +31,7 @@ def test_check_uncheck(qtbot, w_mock):
     assert len(w.needDeleteWordsView.checked_items()) == len(texts)
 
 
-@pytest.mark.parametrize("texts", [[], ["a", "b", "c"]])
+@pytest.mark.parametrize('texts', [[], ['a', 'b', 'c']])
 def test_item_texts(qtbot, w_mock, texts):
     w: addonWindow.Windows = w_mock()
     qtbot.addWidget(w)
@@ -40,7 +41,7 @@ def test_item_texts(qtbot, w_mock, texts):
 
 
 def text_clear(qtbot, w_mock, texts):
-    texts = ["a", "b", "c"]
+    texts = ['a', 'b', 'c']
     w: addonWindow.Windows = w_mock()
     qtbot.addWidget(w)
     w.needDeleteWordsView.add_items(texts)

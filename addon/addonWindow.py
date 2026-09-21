@@ -3,23 +3,26 @@ import logging
 import os
 import shutil
 from tempfile import gettempdir
-from typing import Iterable, Optional
+from typing import Iterable, Iterator, Optional
 
 import aqt
 import aqt.utils
-from aqt import QDialog, QIcon, QListWidgetItem, QPlainTextEdit, QPushButton, Qt, QVBoxLayout, pyqtSlot
+from aqt import QCloseEvent, QDialog, QIcon, QListWidgetItem, QPlainTextEdit, QPushButton, Qt, QVBoxLayout, pyqtSlot
 
-from . import conf_model, misc, noteManager
+from . import adv_conf, conf_model, dictionary, misc, noteManager, queryApi
 from . import constants as C
-from ._typing import AbstractDictionary, AbstractQueryAPI, QueryWordData
+from ._typing import AbstractDictionary, AbstractQueryAPI, ConfigMap, QueryWordData
 from .dictionary import dictionaries
 from .logger import Handler
 from .loginDialog import LoginDialog
 from .queryApi import apis
 from .repair import Repair
-from .UIForm import mainUI, wordGroup
-from .UIForm import icons_rc  # noqa: F401
-from .workers import LoginStateCheckWorker, QueryAllWorker, RemoteWordFetchingWorker, VersionCheckWorker, WorkerManager
+from .UIForm import (
+    icons_rc,  # noqa: F401
+    mainUI,
+    wordGroup,
+)
+from .workers import ApiASTWorker, LoginStateCheckWorker, RemoteWordFetchingWorker, VersionCheckWorker, WorkerManager
 
 logger = logging.getLogger('dict2Anki')
 
@@ -62,13 +65,11 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         self.setupUi(self)
         self.setWindowTitle(C.ADDON_FULL_NAME)
         self.dummyBtn.hide()
-        self.dictionaryComboBox.addItems((k for k in dictionaries))
-        self.apiComboBox.addItems((k for k in apis))
         self.deckComboBox.addItems(noteManager.getDeckNames())
         self.needDeleteWordsView = NeedDeleteWordsView(self.needDeleteCheckBox, self.needDeleteWordListWidget)
         ConfCtl.init_ui(self, self.conf)
 
-    def closeEvent(self, event):
+    def closeEvent(self, a0: Optional[QCloseEvent]):
         ConfCtl.write(self.conf)
         conf_model.Conf.delinstance()
         # removeHandler in logTextBox.destroyed event is too late which may
@@ -80,14 +81,18 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         shutil.rmtree(misc.tmp_audio_dir(), ignore_errors=True)
 
         # need super to emit finished event
-        super().closeEvent(event)
+        super().closeEvent(a0)
 
     def setupLogger(self):
-        """初始化 Logger """
+        """初始化 Logger"""
 
         # 防止 debug 信息写入stdout/stderr 导致 Anki 崩溃
         logFile = os.path.join(gettempdir(), 'dict2anki.log')
-        logging.basicConfig(handlers=[logging.FileHandler(logFile, 'w', 'utf-8')], level=logging.DEBUG, format='[%(asctime)s][%(levelname)8s] -- %(message)s - (%(name)s)')
+        logging.basicConfig(
+            handlers=[logging.FileHandler(logFile, 'w', 'utf-8')],
+            level=logging.DEBUG,
+            format='[%(asctime)s][%(levelname)8s] -- %(message)s - (%(name)s)',
+        )
 
         logTextBox = QPlainTextEdit(self)
         logTextBox.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
@@ -113,6 +118,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         def on_haveNewVersion(version, changeLog):
             if aqt.utils.askUser(f'有新版本:{version}是否更新？\n\n{changeLog.strip()}'):
                 aqt.utils.openLink(C.RELEASE_URL)
+
         worker = VersionCheckWorker()
         worker.haveNewVersion.connect(on_haveNewVersion)
         self.workerman.start(worker)
@@ -130,8 +136,9 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         logger.info(self.conf.print())
 
         # 登陆线程
-        worker = LoginStateCheckWorker(self.get_current_dict().checkCookie,
-                                       json.loads(self.conf.current_cookies or '{}'))
+        worker = LoginStateCheckWorker(
+            self.get_current_dict().checkCookie, json.loads(self.conf.current_cookies or '{}')
+        )
         worker.logSuccess.connect(self.onLogSuccess)
         worker.logFailed.connect(self.onLoginFailed)
         self.workerman.start(worker)
@@ -141,12 +148,10 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         aqt.utils.showCritical('第一次登录或cookie失效!请重新登录')
         self.resetProgressBar(1)
         self.mainTab.setEnabled(True)
-        self.conf.current_cookies = ""
+        self.conf.current_cookies = ''
         currentDict = self.get_current_dict()
         self.loginDialog = LoginDialog(
-            loginUrl=currentDict.loginUrl,
-            loginCheckCallbackFn=currentDict.loginCheckCallbackFn,
-            parent=self
+            loginUrl=currentDict.loginUrl, loginCheckCallbackFn=currentDict.loginCheckCallbackFn, parent=self
         )
         self.loginDialog.loginSucceed.connect(self.onLogSuccess)
         self.loginDialog.show()
@@ -184,8 +189,11 @@ class Windows(QDialog, mainUI.Ui_Dialog):
             self.needDeleteWordsView.clear()
             self.mainTab.setEnabled(False)
 
-            groupNames: list[str] = [group.wordGroupListWidget.item(index).text() for index in range(group.wordGroupListWidget.count()) if # type: ignore
-                              group.wordGroupListWidget.item(index).checkState() == Qt.CheckState.Checked] # type: ignore
+            groupNames: list[str] = [
+                group.wordGroupListWidget.item(index).text()  # type: ignore
+                for index in range(group.wordGroupListWidget.count())
+                if group.wordGroupListWidget.item(index).checkState() == Qt.CheckState.Checked  # type: ignore
+            ]
             # 保存分组记录
             self.conf.current_selected_groups = groupNames
             self.resetProgressBar(1)
@@ -206,8 +214,16 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         groupMap = dict(self.get_current_dict().groups)
 
         # 启动单词获取线程
-        worker = RemoteWordFetchingWorker(self.get_current_dict(),
-                                          [(groupName, groupMap[groupName],) for groupName in groupNames])
+        worker = RemoteWordFetchingWorker(
+            self.get_current_dict(),
+            [
+                (
+                    groupName,
+                    groupMap[groupName],
+                )
+                for groupName in groupNames
+            ],
+        )
         worker.tick.connect(lambda: self.progressBar.setValue(self.progressBar.value() + 1))
         worker.setProgress.connect(self.progressBar.setMaximum)
         worker.doneThisGroup.connect(self.on_getRemoteWords_groupDone)
@@ -223,7 +239,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         self.remoteWords.extend(words)
 
     @pyqtSlot(object)
-    def on_allPullWork_done(self, worker):
+    def on_allPullWork_done(self, _worker):
         """全部分组获取完毕事件"""
         localWordSet = set(self.localWords)
         remoteWordSet = set(self.remoteWords)
@@ -248,7 +264,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
             self.newWordListWidget.addItem(item)
         self.newWordListWidget.clearSelection()
 
-        self.needDeleteWordsView.check_if_not_empty()
+        self.needDeleteWordsView.check_head_cb_if_not_empty()
 
         self.dictionaryComboBox.setEnabled(True)
         self.apiComboBox.setEnabled(True)
@@ -260,111 +276,124 @@ class Windows(QDialog, mainUI.Ui_Dialog):
             logger.info('无需同步')
             aqt.utils.tooltip('无需同步')
         else:
-            aqt.utils.tooltip("查询完成")
+            aqt.utils.tooltip('查询完成')
         self.mainTab.setEnabled(True)
 
     @pyqtSlot()
     def on_queryBtn_clicked(self):
         logger.info('点击查询按钮')
         logger.info(self.conf.print())
+
+        ast_dict, errmsg = adv_conf.ensure_ast_dict_errmsg_for_ui(self.conf.get_ast_dict())
+        if errmsg:
+            aqt.utils.show_critical(errmsg)
+            return
+
         self.queryBtn.setEnabled(False)
         self.pullRemoteWordsBtn.setEnabled(False)
         self.syncBtn.setEnabled(False)
 
         wordItems = self.newWordListWidget.selectedItems()
-        if not wordItems: # 如果没有选中单词，则查询所有单词
+        if not wordItems:  # 如果没有选中单词，则查询所有单词
             wordItems = [self.newWordListWidget.item(row) for row in range(self.newWordListWidget.count())]
 
         row_words = []
         for wordItem in wordItems:
             row = self.newWordListWidget.row(wordItem)
-            row_words.append((row, wordItem.text())) # type: ignore
+            row_words.append((row, wordItem.text()))  # type: ignore
 
         logger.info(f'待查询单词{row_words}')
         self.resetProgressBar(len(row_words))
 
-        # 查询线程
-        # 判断是否需要下载发音
-        if self.conf.no_pron:
-            logger.info('不下载发音')
-            whichPron = None
-        else:
-            whichPron = C.F_AMEPRON if self.conf.ame_pron else C.F_BREPRON
-            logger.info(f'下载发音{whichPron}')
-        worker = QueryAllWorker(row_words, whichPron, self.get_current_api(), self.conf.congest)
+        worker = ApiASTWorker(row_words, ast_dict, self.conf.congest, parent=self)
         worker.rowSuccess.connect(self.on_queryRowSuccess)
         worker.rowFail.connect(self.on_queryRowFail)
-        worker.query_word_tick.connect(lambda: self.progressBar.setValue(self.progressBar.value() + 1))
-        worker.doneWithResult.connect(self.on_queryDone)
+        worker.done.connect(self.on_queryDone)
         self.workerman.start(worker)
 
     @pyqtSlot(int, str, dict)
-    def on_queryRowSuccess(self, row, word, result):
+    def on_queryRowSuccess(self, row, _word, query_cache):
         """该行单词查询完毕"""
         doneIcon = QIcon(':/icons/done.png')
         wordItem = self.newWordListWidget.item(row)
-        wordItem.setIcon(doneIcon) # type: ignore
-        wordItem.setData(Qt.ItemDataRole.UserRole, result) # type: ignore
+        wordItem.setIcon(doneIcon)  # type: ignore
+        wordItem.setData(Qt.ItemDataRole.UserRole, query_cache)  # type: ignore
 
-    @pyqtSlot(int, str)
-    def on_queryRowFail(self, row, word):
+    @pyqtSlot(int, str, dict)
+    def on_queryRowFail(self, row, _word, query_cache):
         failedIcon = QIcon(':/icons/failed.png')
         failedWordItem = self.newWordListWidget.item(row)
-        failedWordItem.setIcon(failedIcon) # type: ignore
+        failedWordItem.setIcon(failedIcon)  # type: ignore
+        failedWordItem.setData(Qt.ItemDataRole.UserRole, query_cache)  # type: ignore
 
     @pyqtSlot(list)
-    def on_queryDone(self, results):
-        failed_words = []
-        for _row, word, queryResult in results:
-            if not queryResult:
-                failed_words.append(word)
-        if failed_words:
-            logger.warning(f'查询失败:{failed_words}')
-
+    def on_queryDone(self, _worker):
         self.pullRemoteWordsBtn.setEnabled(True)
         self.queryBtn.setEnabled(True)
         self.syncBtn.setEnabled(True)
 
     @pyqtSlot()
     def on_syncBtn_clicked(self):
+        assert aqt.mw.col is not None
+
+        ast_dict, errmsg = adv_conf.ensure_ast_dict_errmsg_for_ui(self.conf.get_ast_dict())
+        if errmsg:
+            aqt.utils.show_critical(errmsg)
+            return
 
         for i in range(self.newWordListWidget.count()):
-            if not self.newWordListWidget.item(i).data(Qt.ItemDataRole.UserRole): # type: ignore
+            if not self.newWordListWidget.item(i).data(Qt.ItemDataRole.UserRole):  # type: ignore
                 if not aqt.utils.askUser(
-                    '存在未查询或失败的单词，确定要加入单词本吗？\n 你可以选择失败的单词点击 "查询按钮" 来重试。'):
+                    '存在未查询或失败的单词，确定要加入单词本吗？\n 你可以选择失败的单词点击 "查询按钮" 来重试。',
+                    parent=self,
+                ):
                     return
                 break
 
         self.syncBtn.setEnabled(False)
         logger.info('同步点击')
 
+        # TODO: add notes in background thread, use anki's api
+
+        # add notes to database
+
         model = noteManager.getOrCreateModel()
         noteManager.getOrCreateModelCardTemplate(model)
         deck = noteManager.getOrCreateDeck(self.conf.deck, model)
 
-        if self.conf.no_pron:
-            whichPron = None
-        else:
-            whichPron = C.F_AMEPRON if self.conf.ame_pron else C.F_BREPRON
-
         added = 0
+        notes = []
         for i in range(self.newWordListWidget.count()):
             wordItem = self.newWordListWidget.item(i)
-            wordItemData: Optional[QueryWordData] = wordItem.data(Qt.ItemDataRole.UserRole) # type: ignore
-            if wordItemData:
-                noteManager.addNoteToDeck(deck, model, self.conf, wordItemData)
-                added += 1
-                # 移动发音文件，从 {tmp}/Dict2Anki/audios 到 anki 媒体库文件夹
-                if whichPron and wordItemData.get(whichPron):
-                    fname = misc.audio_fname(whichPron, wordItemData[C.F_TERM])
-                    audio_from = os.path.join(misc.tmp_audio_dir(), fname)
-                    audio_to = noteManager.media_path(fname)
-                    if os.path.isfile(audio_from):
-                        if os.path.isfile(audio_to):
-                            os.remove(audio_to)
-                        shutil.move(audio_from, audio_to)
+            query_cache: Optional[dict[str, Optional[QueryWordData]]] = wordItem.data(Qt.ItemDataRole.UserRole)  # type: ignore
 
+            # create note only for words that have any API data
+            if not query_cache or not any(api_data for api_data in query_cache.values()):
+                continue
+
+            word = wordItem.text()  # type: ignore
+
+            # 1. new and add note to database (in order to update flag note
+            # must be in database)
+            # 2. eval ASTs
+            # 3. update note to database
+
+            note = noteManager.new_note(word, model)
+            notes.append(note)
+            aqt.mw.col.add_note(note, deck['id'])  # type: ignore
+
+            adv_conf.eval_asts_set_note(word, note, query_cache, ast_dict)
+
+            # move audio file
+            ast_dict[C.F_AMEPRON].eval(adv_conf.MoveAudioFConfVisitor(word, C.F_AMEPRON))
+            ast_dict[C.F_BREPRON].eval(adv_conf.MoveAudioFConfVisitor(word, C.F_BREPRON))
+
+            added += 1
+
+        noteManager.updateNotes(notes)
         self.newWordListWidget.clear()
+
+        # delete checkbox selected items
 
         needDeleteItems = self.needDeleteWordsView.checked_items()
         needToDeleteWords = self.needDeleteWordsView.item_texts(needDeleteItems)
@@ -372,7 +401,10 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         deleted = 0
 
         if needToDeleteWords and aqt.utils.askUser(
-            f'确定要删除这些单词吗:{needToDeleteWords[:3]}...({len(needToDeleteWords)}个)', title=C.ADDON_FULL_NAME, parent=self):
+            f'确定要删除这些单词吗:{needToDeleteWords[:3]}...({len(needToDeleteWords)}个)',
+            title=C.ADDON_FULL_NAME,
+            parent=self,
+        ):
             noteIds = noteManager.getNoteIds(needToDeleteWords, self.conf.deck)
             noteManager.removeNotes(noteIds)
             deleted = len(needToDeleteWords)
@@ -386,7 +418,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         aqt.utils.tooltip(f'添加{added}个笔记\n删除{deleted}个笔记')
 
     def simpleLogin(self):
-        aqt.utils.showCritical("第一次登录或cookie失效！请重新登录")
+        aqt.utils.showCritical('第一次登录或cookie失效！请重新登录')
         currentDict = self.get_current_dict()
         self.resetProgressBar(0)
         self.loginDialog = LoginDialog(
@@ -394,9 +426,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
             loginCheckCallbackFn=currentDict.loginCheckCallbackFn,
             parent=self,
         )
-        self.loginDialog.loginSucceed.connect(
-            self._on_simpleLoginSuccess
-        )
+        self.loginDialog.loginSucceed.connect(self._on_simpleLoginSuccess)
         self.loginDialog.show()
 
     def _on_simpleLoginSuccess(self, cookie):
@@ -404,34 +434,35 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         logger.info(self.conf.print())
         # set cookie to cookiejar and check
         if self.get_current_dict().checkCookie(json.loads(cookie)):
-            aqt.utils.tooltip("登录成功")
+            aqt.utils.tooltip('登录成功')
         else:
-            aqt.utils.tooltip("登录失败")
+            aqt.utils.tooltip('登录失败')
         self.resetProgressBar(1)
 
 
 class NeedDeleteWordsView:
-    def __init__(self, title_checkbox: aqt.QCheckBox, list_widget: aqt.QListWidget):
-        self._checkbox = title_checkbox
+    def __init__(self, head_cb: aqt.QCheckBox, list_widget: aqt.QListWidget):
+        self._head_cb = head_cb
         self._list_widget = list_widget
-        self._delIcon = QIcon(":/icons/delete.png")
-        self._listen_checkbox_change()
+        self._delIcon = QIcon(':/icons/delete.png')
+        self._listen_head_cb_change()
 
-    def _listen_checkbox_change(self):
+    def _listen_head_cb_change(self):
+
         def on_cb_change(state):
             check_state = Qt.CheckState(state)
             for item in self._items_iter():
                 item.setCheckState(check_state)
 
-        self._checkbox.stateChanged.connect(on_cb_change)
+        self._head_cb.stateChanged.connect(on_cb_change)
 
-    def check_if_not_empty(self):
+    def check_head_cb_if_not_empty(self):
         if not self.empty():
-            self._checkbox.blockSignals(True)
-            self._checkbox.setChecked(True)
-            self._checkbox.blockSignals(False)
+            self._head_cb.blockSignals(True)
+            self._head_cb.setChecked(True)
+            self._head_cb.blockSignals(False)
 
-    def _items_iter(self) -> Iterable[aqt.QListWidgetItem]:
+    def _items_iter(self) -> Iterator[aqt.QListWidgetItem]:
         return (self._list_widget.item(i) for i in range(self._list_widget.count()))  # type: ignore
 
     def items(self) -> list[aqt.QListWidgetItem]:
@@ -471,22 +502,44 @@ class NeedDeleteWordsView:
 
 class ConfCtl:
     @staticmethod
-    def read():
+    def read() -> ConfigMap:
         if config := aqt.mw.addonManager.getConfig(__name__):
-            return config
+            return config  # type: ignore
         else:
             raise FileNotFoundError('missing config file')
 
     @staticmethod
     def write(conf: conf_model.Conf):
         if conf.is_dirty():
-            aqt.mw.addonManager.writeConfig(__name__, conf.get_saving_map())
+            aqt.mw.addonManager.writeConfig(__name__, conf.get_saving_map())  # type: ignore
 
     @staticmethod
     def init_ui(w: Windows, conf: conf_model.Conf):
         """Should be called only once!"""
 
+        if conf.advanced_enabled and conf.advanced_enable_user_modules:
+            queryApi.load_usr_mod()
+            dictionary.load_usr_mod()
+
         # init UI
+
+        w.dictionaryComboBox.addItems((k for k in dictionaries))
+        w.apiComboBox.addItems((k for k in apis))
+
+        if (dictionaries.get(dict_ := conf.selected_dict)) is None:
+            aqt.utils.show_info(f'无法加载模块[{dict_}]，回滚到默认值[{dictionary.default_dict.name}]', parent=w)
+            conf.selected_dict = dictionary.default_dict.name
+
+        if conf.advanced_enabled is False:
+            if (apis.get(api := conf.selected_api)) is None:
+                aqt.utils.show_info(f'无法加载模块[{api}]，回滚到默认值[{queryApi.default_api.name}]', parent=w)
+                conf.selected_api = queryApi.default_api.name
+        else:
+            # warn for any invalid API in user config
+            _ast_dict, errmsg = adv_conf.ensure_ast_dict_errmsg_for_ui(conf.get_ast_dict())
+            if errmsg:
+                aqt.utils.show_warning(errmsg)
+
         w.deckComboBox.setCurrentText(conf.deck)
         w.dictionaryComboBox.setCurrentText(conf.selected_dict)
         w.currentDictionaryLabel.setText(f'当前选择词典: {w.dictionaryComboBox.currentText()}')
@@ -503,7 +556,7 @@ class ConfCtl:
         w.noPronRadioButton.setChecked(conf.no_pron)
         w.congestSpinBox.setValue(conf.congest)
         w.uaLineEdit.setText(conf.user_agent)
-        undoicon = QIcon.fromTheme('edit-undo')
+        undoicon = QIcon.fromTheme(QIcon.ThemeIcon.EditUndo)
         uaAction = w.uaLineEdit.addAction(undoicon, aqt.QLineEdit.ActionPosition.TrailingPosition)
         uaAction.setToolTip('回到默认')
 
@@ -575,7 +628,7 @@ class ConfCtl:
         w.noPronRadioButton.toggled.connect(_on_no_pron_radio_toggled)
         w.congestSpinBox.valueChanged.connect(_on_congest_spinbox_change)
         w.uaLineEdit.textChanged.connect(_on_ua_line_edit_changed)
-        uaAction.triggered.connect(lambda: w.uaLineEdit.setText(conf.default_user_agent))
+        uaAction.triggered.connect(lambda: w.uaLineEdit.setText(C.USER_AGENT))
 
         def update_cookies_line_edit(val: str):
             w.cookieLineEdit.blockSignals(True)

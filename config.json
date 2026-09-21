@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "deck": "",
   "selected_dict": "欧路词典",
   "dict_saved_groups": {},
@@ -14,6 +14,18 @@
   "BrEPron": false,
   "AmEPron": true,
   "noPron": false,
+  "advanced_fields": {
+    "enabled": false,
+    "enable_use_modules": false,
+    "definition": "",
+    "sentence": "",
+    "image": "",
+    "phrase": "",
+    "AmEPhonetic": "",
+    "BrEPhonetic": "",
+    "AmEPron": "",
+    "BrEPron": ""
+  },
   "congest": 120,
   "user_agent": ""
 }

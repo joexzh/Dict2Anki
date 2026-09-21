@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import json
 import logging
 import os
-import typing
+import typing as T
 from abc import abstractmethod
 from itertools import chain
 
@@ -10,40 +12,40 @@ from aqt import QObject, pyqtBoundSignal, pyqtSignal
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
+from . import adv_conf, misc
 from . import constants as C
-from . import misc
-from ._typing import AbstractDictionary, AbstractQueryAPI, QueryWordData
 from . import global_vars as V
+from ._typing import AbstractDictionary, QueryWordData
 
 
 class AbstractWorker(QObject):
     done = pyqtSignal(object)
-    """Workers must use done to emit itself before run() returns, otherwise leak!"""
+    'Workers must use done to emit itself before run() returns, otherwise leak!'
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.interrupted = False
-        """Set by WorkerManager when destroyed."""
+        'Set by WorkerManager when destroyed.'
 
     @abstractmethod
     def run(self):
-        """Required!"""
+        "Required!"
         pass
 
 
 class NetworkWorker(AbstractWorker):
     retries = Retry(total=5, backoff_factor=3, status_forcelist=[500, 502, 503, 504])
     session = requests.Session()
-    session.mount("http://", HTTPAdapter(max_retries=retries))
-    session.mount("https://", HTTPAdapter(max_retries=retries))
-    session.headers.update({"User-Agent": V.user_agent()})
+    session.mount('http://', HTTPAdapter(max_retries=retries))
+    session.mount('https://', HTTPAdapter(max_retries=retries))
+    session.headers.update({'User-Agent': V.user_agent()})
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super().__init__(parent)
 
 
 class WorkerManager:
-    _logger = logging.getLogger("dict2Anki.workers.WorkerManager")
+    _logger = logging.getLogger('dict2Anki.workers.WorkerManager')
 
     def __init__(self):
         self._pool = misc.ThreadPool(max_workers=os.cpu_count())
@@ -67,24 +69,24 @@ class WorkerManager:
 
 class VersionCheckWorker(AbstractWorker):
     haveNewVersion = pyqtSignal(str, str)
-    _logger = logging.getLogger("dict2Anki.workers.UpdateCheckWorker")
+    _logger = logging.getLogger('dict2Anki.workers.UpdateCheckWorker')
 
     def __init__(self):
         super().__init__()
 
     def run(self):
         try:
-            self._logger.info("检查新版本")
+            self._logger.info('检查新版本')
             rsp = requests.get(C.VERSION_CHECK_API, timeout=20).json()
-            version = rsp["tag_name"]
-            changeLog = rsp["body"]
+            version = rsp['tag_name']
+            changeLog = rsp['body']
             if version != C.VERSION:
-                self._logger.info(f"检查到新版本:{version}--{changeLog.strip()}")
+                self._logger.info(f'检查到新版本:{version}--{changeLog.strip()}')
                 self.haveNewVersion.emit(version.strip(), changeLog.strip())
             else:
-                self._logger.info(f"当前为最新版本:{C.VERSION}")
+                self._logger.info(f'当前为最新版本:{C.VERSION}')
         except Exception as e:
-            self._logger.error(f"版本检查失败{e}")
+            self._logger.error(f'版本检查失败{e}')
 
         finally:
             self.done.emit(self)
@@ -112,11 +114,9 @@ class RemoteWordFetchingWorker(AbstractWorker):
     tick = pyqtSignal()
     setProgress = pyqtSignal(int)
     doneThisGroup = pyqtSignal(list)
-    _logger = logging.getLogger("dict2Anki.workers.RemoteWordFetchingWorker")
+    _logger = logging.getLogger('dict2Anki.workers.RemoteWordFetchingWorker')
 
-    def __init__(
-        self, selectedDict: type[AbstractDictionary], groups: list[tuple[str, str]]
-    ):
+    def __init__(self, selectedDict: type[AbstractDictionary], groups: list[tuple[str, str]]):
         super().__init__()
         self.selectedDict = selectedDict
         self.groups = groups
@@ -130,7 +130,6 @@ class RemoteWordFetchingWorker(AbstractWorker):
 
         try:
             for groupName, groupId in self.groups:
-
                 totalPage = self.selectedDict.getTotalPage(groupName, groupId)
                 self.setProgress.emit(totalPage)
                 with misc.ThreadPool(max_workers=3) as executor:
@@ -144,200 +143,41 @@ class RemoteWordFetchingWorker(AbstractWorker):
             self.done.emit(self)
 
 
-def query_word(
-    row: int,
-    word: str,
-    api: type[AbstractQueryAPI],
-    logger: logging.Logger,
-    sig_success: pyqtBoundSignal,
-    sig_fail: pyqtBoundSignal,
-    sig_done: pyqtBoundSignal,
-):
-    """
-    Query a single word through `api`
+class ApiASTWorker(AbstractWorker):
+    "eval AST with ApiFConfVisitor"
 
-    :param sig_success: emit(row, word, queryResult)
-    :param sig_fail: emit(row, word)
-    :param sig_done: emit()
-    """
-    queryResult = api.query(word)
-    if queryResult:
-        logger.info(f"查询成功: {row}, {word} -- {queryResult}")
-        sig_success.emit(row, word, queryResult)
-    else:
-        logger.warning(f"查询失败: {row}, {word}")
-        sig_fail.emit(row, word)
-    sig_done.emit()
-    return queryResult
-
-
-def download_file(session: requests.Session, fileName, url):
-    r = session.get(url, stream=True)
-    if not r.ok:
-        raise PermissionError(f"http status code: {r.status_code}")
-    with open(fileName, "wb") as f:
-        for chunk in r.iter_content(chunk_size=1024):
-            if chunk:
-                f.write(chunk)
-
-
-def rmv_file(fileName):
-    if os.path.isfile(fileName):
-        os.remove(fileName)
-
-
-def downloadSingleAudio(
-    fileName: str,
-    url: str,
-    session: requests.Session,
-    logger: logging.Logger,
-    tick: pyqtBoundSignal,
-):
-    success = False
-    try:
-        download_file(session, fileName, url)
-        success = True
-        logger.info(f"发音下载完成：{fileName}, {url}")
-    except Exception as e:
-        logger.warning(f"下载{fileName}, {url}，异常: {e}")
-        rmv_file(fileName)
-        success = False
-    finally:
-        tick.emit(fileName, url, success)
-    return success
-
-
-class QueryAllWorker(NetworkWorker):
-    """Query words and download audios"""
-
-    rowSuccess = pyqtSignal(int, str, dict)
-    rowFail = pyqtSignal(int, str)
-    query_word_tick = pyqtSignal()
-    audio_tick = pyqtSignal(str, str, bool)
-    """emit(file_name, url, success)"""
-    doneWithResult = pyqtSignal(list)
-    _logger = logging.getLogger("dict2Anki.workers.QueryAllWorker")
+    rowSuccess = pyqtSignal(int, str, dict)  # row, word, query_cache
+    rowFail = pyqtSignal(int, str, dict)  # row, word, query_cache
+    _logger = logging.getLogger('dict2Anki.workers.ApiASTWorker')
 
     def __init__(
         self,
-        row_words: list[tuple[int, str]],
-        which_pron: typing.Optional[str],
-        api: type[AbstractQueryAPI],
-        congest=60,
+        row_words: list[tuple[int, str]],  # e.g. (0, 'hello')
+        fconf_ast_dict: dict[str, adv_conf.FConfAST],
+        congest: int = 120,
+        parent=None,
     ):
-        super().__init__()
-        self._row_words = row_words
-        self._which_pron = which_pron
-        self._api = api
-        self._congest = congest
-        self._results: list[tuple[int, str, typing.Optional[QueryWordData]]] = []
-        """list[tuple[row, word, QueryWordData|None]]"""
+        super().__init__(parent)
+        self.row_words = row_words
+        self.congest = congest
+        self.fconf_ast_dict = fconf_ast_dict
 
     def run(self):
         try:
-            tmp_audio_dir = misc.tmp_audio_dir()
-            os.makedirs(tmp_audio_dir, exist_ok=True)
-
-            congestGen = misc.congestGenerator(self._congest)
-            for row, word in self._row_words:
+            congestGen = misc.congestGenerator(self.congest)
+            for row, word in self.row_words:
                 if self.interrupted:
                     break
                 next(congestGen)
-                result = query_word(
-                    row,
-                    word,
-                    self._api,
-                    self._logger,
-                    self.rowSuccess,
-                    self.rowFail,
-                    self.query_word_tick,
-                )
-                if result and self._which_pron and result.get(self._which_pron):
-                    tmp_audio_path = os.path.join(
-                        tmp_audio_dir,
-                        misc.audio_fname(self._which_pron, result[C.F_TERM]),
-                    )
-                    downloadSingleAudio(
-                        tmp_audio_path,
-                        result[self._which_pron],
-                        self.session,
-                        self._logger,
-                        self.audio_tick,
-                    )
 
-                self._results.append((row, word, result))
+                query_cache: dict[str, T.Optional[QueryWordData]] = {}
+                ret_eval = False
 
-            self.doneWithResult.emit(self._results)
-        finally:
-            self.done.emit(self)
-
-
-class QueryWorker(AbstractWorker):
-    tick = pyqtSignal()
-    rowSuccess = pyqtSignal(int, str, dict)
-    rowFail = pyqtSignal(int, str)
-    doneWithResult = pyqtSignal(list)
-    _logger = logging.getLogger("dict2Anki.workers.QueryWorker")
-
-    def __init__(
-        self, row_words: list[tuple[int, str]], api: type[AbstractQueryAPI], congest=60
-    ):
-        super().__init__()
-        self._row_words = row_words
-        self._api = api
-        self._congest = congest
-
-    def run(self):
-
-        def _query(row, word):
-            return query_word(
-                row,
-                word,
-                self._api,
-                self._logger,
-                self.rowSuccess,
-                self.rowFail,
-                self.tick,
-            )
-
-        try:
-            with misc.ThreadPool(max_workers=3) as executor:
-                congestGen = misc.congestGenerator(self._congest)
-                for row, word in self._row_words:
+                for field, ast in self.fconf_ast_dict.items():
                     if self.interrupted:
-                        return
-                    next(congestGen)
-                    executor.submit(_query, row, word)
+                        break
+                    ret_eval = ret_eval or ast.eval(adv_conf.ApiFConfVisitor(word, field, query_cache))
 
-            results = [(r[0][0], r[0][1], r[2]) for r in executor.result]
-            self.doneWithResult.emit(results)
-            return results
-        finally:
-            self.done.emit(self)
-
-
-class AudioDownloadWorker(NetworkWorker):
-    tick = pyqtSignal(str, str, bool)
-    _logger = logging.getLogger("dict2Anki.workers.AudioDownloadWorker")
-
-    def __init__(self, audios: list[tuple[str, str]]):
-        super().__init__()
-        self._audios = audios
-
-    def run(self):
-
-        try:
-            with misc.ThreadPool(max_workers=3) as executor:
-                for fileName, url in self._audios:
-                    if self.interrupted:
-                        return
-                    executor.submit(
-                        downloadSingleAudio,
-                        fileName,
-                        url,
-                        self.session,
-                        self._logger,
-                        self.tick,
-                    )
+                self.rowSuccess.emit(row, word, query_cache) if ret_eval else self.rowFail.emit(row, word, query_cache)
         finally:
             self.done.emit(self)

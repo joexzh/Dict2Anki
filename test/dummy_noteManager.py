@@ -35,13 +35,29 @@ def removeNotes(noteIds):
     pass
 
 
+def updateNotes(notes):
+    pass
+
+
 def media_path(fileName: str) -> str:
     return ''
 
 
-def writeNoteFields(*args, **kwargs):
+def getNotesByDeckName(*args, **kwargs) -> list[notes.Note]:
+    return [notes.Note(1)]
+
+
+def new_note(word, model):
+    return notes.Note
+
+
+def set_flag(notes, flag):
     pass
 
 
-def getNotesByDeckName(*args, **kwargs) -> list[notes.Note]:
-    return [notes.Note(1)]
+def set_field(note, field, query_data) -> bool:
+    return True
+
+
+def empty_field(note, field):
+    pass
