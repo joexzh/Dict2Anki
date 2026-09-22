@@ -1,10 +1,10 @@
 import typing as T
 
-from ..addon import conf_migration, dictionary, misc, queryApi
-from ..addon.conf_model import Conf
+from addon import conf_migration, dictionary, misc, queryApi
+from addon.conf_model import Conf
 from . import helper
-from ..addon import global_vars as V
-from ..addon import constants as C
+from addon import global_vars as V
+from addon import constants as C
 
 
 def new_conf():

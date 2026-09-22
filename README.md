@@ -1,6 +1,6 @@
 # Dict2Anki-ng
 
-**Dict2Anki-ng** is a fork from [Dict2Anki](https://github.com/megachweng/Dict2Anki)（原作者：[@megachweng](https://github.com/megachweng)），迁移到 Qt 6 和新版 anki，主要功能与原版一致。
+**Dict2Anki-ng** is a fork of [Dict2Anki](https://github.com/megachweng/Dict2Anki)（原作者：[@megachweng](https://github.com/megachweng)），迁移到 Qt 6 和新版 anki，主要功能与原版一致。
 
 **Dict2Anki** 是一款方便[有道词典](http://cidian.youdao.com/multi.html)、[欧路词典](https://www.eudic.net/)用户同步生成单词本卡片至[Anki](https://apps.ankiweb.net/#download)的插件
 
@@ -109,7 +109,7 @@ pip install -r requirements.txt
      在 Command Prompt 中执行（如果策略组中没开启 Create Symbolic Link 权限，就需要管理员权限）
 
      ```batch
-     mklink /D %APPDATA%\Anki2\addons21\Dict2Anki-ng-debug full\path\to\project_root
+     mklink /D %APPDATA%\Anki2\addons21\Dict2Anki-ng-debug full\path\to\project_root\addon
      ```
 
    - Linux:
@@ -153,8 +153,6 @@ pip install -r requirements.txt
 ./test.sh
 ```
 
-其中分别测试了 `config.json` version 1 和 version 2。
-
 ### 编辑 UI
 
 使用 Qt Creator 导入 `./addon/UIForm/xxx.ui` 设计 UI，然后生成对应的 `xxx.py` 文件
@@ -166,5 +164,5 @@ pyuic6 -o ./addon/UIForm/xxx.py ./addon/UIForm/xxx.ui
 ### 单独运行 UI（仅作为界面参考）
 
 ```bash
-(cd .. && python -m Dict2Anki)
+python ./__main__.py
 ```

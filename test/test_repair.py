@@ -3,22 +3,23 @@ import os
 import aqt.utils
 import pytest
 
-from ..addon import noteManager, queryApi, repair, workers
-from ..addon.addonWindow import Windows
+from addon import noteManager, queryApi, repair, workers
+from addon.addonWindow import Windows
+
 from . import mock_helper
 from .dummy_aqt import notes
 from .mock_helper import w_mock
 
 
 def test_model_init_zero():
-    g = repair.CntGrp()
+    g = repair.Stats()
     assert g.total == 0
     assert g.success_cnt == 0
     assert g.fail_cnt == 0
 
 
 def test_model_reset():
-    g = repair.CntGrp()
+    g = repair.Stats()
     g.reset(111, 222, 333)
     assert g.total == 111
     assert g.success_cnt == 222
@@ -26,7 +27,7 @@ def test_model_reset():
 
 
 def test_model_reset_listen():
-    g = repair.CntGrp()
+    g = repair.Stats()
     expected = 1
     assert_val = 0
 
@@ -41,13 +42,13 @@ def test_model_reset_listen():
 
 
 def test_model_incSuccessCnt():
-    g = repair.CntGrp()
+    g = repair.Stats()
     g.incSuccessCnt()
     assert g.success_cnt == 1
 
 
 def test_model_incSuccessCnt_listen():
-    g = repair.CntGrp()
+    g = repair.Stats()
     expected = 1
     assert_val = 0
 
@@ -62,13 +63,13 @@ def test_model_incSuccessCnt_listen():
 
 
 def test_model_incFailCnt():
-    g = repair.CntGrp()
+    g = repair.Stats()
     g.incFailCnt()
     assert g.fail_cnt == 1
 
 
 def test_model_incFailCnt_listen():
-    g = repair.CntGrp()
+    g = repair.Stats()
     expected = 1
     assert_val = 0
 
@@ -115,13 +116,14 @@ def test_selected_remove_only(qtbot, monkeypatch, w_mock):
 
     qtbot.waitUntil(check_label)
 
-    assert model.noteGrp.total == 1
-    assert model.noteGrp.success_cnt == 1
+    assert model.note_stats.total == 1
+    assert model.note_stats.success_cnt == 1
     assert (
-        w.repairProgressNoteLabel.text() == f'更新本地笔记：{model.noteGrp.success_cnt} / {model.noteGrp.total} . . . '
+        w.repairProgressNoteLabel.text()
+        == f'更新本地笔记：{model.note_stats.success_cnt} / {model.note_stats.total} . . . '
     )
-    assert model.queryGrp.total == 0
-    assert model.audioGrp.total == 0
+    assert model.query_stats.total == 0
+    assert model.audio_stats.total == 0
 
 
 @pytest.mark.parametrize('num, query_fail_num, audio_download_fail', [(13, 0, 0), (17, 11, 5), (23, 0, 19)])
@@ -197,19 +199,20 @@ def test_query(monkeypatch, w_mock, qtbot, num, query_fail_num, audio_download_f
 
     qtbot.waitUntil(check_audio_label)
 
-    assert model.noteGrp.total == num
-    assert model.noteGrp.success_cnt == num - query_fail_num
+    assert model.note_stats.total == num
+    assert model.note_stats.success_cnt == num - query_fail_num
     assert (
-        w.repairProgressNoteLabel.text() == f'更新本地笔记：{model.noteGrp.success_cnt} / {model.noteGrp.total} . . . '
+        w.repairProgressNoteLabel.text()
+        == f'更新本地笔记：{model.note_stats.success_cnt} / {model.note_stats.total} . . . '
     )
 
-    assert model.queryGrp.total == num
-    assert model.queryGrp.success_cnt == num - query_fail_num
-    assert model.queryGrp.fail_cnt == query_fail_num
+    assert model.query_stats.total == num
+    assert model.query_stats.success_cnt == num - query_fail_num
+    assert model.query_stats.fail_cnt == query_fail_num
     assert (
         w.repairProgressQueryLabel.text()
-        == f'调用{r._api_name}：{model.queryGrp.success_cnt + model.queryGrp.fail_cnt} / {model.queryGrp.total}，成功：{model.queryGrp.success_cnt}，失败：{r._model.queryGrp.fail_cnt} . . . '
+        == f'调用{r._api_name}：{model.query_stats.success_cnt + model.query_stats.fail_cnt} / {model.query_stats.total}，成功：{model.query_stats.success_cnt}，失败：{r._model.query_stats.fail_cnt} . . . '
     )
 
-    assert model.audioGrp.success_cnt == num - query_fail_num - audio_download_fail
-    assert model.audioGrp.fail_cnt == audio_download_fail
+    assert model.audio_stats.success_cnt == num - query_fail_num - audio_download_fail
+    assert model.audio_stats.fail_cnt == audio_download_fail

@@ -2,7 +2,7 @@ import datetime
 import logging
 from typing import Optional
 
-from ....addon import _typing as _T
+from .... import _typing as _T
 from .webapi.vcom import VCOMWord, fetch_parse, session
 
 logger = logging.getLogger('dict2Anki.queryApi.vcom_funny')

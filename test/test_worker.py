@@ -2,7 +2,7 @@ import time
 
 import aqt
 
-from ..addon import workers
+from addon import workers
 
 
 class DummyWorker(workers.AbstractWorker):

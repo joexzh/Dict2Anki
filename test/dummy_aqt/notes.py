@@ -1,4 +1,4 @@
-from ...addon import constants as C
+from addon import constants as C
 
 NoteId = int
 

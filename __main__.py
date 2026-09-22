@@ -4,8 +4,8 @@ if __name__ == "__main__":
     import pytest
     from PyQt6.QtWidgets import QApplication
 
-    from .addon.addonWindow import Windows
-    from .test import mock_helper
+    from addon.addonWindow import Windows
+    from test import mock_helper
 
     mp = pytest.MonkeyPatch()
     mock_helper.mock_aqt_mw(mp)

@@ -2,14 +2,14 @@ import aqt.utils
 import pytest
 import requests
 
-from ..addon import addonWindow, misc, noteManager, queryApi, workers
-from ..addon import constants as C
+from addon import addonWindow, misc, noteManager, queryApi, workers
+from addon import constants as C
 from . import dummy_aqt, dummy_noteManager, helper
 
 
 def mock_module(monkeypatch, target_mod, mod):
-    "replace attributes in target_mod with those found in mod"
-    for name in dir(mod):
+    "replace attributes in target_mod with those found in mod.__all__"
+    for name in mod.__all__:
         if not name.startswith('_'):
             monkeypatch.setattr(target_mod, name, getattr(mod, name))
 
@@ -80,20 +80,23 @@ query_data_mock = {
 def mock_query_api(monkeypatch):
     monkeypatch.setattr(queryApi.youdao.API, 'query', lambda *args, **kwargs: query_data_mock)
 
-    monkeypatch.setattr(workers, 'download_file', lambda *args, **kwargs: None)
-    monkeypatch.setattr(workers, 'rmv_file', lambda *args, **kwargs: None)
-
     monkeypatch.setattr(
         workers.NetworkWorker.session,
         'get',
         lambda *args, **kwargs: requests.Response(),
     )
 
+
+def mock_misc(monkeypatch):
+
     def mock_congest_generator(*args, **kwargs):
         while True:
             yield
 
     monkeypatch.setattr(misc, 'congestGenerator', mock_congest_generator)
+    monkeypatch.setattr(misc, 'download_file', lambda *args, **kwargs: None)
+    monkeypatch.setattr(misc, 'rm_file', lambda *args, **kwargs: None)
+    monkeypatch.setattr(misc, 'mv_file', lambda *args, **kwargs: True)
 
 
 class WindowMock:
@@ -103,6 +106,7 @@ class WindowMock:
         mock_aqt_utils(monkeypatch)
         mock_requests(monkeypatch)
         mock_query_api(monkeypatch)
+        mock_misc(monkeypatch)
 
     def __call__(self):
         return addonWindow.Windows()

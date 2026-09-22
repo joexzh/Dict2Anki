@@ -25,6 +25,7 @@ def create_zip():
         '.venv',
         '.vscode',
         '__pycache__',
+        'docs',
         'screenshots',
         'test',
         'venv',
@@ -44,8 +45,8 @@ def create_zip():
         'runanki.py',
         'test.sh',
     ]
-    exclude_ext = ['.png', '.ui', '.qrc', '.log', '.zip', '.tpl']
-    for dirname, sub_dirs, files in os.walk("."):
+    exclude_ext = ['.png', '.ui', '.qrc', '.log', '.zip', '.tpl', '.md']
+    for dirname, sub_dirs, files in os.walk('./addon'):
         for d in exclude_dirs:
             if d in sub_dirs:
                 sub_dirs.remove(d)
@@ -68,21 +69,25 @@ def update(title, tags, desc):
     s = Session()
     URL = 'https://ankiweb.net/account/login'
     rsp = s.get(URL)
-    soup = BeautifulSoup(rsp.text, features="html.parser")
+    soup = BeautifulSoup(rsp.text, features='html.parser')
     csrf_token = soup.find('input', {'name': 'csrf_token'}).get('value')
     s.post(URL, data={'submit': 1, 'csrf_token': csrf_token, 'username': username, 'password': password})
 
     URL = 'https://ankiweb.net/shared/upload'
     file = {'v21file': open(f'{ADDON_FULL_NAME}.zip', 'rb')}
-    rsp = s.post(URL, files=file, data={
-        'title': title,
-        'tags': tags,
-        'desc': desc,
-        'id': addon_id,
-        'submit': 'Update',
-        'v21file': file,
-        'v20file': '',
-    })
+    rsp = s.post(
+        URL,
+        files=file,
+        data={
+            'title': title,
+            'tags': tags,
+            'desc': desc,
+            'id': addon_id,
+            'submit': 'Update',
+            'v21file': file,
+            'v20file': '',
+        },
+    )
     if rsp.url == f'https://ankiweb.net/shared/info/{addon_id}':
         return True
     else:

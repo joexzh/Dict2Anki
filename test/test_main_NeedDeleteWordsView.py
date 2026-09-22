@@ -1,6 +1,7 @@
 import pytest
 
-from ..addon import addonWindow
+from addon import addonWindow
+
 from .mock_helper import w_mock
 
 

@@ -12,6 +12,6 @@ default_api = youdao.API
 
 def load_usr_mod():
     "load user modules in user_files/queryApi"
-    for mod in misc.load_all_modules('...user_files.queryApi', __package__):
+    for mod in misc.load_all_modules('..user_files.queryApi', __package__):
         if hasattr(mod, 'API') and isinstance(mod.API, type) and issubclass(mod.API, AbstractQueryAPI):
             apis[mod.API.name] = mod.API

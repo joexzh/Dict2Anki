@@ -1,4 +1,4 @@
-from ..addon.misc import dec_cookies, enc_cookies
+from addon.misc import dec_cookies, enc_cookies
 
 
 def assert_enc_dec_cookies(cookies: str):
@@ -25,3 +25,12 @@ def test_enc_desc_cookies_empty():
 
     s_dec = dec_cookies('')
     assert s_dec == ''
+
+
+def test_load_all_modules():
+    # TODO
+    pass
+
+def test_load_all_modules_fail():
+    # TODO
+    pass

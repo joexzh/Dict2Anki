@@ -1,6 +1,21 @@
-from ..addon import conf_model
-from ..addon._typing import QueryWordData
 from .dummy_aqt import models, notes
+
+__all__ = [
+    'getDeckNames',
+    'getOrCreateDeck',
+    'getOrCreateModel',
+    'getOrCreateModelCardTemplate',
+    'getWordsByDeck',
+    'getNoteIds',
+    'removeNotes',
+    'updateNotes',
+    'media_path',
+    'getNotesByDeckName',
+    'new_note',
+    'set_flag',
+    'set_field',
+    'empty_field',
+]
 
 
 def getDeckNames():
@@ -16,10 +31,6 @@ def getOrCreateModel() -> models.NoteType:
 
 
 def getOrCreateModelCardTemplate(modelObject):
-    pass
-
-
-def addNoteToDeck(deckObject, modelObject, conf: conf_model.Conf, oneQueryResult: QueryWordData):
     pass
 
 

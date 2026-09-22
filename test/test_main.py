@@ -6,9 +6,9 @@ import pytest
 import requests
 from PyQt6.QtCore import Qt
 
-from ..addon import constants as C
-from ..addon import dictionary, misc
-from ..addon.addonWindow import Windows, noteManager
+from addon import constants as C
+from addon import dictionary, misc
+from addon.addonWindow import Windows, noteManager
 from .mock_helper import w_mock
 
 

@@ -1,7 +1,7 @@
 import os
 import logging
-from ..addon.queryApi.eudict import API
-from ..addon import constants as C
+from addon.queryApi.eudict import API
+from addon import constants as C
 import pytest
 logger = logging.getLogger(__name__)
 api = API()

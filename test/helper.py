@@ -2,7 +2,7 @@ import json
 import os
 import typing as T
 
-from ..addon import _typing as _T
+from addon import _typing as _T
 
 
 class MockCallable:
@@ -90,6 +90,39 @@ _CONFIG_V3 = """{
 }
 """
 
+_CONFIG_V4 = """{
+  "version": 4,
+  "deck": "",
+  "selected_dict": "欧路词典",
+  "dict_saved_groups": {},
+  "selected_api": "有道 API",
+  "credentials": {},
+  "definition": true,
+  "sentence": true,
+  "image": true,
+  "phrase": true,
+  "AmEPhonetic": true,
+  "BrEPhonetic": true,
+  "BrEPron": false,
+  "AmEPron": true,
+  "noPron": false,
+  "advanced_fields": {
+    "enabled": false,
+    "enable_use_modules": false,
+    "definition": "",
+    "sentence": "",
+    "image": "",
+    "phrase": "",
+    "AmEPhonetic": "",
+    "BrEPhonetic": "",
+    "AmEPron": "",
+    "BrEPron": ""
+  },
+  "congest": 120,
+  "user_agent": ""
+}
+"""
+
 
 def fresh_v1_confmap() -> _T.ConfigMap:
     return json.loads(_CONFIG_V1)
@@ -103,5 +136,9 @@ def fresh_v3_confmap() -> _T.ConfigMap:
     return json.loads(_CONFIG_V3)
 
 
+def fresh_v4_confmap() -> _T.ConfigMap:
+    return json.loads(_CONFIG_V4)
+
+
 def fresh_latest_confmap() -> _T.ConfigMap:
-    return fresh_v3_confmap()
+    return fresh_v4_confmap()
