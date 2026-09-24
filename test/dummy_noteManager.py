@@ -13,8 +13,6 @@ __all__ = [
     'getNotesByDeckName',
     'new_note',
     'set_flag',
-    'set_field',
-    'empty_field',
 ]
 
 
@@ -63,12 +61,4 @@ def new_note(word, model):
 
 
 def set_flag(notes, flag):
-    pass
-
-
-def set_field(note, field, query_data) -> bool:
-    return True
-
-
-def empty_field(note, field):
     pass

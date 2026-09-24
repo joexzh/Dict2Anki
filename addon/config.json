@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 3,
   "deck": "",
   "selected_dict": "欧路词典",
   "dict_saved_groups": {},
@@ -16,7 +16,7 @@
   "noPron": false,
   "advanced_fields": {
     "enabled": false,
-    "enable_use_modules": false,
+    "enable_user_modules": false,
     "definition": "",
     "sentence": "",
     "image": "",

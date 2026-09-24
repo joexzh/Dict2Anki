@@ -20,9 +20,9 @@ api_ast  api_ast
 
 In this example, "有道 API" is first to evaluate, if it fails, fallback to "欧路词典 API", then fallback to flag 1 (red flag).
 
-Parser supports `api` and `flag` expression, parenthesis expression, and two binary expressions: OR and AND with operators of `|` and `&` respectively. API name should be double-quoted if contains spaces or either of the characters `:()&|"`, since these characters are special delimiters. `"` should follow a backslash (`\"`) inside a double-quoted-string.
+Parser supports `api` and `flag` expression, parenthesis expression, and two binary expressions: OR and AND with operators of `|` and `&` respectively. API name should be double-quoted if contains spaces or either of the characters `:()&|"`, since these characters are special delimiters. `"` should follow a backslash (`\"`) inside a double-quoted-string. API name cannot be exact `api` or `flag` unless it's quoted: `api:"api"`.
 
-When evaluating the AST, specific visitor function is called so that corresponding action is made. For example, `ApiFConfVisitor` is implemented for API query, `NoteFlagFConfVisitor` for flagging note in database, `MoveAudioFConfVisitor` for moving downloaded audios to Anki media folder when saving notes.
+When evaluating the AST, specific visitor function is called so that corresponding action is made. For example, `ApiFConfVisitor` is implemented for API query, `NoteFConfVisitor` for saving and flagging note in database, `MoveAudioFConfVisitor` for moving downloaded audios to Anki media folder when saving notes.
 
 ## UML class diagram
 

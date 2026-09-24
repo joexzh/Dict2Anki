@@ -238,7 +238,7 @@ class OrFConfAST(FConfAST):
         return self.left.eval(visitor) or self.right.eval(visitor)
 
     def __str__(self):
-        return f'({self.left}) | ({self.right})'
+        return f'({str(self.left)} | {str(self.right)})'
 
     def __repr__(self):
         return self.__str__()
@@ -313,25 +313,20 @@ class Lexer:
         """
         get token
         """
+
+        def not_delimiters(char: str) -> bool:
+            return char != ':' and char != '(' and char != ')' and char != '&' and char != '|' and char != '"'
+
         # skip whitespace
         while self.last_char.isspace():
             self.last_char = self.getchar()
 
-        if (
-            self.last_char
-            and not self.last_char.isdigit()
-            and self.last_char != ':'
-            and self.last_char != '('
-            and self.last_char != ')'
-            and self.last_char != '&'
-            and self.last_char != '|'
-            and self.last_char != '"'
-        ):
-            # string = [^0-9:\(\)&\|"][^: ]*
+        if self.last_char and not self.last_char.isdigit() and not_delimiters(self.last_char):
+            # string = [^0-9:\(\)&\|"][^:\(\)&\|" ]*
             chunk = [self.last_char]
 
             self.last_char = self.getchar()
-            while not self.last_char.isspace() and self.last_char != ':':
+            while self.last_char and not self.last_char.isspace() and not_delimiters(self.last_char):
                 chunk.append(self.last_char)
                 self.last_char = self.getchar()
 
@@ -394,9 +389,8 @@ class Parser:
         """
         'api' ':' (string | '"' string '"')
         """
-        self.lexer.get_next_tok()  # eat (consume) 'api'
+        next_tok = self.lexer.get_next_tok()  # eat (consume) 'api'
 
-        next_tok = self.lexer.get_next_tok()
         if next_tok != ord(':'):
             return None, 'Error: expect colon `:` after `api`'
 
@@ -412,9 +406,8 @@ class Parser:
         """
         'flag' ':' number
         """
-        self.lexer.get_next_tok()  # eat 'flag'
+        next_tok = self.lexer.get_next_tok()  # eat 'flag'
 
-        next_tok = self.lexer.get_next_tok()
         if next_tok != ord(':'):
             return None, 'Error, expect colon `:` after `flag`'
 
@@ -470,6 +463,7 @@ class Parser:
             if op != ord('&') and op != ord('|'):
                 return lhs, ''
 
+            self.lexer.get_next_tok()  # eat op
             rhs, err = self.parse_primary()
             if rhs is None:
                 return rhs, err

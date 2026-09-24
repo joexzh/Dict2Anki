@@ -13,10 +13,6 @@ from .conf_migration import migrate_version
 from .misc import dec_cookies, enc_cookies
 
 
-def make_ast_from_bool(val: bool, api: str) -> adv_conf.FConfAST:
-    return adv_conf.ApiFConfAST(api) if val else adv_conf.EmptyFConfAST()
-
-
 def _set_dirty(method):
     """
     Conf setter decorator, sets self._dirty=True if value changed
@@ -63,27 +59,37 @@ class Conf(_T.ListenableModel):
 
         migrate_version(self)
 
-    def _make_ast_dict(self) -> dict[str, tuple[T.Optional[adv_conf.FConfAST], str]]:
+    def _make_ast_from_bool(self, val: bool) -> adv_conf.FConfAST:
+        return adv_conf.ApiFConfAST(self.selected_api) if val else adv_conf.EmptyFConfAST()
+
+    def _make_ast_dict_old(self):
         ast_dict: dict[str, tuple[T.Optional[adv_conf.FConfAST], str]] = {}
-        if self.advanced_enabled:
-            ast_dict[C.F_DEFINITION] = adv_conf.make_ast(self.advanced_definition)
-            ast_dict[C.F_SENTENCE] = adv_conf.make_ast(self.advanced_sentence)
-            ast_dict[C.F_IMAGE] = adv_conf.make_ast(self.advanced_image)
-            ast_dict[C.F_PHRASE] = adv_conf.make_ast(self.advanced_phrase)
-            ast_dict[C.F_AMEPHONETIC] = adv_conf.make_ast(self.advanced_AmEPhonetic)
-            ast_dict[C.F_BREPHONETIC] = adv_conf.make_ast(self.advanced_BrEPhonetic)
-            ast_dict[C.F_AMEPRON] = adv_conf.make_ast(self.advanced_AmEPron)
-            ast_dict[C.F_BREPRON] = adv_conf.make_ast(self.advanced_BrEPron)
-        else:
-            ast_dict[C.F_DEFINITION] = (make_ast_from_bool(self.definition, self.selected_api), '')
-            ast_dict[C.F_SENTENCE] = (make_ast_from_bool(self.sentence, self.selected_api), '')
-            ast_dict[C.F_IMAGE] = (make_ast_from_bool(self.image, self.selected_api), '')
-            ast_dict[C.F_PHRASE] = (make_ast_from_bool(self.phrase, self.selected_api), '')
-            ast_dict[C.F_AMEPHONETIC] = (make_ast_from_bool(self.ame_phonetic, self.selected_api), '')
-            ast_dict[C.F_BREPHONETIC] = (make_ast_from_bool(self.bre_phonetic, self.selected_api), '')
-            ast_dict[C.F_AMEPRON] = (make_ast_from_bool(self.ame_pron, self.selected_api), '')
-            ast_dict[C.F_BREPRON] = (make_ast_from_bool(self.bre_pron, self.selected_api), '')
+        ast_dict[C.F_DEFINITION] = (self._make_ast_from_bool(self.definition), '')
+        ast_dict[C.F_SENTENCE] = (self._make_ast_from_bool(self.sentence), '')
+        ast_dict[C.F_IMAGE] = (self._make_ast_from_bool(self.image), '')
+        ast_dict[C.F_PHRASE] = (self._make_ast_from_bool(self.phrase), '')
+        ast_dict[C.F_AMEPHONETIC] = (self._make_ast_from_bool(self.ame_phonetic), '')
+        ast_dict[C.F_BREPHONETIC] = (self._make_ast_from_bool(self.bre_phonetic), '')
+        ast_dict[C.F_AMEPRON] = (self._make_ast_from_bool(self.ame_pron), '')
+        ast_dict[C.F_BREPRON] = (self._make_ast_from_bool(self.bre_pron), '')
         return ast_dict
+
+    def _make_ast_dict_advanced(self):
+        ast_dict: dict[str, tuple[T.Optional[adv_conf.FConfAST], str]] = {}
+        ast_dict[C.F_DEFINITION] = adv_conf.make_ast(self.advanced_definition)
+        ast_dict[C.F_SENTENCE] = adv_conf.make_ast(self.advanced_sentence)
+        ast_dict[C.F_IMAGE] = adv_conf.make_ast(self.advanced_image)
+        ast_dict[C.F_PHRASE] = adv_conf.make_ast(self.advanced_phrase)
+        ast_dict[C.F_AMEPHONETIC] = adv_conf.make_ast(self.advanced_AmEPhonetic)
+        ast_dict[C.F_BREPHONETIC] = adv_conf.make_ast(self.advanced_BrEPhonetic)
+        ast_dict[C.F_AMEPRON] = adv_conf.make_ast(self.advanced_AmEPron)
+        ast_dict[C.F_BREPRON] = adv_conf.make_ast(self.advanced_BrEPron)
+        return ast_dict
+
+    def _make_ast_dict(self) -> dict[str, tuple[T.Optional[adv_conf.FConfAST], str]]:
+        if self.advanced_enabled:
+            return self._make_ast_dict_advanced()
+        return self._make_ast_dict_old()
 
     def get_ast_dict(self):
         return self._ast_dict
@@ -145,6 +151,8 @@ class Conf(_T.ListenableModel):
     @_set_dirty
     def selected_api(self, val: str):
         self._map['selected_api'] = val
+        if not self.advanced_enabled:
+            self._ast_dict = self._make_ast_dict_old()
 
     @property
     def current_credential(self):
@@ -180,6 +188,8 @@ class Conf(_T.ListenableModel):
     @_set_dirty
     def definition(self, val: bool):
         self._map[C.F_DEFINITION] = val
+        if not self.advanced_enabled:
+            self._ast_dict[C.F_DEFINITION] = (self._make_ast_from_bool(val), '')
 
     @property
     def image(self):
@@ -189,6 +199,8 @@ class Conf(_T.ListenableModel):
     @_set_dirty
     def image(self, val: bool):
         self._map[C.F_IMAGE] = val
+        if not self.advanced_enabled:
+            self._ast_dict[C.F_IMAGE] = (self._make_ast_from_bool(val), '')
 
     @property
     def sentence(self):
@@ -198,6 +210,8 @@ class Conf(_T.ListenableModel):
     @_set_dirty
     def sentence(self, val: bool):
         self._map[C.F_SENTENCE] = val
+        if not self.advanced_enabled:
+            self._ast_dict[C.F_SENTENCE] = (self._make_ast_from_bool(val), '')
 
     @property
     def phrase(self):
@@ -207,6 +221,8 @@ class Conf(_T.ListenableModel):
     @_set_dirty
     def phrase(self, val: bool):
         self._map[C.F_PHRASE] = val
+        if not self.advanced_enabled:
+            self._ast_dict[C.F_PHRASE] = (self._make_ast_from_bool(val), '')
 
     @property
     def ame_phonetic(self):
@@ -216,6 +232,8 @@ class Conf(_T.ListenableModel):
     @_set_dirty
     def ame_phonetic(self, val: bool):
         self._map[C.F_AMEPHONETIC] = val
+        if not self.advanced_enabled:
+            self._ast_dict[C.F_AMEPHONETIC] = (self._make_ast_from_bool(val), '')
 
     @property
     def bre_phonetic(self):
@@ -225,6 +243,8 @@ class Conf(_T.ListenableModel):
     @_set_dirty
     def bre_phonetic(self, val: bool):
         self._map[C.F_BREPHONETIC] = val
+        if not self.advanced_enabled:
+            self._ast_dict[C.F_BREPHONETIC] = (self._make_ast_from_bool(val), '')
 
     @property
     def bre_pron(self):
@@ -237,6 +257,9 @@ class Conf(_T.ListenableModel):
         if val:
             self._map[C.F_AMEPRON] = False
             self._map[C.F_NOPRON] = False
+        if not self.advanced_enabled:
+            self._ast_dict[C.F_BREPRON] = (self._make_ast_from_bool(val), '')
+            self._ast_dict[C.F_AMEPRON] = (self._make_ast_from_bool(self.ame_pron), '')
 
     @property
     def ame_pron(self):
@@ -249,6 +272,9 @@ class Conf(_T.ListenableModel):
         if val:
             self._map[C.F_BREPRON] = False
             self._map[C.F_NOPRON] = False
+        if not self.advanced_enabled:
+            self._ast_dict[C.F_AMEPRON] = (self._make_ast_from_bool(val), '')
+            self._ast_dict[C.F_BREPRON] = (self._make_ast_from_bool(self.bre_pron), '')
 
     @property
     def no_pron(self):
@@ -261,6 +287,9 @@ class Conf(_T.ListenableModel):
         if val:
             self._map[C.F_BREPRON] = False
             self._map[C.F_AMEPRON] = False
+        if not self.advanced_enabled:
+            self._ast_dict[C.F_AMEPRON] = (self._make_ast_from_bool(self.ame_pron), '')
+            self._ast_dict[C.F_BREPRON] = (self._make_ast_from_bool(self.bre_pron), '')
 
     @property
     def advanced_fields(self):
@@ -274,6 +303,7 @@ class Conf(_T.ListenableModel):
     @_set_dirty
     def advanced_enabled(self, val: bool):
         self.advanced_fields['enabled'] = val
+        self._ast_dict = self._make_ast_dict()
 
     @property
     def advanced_enable_user_modules(self):
@@ -292,7 +322,8 @@ class Conf(_T.ListenableModel):
     @_set_dirty
     def advanced_definition(self, val: str):
         self.advanced_fields[C.F_DEFINITION] = val
-        self._ast_dict[C.F_DEFINITION] = adv_conf.make_ast(val)
+        if self.advanced_enabled:
+            self._ast_dict[C.F_DEFINITION] = adv_conf.make_ast(val)
 
     @property
     def advanced_sentence(self):
@@ -302,7 +333,8 @@ class Conf(_T.ListenableModel):
     @_set_dirty
     def advanced_sentence(self, val: str):
         self.advanced_fields[C.F_SENTENCE] = val
-        self._ast_dict[C.F_SENTENCE] = adv_conf.make_ast(val)
+        if self.advanced_enabled:
+            self._ast_dict[C.F_SENTENCE] = adv_conf.make_ast(val)
 
     @property
     def advanced_image(self):
@@ -312,7 +344,8 @@ class Conf(_T.ListenableModel):
     @_set_dirty
     def advanced_image(self, val: str):
         self.advanced_fields[C.F_IMAGE] = val
-        self._ast_dict[C.F_IMAGE] = adv_conf.make_ast(val)
+        if self.advanced_enabled:
+            self._ast_dict[C.F_IMAGE] = adv_conf.make_ast(val)
 
     @property
     def advanced_phrase(self):
@@ -322,7 +355,8 @@ class Conf(_T.ListenableModel):
     @_set_dirty
     def advanced_phrase(self, val: str):
         self.advanced_fields[C.F_PHRASE] = val
-        self._ast_dict[C.F_PHRASE] = adv_conf.make_ast(val)
+        if self.advanced_enabled:
+            self._ast_dict[C.F_PHRASE] = adv_conf.make_ast(val)
 
     @property
     def advanced_AmEPhonetic(self):
@@ -332,7 +366,8 @@ class Conf(_T.ListenableModel):
     @_set_dirty
     def advanced_AmEPhonetic(self, val: str):
         self.advanced_fields[C.F_AMEPHONETIC] = val
-        self._ast_dict[C.F_AMEPHONETIC] = adv_conf.make_ast(val)
+        if self.advanced_enabled:
+            self._ast_dict[C.F_AMEPHONETIC] = adv_conf.make_ast(val)
 
     @property
     def advanced_BrEPhonetic(self):
@@ -342,7 +377,8 @@ class Conf(_T.ListenableModel):
     @_set_dirty
     def advanced_BrEPhonetic(self, val: str):
         self.advanced_fields[C.F_BREPHONETIC] = val
-        self._ast_dict[C.F_BREPHONETIC] = adv_conf.make_ast(val)
+        if self.advanced_enabled:
+            self._ast_dict[C.F_BREPHONETIC] = adv_conf.make_ast(val)
 
     @property
     def advanced_AmEPron(self):
@@ -352,7 +388,8 @@ class Conf(_T.ListenableModel):
     @_set_dirty
     def advanced_AmEPron(self, val: str):
         self.advanced_fields[C.F_AMEPRON] = val
-        self._ast_dict[C.F_AMEPRON] = adv_conf.make_ast(val)
+        if self.advanced_enabled:
+            self._ast_dict[C.F_AMEPRON] = adv_conf.make_ast(val)
 
     @property
     def advanced_BrEPron(self):
@@ -362,7 +399,8 @@ class Conf(_T.ListenableModel):
     @_set_dirty
     def advanced_BrEPron(self, val: str):
         self.advanced_fields[C.F_BREPRON] = val
-        self._ast_dict[C.F_BREPRON] = adv_conf.make_ast(val)
+        if self.advanced_enabled:
+            self._ast_dict[C.F_BREPRON] = adv_conf.make_ast(val)
 
     @property
     def congest(self):

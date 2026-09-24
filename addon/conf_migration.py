@@ -89,10 +89,6 @@ def migrate_v2_v3(confmap: _T.ConfigMap):
     del confmap['credential']
 
 
-def migrate_v3_v4(confmap: _T.ConfigMap):
-    confmap['version'] = 4
-
-
 def migrate_version(conf: Conf):
     """
     Migrate to latest version
@@ -103,8 +99,4 @@ def migrate_version(conf: Conf):
     if 'selectedDict' in conf._map:
         migrate_v1_v2(conf._map)
         migrate_v2_v3(conf._map)
-        conf._dirty = True
-
-    if conf.version == 3:
-        migrate_v3_v4(conf._map)
         conf._dirty = True

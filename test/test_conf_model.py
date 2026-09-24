@@ -1,10 +1,11 @@
 import typing as T
 
-from addon import conf_migration, dictionary, misc, queryApi
-from addon.conf_model import Conf
-from . import helper
-from addon import global_vars as V
+from addon import adv_conf, conf_migration, dictionary, misc, queryApi
 from addon import constants as C
+from addon import global_vars as V
+from addon.conf_model import Conf
+
+from . import helper
 
 
 def new_conf():
@@ -24,7 +25,24 @@ def same_val_should_not_dirty(attr, val, conf: T.Optional[Conf] = None):
     assert conf.is_dirty() is False
 
 
+def test_ast_old_at_init():
+    # test make ast from old config at init
+    conf = new_conf()
+
+    assert isinstance(conf._ast_dict[C.F_DEFINITION][0], adv_conf.ApiFConfAST)
+    assert isinstance(conf._ast_dict[C.F_PHRASE][0], adv_conf.ApiFConfAST)
+    assert isinstance(conf._ast_dict[C.F_SENTENCE][0], adv_conf.ApiFConfAST)
+    assert isinstance(conf._ast_dict[C.F_IMAGE][0], adv_conf.ApiFConfAST)
+    assert isinstance(conf._ast_dict[C.F_AMEPHONETIC][0], adv_conf.ApiFConfAST)
+    assert isinstance(conf._ast_dict[C.F_BREPHONETIC][0], adv_conf.ApiFConfAST)
+    assert isinstance(conf._ast_dict[C.F_AMEPRON][0], adv_conf.ApiFConfAST)
+    assert isinstance(conf._ast_dict[C.F_BREPRON][0], adv_conf.EmptyFConfAST)
+    assert conf.is_dirty() is False
+
+
 def test_desk():
+    # test value can be assigned
+
     conf = new_conf()
     assert_val = 'test_deck'
     conf.deck = assert_val
@@ -50,11 +68,21 @@ def test_selected_dict_dirty():
 
 
 def test_selected_api():
+    # test value can be assigned. Default `selected_api` is not '1'
+
     conf = new_conf()
     conf.selected_api = '1'
 
     assert conf.selected_api == '1'
     assert conf.is_dirty() is True
+
+    # test AST can be made. Default `definition` is True, `advanced_enabled` is
+    # False.
+
+    ast = conf._ast_dict[C.F_DEFINITION][0]
+
+    assert isinstance(ast, adv_conf.ApiFConfAST)
+    assert ast.api == '1'
 
 
 def test_selected_api_dirty():
@@ -108,11 +136,21 @@ def test_current_cookies_unlisten():
 
 
 def test_definition():
+    # test value can be assigned. Default `definition` is True
+
     conf = new_conf()
     conf.definition = False
 
     assert conf.definition is False
     assert conf.is_dirty() is True
+
+    # test AST can be made, should be `EmptyFConfAST`
+
+    assert isinstance(conf._ast_dict[C.F_DEFINITION][0], adv_conf.EmptyFConfAST)
+
+    # test AST should not change because default `advanced_enabled` is False
+    conf.advanced_definition = 'api:hello'
+    assert isinstance(conf._ast_dict[C.F_DEFINITION][0], adv_conf.EmptyFConfAST)
 
 
 def test_definition_dirty():
@@ -120,10 +158,20 @@ def test_definition_dirty():
 
 
 def test_image():
+    # test value can be assigned. Default `image` is True
+
     conf = new_conf()
     conf.image = False
 
     assert conf.image is False
+
+    # test AST can be made, should be `EmptyFConfAST`.
+
+    assert isinstance(conf._ast_dict[C.F_IMAGE][0], adv_conf.EmptyFConfAST)
+
+    # test AST should not change because default `advanced_enabled` is False
+    conf.advanced_image = 'api:hello'
+    assert isinstance(conf._ast_dict[C.F_IMAGE][0], adv_conf.EmptyFConfAST)
 
 
 def test_image_dirty():
@@ -131,11 +179,21 @@ def test_image_dirty():
 
 
 def test_sentence():
+    # test value can be assigned. Default `sentence` is True
+
     conf = new_conf()
     conf.sentence = False
 
     assert conf.sentence is False
     assert conf.is_dirty() is True
+
+    # test AST can be made, should be `EmptyFConfAST`.
+
+    assert isinstance(conf._ast_dict[C.F_SENTENCE][0], adv_conf.EmptyFConfAST)
+
+    # test AST should not change because default `advanced_enabled` is False
+    conf.advanced_sentence = 'api:hello'
+    assert isinstance(conf._ast_dict[C.F_SENTENCE][0], adv_conf.EmptyFConfAST)
 
 
 def test_sentence_dirty():
@@ -143,11 +201,21 @@ def test_sentence_dirty():
 
 
 def test_phrase():
+    # test value can be assigned. Default `phrase` is True
+
     conf = new_conf()
     conf.phrase = False
 
     assert conf.phrase is False
     assert conf.is_dirty() is True
+
+    # test AST can be made, should be `EmptyFConfAST`.
+
+    assert isinstance(conf._ast_dict[C.F_PHRASE][0], adv_conf.EmptyFConfAST)
+
+    # test AST should not change because default `advanced_enabled` is False
+    conf.advanced_phrase = 'api:hello'
+    assert isinstance(conf._ast_dict[C.F_PHRASE][0], adv_conf.EmptyFConfAST)
 
 
 def test_phrase_dirty():
@@ -155,11 +223,21 @@ def test_phrase_dirty():
 
 
 def test_ame_phonetic():
+    # test value can be assigned. Default `ame_phonetic` is True
+
     conf = new_conf()
     conf.ame_phonetic = False
 
     assert conf.ame_phonetic is False
     assert conf.is_dirty() is True
+
+    # test AST can be made, should be `EmptyConfAST`.
+
+    assert isinstance(conf._ast_dict[C.F_AMEPHONETIC][0], adv_conf.EmptyFConfAST)
+
+    # test AST should not change because default `advanced_enabled` is False
+    conf.advanced_AmEPhonetic = 'api:hello'
+    assert isinstance(conf._ast_dict[C.F_AMEPHONETIC][0], adv_conf.EmptyFConfAST)
 
 
 def test_ame_phonetic_dirty():
@@ -167,11 +245,21 @@ def test_ame_phonetic_dirty():
 
 
 def test_bre_phonetic():
+    # test value can be assigned. Default `bre_phonetic` is True
+
     conf = new_conf()
     conf.bre_phonetic = False
 
     assert conf.bre_phonetic is False
     assert conf.is_dirty() is True
+
+    # test AST can be made, should be `EmptyConfAST`.
+
+    assert isinstance(conf._ast_dict[C.F_BREPHONETIC][0], adv_conf.EmptyFConfAST)
+
+    # test AST should not change because default `advanced_enabled` is False
+    conf.advanced_BrEPhonetic = 'api:hello'
+    assert isinstance(conf._ast_dict[C.F_BREPHONETIC][0], adv_conf.EmptyFConfAST)
 
 
 def test_bre_phonetic_dirty():
@@ -179,7 +267,8 @@ def test_bre_phonetic_dirty():
 
 
 def test_bre_pron():
-    # json file defaults to False
+    # test value can be assigned. Default `bre_pron` is False
+
     conf = new_conf()
     conf.bre_pron = True
 
@@ -188,6 +277,14 @@ def test_bre_pron():
     assert conf.no_pron is False
     assert conf.is_dirty() is True
 
+    # test AST can be made, should be `ApiFConfAST`
+
+    assert isinstance(conf._ast_dict[C.F_BREPRON][0], adv_conf.ApiFConfAST)
+
+    # test AST should not change because `advanced_enabled` is False
+    conf.advanced_BrEPron = 'flag:1'
+    assert isinstance(conf._ast_dict[C.F_BREPRON][0], adv_conf.ApiFConfAST)
+
 
 def test_bre_pron_dirty():
     # json file defaults to False
@@ -195,7 +292,8 @@ def test_bre_pron_dirty():
 
 
 def test_ame_pron():
-    # json file defaults to True
+    # test value can be assigned. Default `ame_pron` is True
+
     conf_map = helper.fresh_latest_confmap()
     conf_map['AmEPron'] = False
     conf_map['BrEPron'] = False
@@ -209,6 +307,14 @@ def test_ame_pron():
     assert conf.no_pron is False
     assert conf.is_dirty() is True
 
+    # test AST can be made, should be `ApiFConfAST`
+
+    assert isinstance(conf._ast_dict[C.F_AMEPRON][0], adv_conf.ApiFConfAST)
+
+    # test AST should not change because default `advanced_enabled` is False
+    conf.advanced_AmEPron = 'flag:1'
+    assert isinstance(conf._ast_dict[C.F_AMEPRON][0], adv_conf.ApiFConfAST)
+
 
 def test_ame_pron_dirty():
     # json file defaults to True
@@ -221,7 +327,8 @@ def test_ame_pron_dirty():
 
 
 def test_no_pron():
-    # json file defaults to False
+    # test value can be assigned. Default `no_pron` is False
+
     conf = new_conf()
     conf.no_pron = True
 
@@ -229,6 +336,11 @@ def test_no_pron():
     assert conf.ame_pron is False
     assert conf.bre_pron is False
     assert conf.is_dirty() is True
+
+    # test AST can be made, both 'AmEPron' and 'BrEPron's' should be `EmptyFConfAST`
+
+    assert isinstance(conf._ast_dict[C.F_AMEPRON][0], adv_conf.EmptyFConfAST)
+    assert isinstance(conf._ast_dict[C.F_BREPRON][0], adv_conf.EmptyFConfAST)
 
 
 def test_no_pron_dirty():
@@ -245,6 +357,194 @@ def test_congest():
 
 def test_congest_dirty():
     same_val_should_not_dirty(Conf.congest, 200)
+
+
+def new_conf_adv():
+    conf_str = 'api:hello | api:world | flag:1'
+    confmap = helper.fresh_latest_confmap()
+    confmap['advanced_fields']['enabled'] = True
+    confmap['advanced_fields']['enable_user_modules'] = True
+    confmap['advanced_fields']['definition'] = conf_str
+    confmap['advanced_fields']['sentence'] = conf_str
+    confmap['advanced_fields']['phrase'] = conf_str
+    confmap['advanced_fields']['image'] = conf_str
+    confmap['advanced_fields']['AmEPhonetic'] = conf_str
+    confmap['advanced_fields']['BrEPhonetic'] = conf_str
+    confmap['advanced_fields']['AmEPron'] = conf_str
+    confmap['advanced_fields']['BrEPron'] = conf_str
+    return Conf(confmap)
+
+
+def test_adv_ast_at_init():
+    # test make ast from advanced config at init
+
+    conf = new_conf_adv()
+
+    assert isinstance(conf._ast_dict[C.F_DEFINITION][0], adv_conf.OrFConfAST)
+    assert isinstance(conf._ast_dict[C.F_SENTENCE][0], adv_conf.OrFConfAST)
+    assert isinstance(conf._ast_dict[C.F_PHRASE][0], adv_conf.OrFConfAST)
+    assert isinstance(conf._ast_dict[C.F_IMAGE][0], adv_conf.OrFConfAST)
+    assert isinstance(conf._ast_dict[C.F_AMEPHONETIC][0], adv_conf.OrFConfAST)
+    assert isinstance(conf._ast_dict[C.F_BREPHONETIC][0], adv_conf.OrFConfAST)
+    assert isinstance(conf._ast_dict[C.F_AMEPRON][0], adv_conf.OrFConfAST)
+    assert isinstance(conf._ast_dict[C.F_BREPRON][0], adv_conf.OrFConfAST)
+    assert conf.is_dirty() is False
+
+
+def test_adv_enabled():
+    # test value can be assigned
+
+    conf = new_conf_adv()
+    conf.advanced_enabled = False
+
+    assert conf.advanced_enabled is False
+    assert conf.is_dirty() is True
+
+    # test ASTs are changed to Api from old config
+    assert isinstance(conf._ast_dict[C.F_DEFINITION][0], adv_conf.ApiFConfAST)
+
+    conf.advanced_enabled = True
+
+    # test ASTs are changed back to OR
+    assert isinstance(conf._ast_dict[C.F_DEFINITION][0], adv_conf.OrFConfAST)
+
+
+def test_adv_enable_user_modules():
+    # test value can be assigned
+
+    conf = new_conf_adv()
+    conf.advanced_enable_user_modules = False
+
+    assert conf.advanced_enable_user_modules is False
+    assert conf.is_dirty() is True
+
+
+def test_adv_definition():
+    # test value can be assigned
+
+    conf = new_conf_adv()
+    conf.advanced_definition = 'flag:1'
+
+    assert conf.advanced_definition == 'flag:1'
+    # test AST is changed
+    assert isinstance(conf._ast_dict[C.F_DEFINITION][0], adv_conf.NoteFlagFConfAST)
+    assert conf.is_dirty() is True
+
+    # test AST should not change because `advanced_enabled` is True
+    conf.definition = True
+    assert isinstance(conf._ast_dict[C.F_DEFINITION][0], adv_conf.NoteFlagFConfAST)
+
+
+def test_adv_sentence():
+    # test value can be assigned
+
+    conf = new_conf_adv()
+    conf.advanced_sentence = 'flag:1'
+
+    assert conf.advanced_sentence == 'flag:1'
+    # test AST is changed
+    assert isinstance(conf._ast_dict[C.F_SENTENCE][0], adv_conf.NoteFlagFConfAST)
+    assert conf.is_dirty() is True
+
+    # test AST should not change because `advanced_enabled` is True
+    conf.sentence = True
+    assert isinstance(conf._ast_dict[C.F_SENTENCE][0], adv_conf.NoteFlagFConfAST)
+
+
+def test_adv_phrase():
+    # test value can be assigned
+
+    conf = new_conf_adv()
+    conf.advanced_phrase = 'flag:1'
+
+    assert conf.advanced_phrase == 'flag:1'
+    # test AST is changed
+    assert isinstance(conf._ast_dict[C.F_PHRASE][0], adv_conf.NoteFlagFConfAST)
+    assert conf.is_dirty() is True
+
+    # test AST should not change because `advanced_enabled` is True
+    conf.phrase = True
+    assert isinstance(conf._ast_dict[C.F_PHRASE][0], adv_conf.NoteFlagFConfAST)
+
+
+def test_adv_image():
+    # test value can be assigned
+
+    conf = new_conf_adv()
+    conf.advanced_image = 'flag:1'
+
+    assert conf.advanced_image == 'flag:1'
+    # test AST is changed
+    assert isinstance(conf._ast_dict[C.F_IMAGE][0], adv_conf.NoteFlagFConfAST)
+    assert conf.is_dirty() is True
+
+    # test AST should not change because `advanced_enabled` is True
+    conf.image = True
+    assert isinstance(conf._ast_dict[C.F_IMAGE][0], adv_conf.NoteFlagFConfAST)
+
+
+def test_adv_ame_phonetic():
+    # test value can be assigned
+
+    conf = new_conf_adv()
+    conf.advanced_AmEPhonetic = 'flag:1'
+
+    assert conf.advanced_AmEPhonetic == 'flag:1'
+    # test AST is changed
+    assert isinstance(conf._ast_dict[C.F_AMEPHONETIC][0], adv_conf.NoteFlagFConfAST)
+    assert conf.is_dirty() is True
+
+    # test AST should not change because `advanced_enabled` is True
+    conf.ame_phonetic = True
+    assert isinstance(conf._ast_dict[C.F_AMEPHONETIC][0], adv_conf.NoteFlagFConfAST)
+
+
+def test_adv_bre_phonetic():
+    # test value can be assigned
+
+    conf = new_conf_adv()
+    conf.advanced_BrEPhonetic = 'flag:1'
+
+    assert conf.advanced_BrEPhonetic == 'flag:1'
+    # test AST is changed
+    assert isinstance(conf._ast_dict[C.F_BREPHONETIC][0], adv_conf.NoteFlagFConfAST)
+    assert conf.is_dirty() is True
+
+    # test AST should not change because `advanced_enabled` is True
+    conf.bre_phonetic = True
+    assert isinstance(conf._ast_dict[C.F_BREPHONETIC][0], adv_conf.NoteFlagFConfAST)
+
+
+def test_adv_ame_pron():
+    # test value can be assigned
+
+    conf = new_conf_adv()
+    conf.advanced_AmEPron = 'flag:1'
+
+    assert conf.advanced_AmEPron == 'flag:1'
+    # test AST is changed
+    assert isinstance(conf._ast_dict[C.F_AMEPRON][0], adv_conf.NoteFlagFConfAST)
+    assert conf.is_dirty() is True
+
+    # test AST should not change because `advanced_enabled` is True
+    conf.ame_pron = True
+    assert isinstance(conf._ast_dict[C.F_AMEPRON][0], adv_conf.NoteFlagFConfAST)
+
+
+def test_adv_bre_pron():
+    # test value can be assigned
+
+    conf = new_conf_adv()
+    conf.advanced_BrEPron = 'flag:1'
+
+    assert conf.advanced_BrEPron == 'flag:1'
+    # test AST is changed
+    assert isinstance(conf._ast_dict[C.F_BREPRON][0], adv_conf.NoteFlagFConfAST)
+    assert conf.is_dirty() is True
+
+    # test AST should not change because `advanced_enabled` is True
+    conf.bre_pron = True
+    assert isinstance(conf._ast_dict[C.F_BREPRON][0], adv_conf.NoteFlagFConfAST)
 
 
 def test_user_agent_has_instance():

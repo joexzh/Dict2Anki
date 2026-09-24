@@ -380,7 +380,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
 
             note = noteManager.new_note(word, model)
             notes.append(note)
-            aqt.mw.col.add_note(note, deck['id'])  # type: ignore
+            aqt.mw.col.add_note(note, deck['id'])
 
             adv_conf.eval_asts_set_note(word, note, query_cache, ast_dict)
 

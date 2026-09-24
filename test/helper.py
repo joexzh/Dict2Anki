@@ -6,10 +6,10 @@ from addon import _typing as _T
 
 
 class MockCallable:
-    def __init__(self):
+    def __init__(self, return_value: T.Any = None):
         self.called = 0
         self.called_with: T.Any = None
-        self.return_value: T.Any = None
+        self.return_value: T.Any = return_value
 
     def __call__(self, *args, **kwargs):
         self.called += 1
@@ -70,27 +70,6 @@ _CONFIG_V2 = f"""{{
 """
 
 _CONFIG_V3 = """{
-  "version": 3,
-  "deck": "",
-  "selected_dict": "欧路词典",
-  "dict_saved_groups": {},
-  "selected_api": "有道 API",
-  "credentials": {},
-  "definition": true,
-  "sentence": true,
-  "image": true,
-  "phrase": true,
-  "AmEPhonetic": true,
-  "BrEPhonetic": true,
-  "BrEPron": false,
-  "AmEPron": true,
-  "noPron": false,
-  "congest": 120,
-  "user_agent": ""
-}
-"""
-
-_CONFIG_V4 = """{
   "version": 4,
   "deck": "",
   "selected_dict": "欧路词典",
@@ -108,7 +87,7 @@ _CONFIG_V4 = """{
   "noPron": false,
   "advanced_fields": {
     "enabled": false,
-    "enable_use_modules": false,
+    "enable_user_modules": false,
     "definition": "",
     "sentence": "",
     "image": "",
@@ -136,9 +115,5 @@ def fresh_v3_confmap() -> _T.ConfigMap:
     return json.loads(_CONFIG_V3)
 
 
-def fresh_v4_confmap() -> _T.ConfigMap:
-    return json.loads(_CONFIG_V4)
-
-
 def fresh_latest_confmap() -> _T.ConfigMap:
-    return fresh_v4_confmap()
+    return fresh_v3_confmap()

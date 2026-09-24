@@ -5,10 +5,12 @@ import aqt.utils
 import pytest
 import requests
 from PyQt6.QtCore import Qt
+from pytest import MonkeyPatch as MP
 
 from addon import constants as C
 from addon import dictionary, misc
 from addon.addonWindow import Windows, noteManager
+
 from .mock_helper import w_mock
 
 
@@ -21,24 +23,27 @@ def test_start_up_with_fresh_config(qtbot, w_mock):
     assert aqt.mw.addonManager.getConfig.called > 0
     assert w.cookieLineEdit.text() == ''
 
+
 @pytest.mark.skip(reason='disable temporarily')
-def test_version_check(qtbot, monkeypatch, w_mock):
-    new_tag = "v99999.0.0"
-    monkeypatch.setitem(requests.get("").json.return_value, "tag_name", new_tag)
+def test_version_check(qtbot, monkeypatch: MP, w_mock):
+    new_tag = 'v99999.0.0'
+    monkeypatch.setitem(requests.get('').json.return_value, 'tag_name', new_tag)
 
     w = w_mock()
     qtbot.addWidget(w)
 
     def check_askUser():
-        assert aqt.utils.askUser.called_with == ((
-            f"有新版本:{new_tag.strip()}是否更新？\n\n{requests.get('').json.return_value['body'].strip()}",), {})
+        assert aqt.utils.askUser.called_with == (
+            (f'有新版本:{new_tag.strip()}是否更新？\n\n{requests.get("").json.return_value["body"].strip()}',),
+            {},
+        )
 
     qtbot.waitUntil(check_askUser)
-    assert requests.get("").json.called > 0
+    assert requests.get('').json.called > 0
 
 
 @pytest.mark.parametrize('text', [dictionary.youdao.Dict.name, dictionary.eudict.Dict.name])
-def test_dictionary_combobox_change(text, monkeypatch, w_mock, qtbot):
+def test_dictionary_combobox_change(text: str, monkeypatch: MP, w_mock, qtbot):
     cookie0 = '0'
     cookie1 = '1'
     cookie0_enc = misc.enc_cookies(cookie0)
@@ -66,38 +71,43 @@ def test_dictionary_combobox_change(text, monkeypatch, w_mock, qtbot):
     assert w.cookieLineEdit.text() == cookie_decoded
 
 
-def test_get_deck_list(qtbot, monkeypatch, w_mock):
-    monkeypatch.setitem(aqt.mw.addonManager.getConfig.return_value, "deck", "b")
-    monkeypatch.setattr(noteManager, "getDeckNames", lambda: ["a", "b", "c"])
+def test_get_deck_list(qtbot, monkeypatch: MP, w_mock):
+    monkeypatch.setitem(aqt.mw.addonManager.getConfig.return_value, 'deck', 'b')
+    monkeypatch.setattr(noteManager, 'getDeckNames', lambda: ['a', 'b', 'c'])
 
     w: Windows = w_mock()
     qtbot.addWidget(w)
 
     assert [w.deckComboBox.itemText(row) for row in range(w.deckComboBox.count())] == ['a', 'b', 'c']
     assert w.deckComboBox.currentText() == 'b'
-    assert w.conf.deck == "b"
+    assert w.conf.deck == 'b'
 
 
-@pytest.mark.parametrize('local_words,remote_words,test_index', [
-    ([], [], 0),
-    ([], ['a', 'b'], 1),
-    (['a'], ['a'], 2),
-    (['a'], ['a', 'b'], 3),
-    (['a', 'b'], ['c', 'd'], 4),
-    (['a', 'b'], ['c', 'b'], 5),
-])
-def test_fetch_word_and_compare(monkeypatch, w_mock, qtbot, local_words, remote_words, test_index):
-    monkeypatch.setattr(noteManager, "getWordsByDeck", lambda x: copy.deepcopy(local_words))
-    monkeypatch.setattr(dictionary.eudict.Dict, "getTotalPage", lambda x, y: 1)
-    monkeypatch.setattr(dictionary.eudict.Dict, "getWordsByPage", lambda x,y,z: copy.deepcopy(remote_words))
+@pytest.mark.parametrize(
+    'local_words,remote_words,test_index',
+    [
+        ([], [], 0),
+        ([], ['a', 'b'], 1),
+        (['a'], ['a'], 2),
+        (['a'], ['a', 'b'], 3),
+        (['a', 'b'], ['c', 'd'], 4),
+        (['a', 'b'], ['c', 'b'], 5),
+    ],
+)
+def test_fetch_word_and_compare(
+    monkeypatch: MP, w_mock, qtbot, local_words: list[str], remote_words: list[str], test_index: int
+):
+    monkeypatch.setattr(noteManager, 'getWordsByDeck', lambda x: copy.deepcopy(local_words))
+    monkeypatch.setattr(dictionary.eudict.Dict, 'getTotalPage', lambda x, y: 1)
+    monkeypatch.setattr(dictionary.eudict.Dict, 'getWordsByPage', lambda x, y, z: copy.deepcopy(remote_words))
 
     w: Windows = w_mock()
     qtbot.addWidget(w)
 
     w.conf.selected_dict = dictionary.eudict.Dict.name
     # value of w.conf is from monkeypatch, also need monkeypatch to modify it
-    monkeypatch.setattr(w.conf, "current_selected_groups", ["group_1"]) # "group_1" is dummy value
-    w.get_current_dict().groups = [(w.conf.current_selected_groups[0], "1")] # "1" is dummy value
+    monkeypatch.setattr(w.conf, 'current_selected_groups', ['group_1'])  # "group_1" is dummy value
+    w.get_current_dict().groups = [(w.conf.current_selected_groups[0], '1')]  # "1" is dummy value
     w.getRemoteWordList(w.conf.current_selected_groups)
 
     def check_tooltip():
@@ -106,8 +116,7 @@ def test_fetch_word_and_compare(monkeypatch, w_mock, qtbot, local_words, remote_
     qtbot.waitUntil(check_tooltip)
 
     item_in_list_widget = [w.newWordListWidget.item(row) for row in range(w.newWordListWidget.count())]
-    item_in_del_widget = [w.needDeleteWordListWidget.item(row) for row in
-                        range(w.needDeleteWordListWidget.count())]
+    item_in_del_widget = [w.needDeleteWordListWidget.item(row) for row in range(w.needDeleteWordListWidget.count())]
     words_in_list_widget = [i.text() for i in item_in_list_widget]  # type: ignore
     words_in_del_widget = [i.text() for i in item_in_del_widget]  # type: ignore
 

@@ -91,8 +91,8 @@ class Repair:
         self._w.repairBtn.clicked.connect(self._on_repairBtnClick)
 
     def _register_model_events(self, model: RepairModel):
-        def update_label_note_reset(_stats: Stats):
-            self._w.repairProgressNoteLabel.setText('等待更新笔记 . . . ')
+        def update_label_note_reset(stats: Stats):
+            self._w.repairProgressNoteLabel.setText(f'等待更新笔记，总数：{stats.total} . . . ')
 
         def update_label_note(stats: Stats):
             self._w.repairProgressNoteLabel.setText(f'笔记更新完成：总数 {stats.total}，标记 {stats.fail_cnt}')
@@ -166,6 +166,9 @@ Deck：{conf.deck}
             selected_field_set.add(C.F_AMEPHONETIC)
 
         # TODO: create checkbox for en and us pron
+        if self._w.repairPronCB.isChecked():
+            selected_field_set.add(C.F_AMEPRON)
+            selected_field_set.add(C.F_BREPRON)
         return selected_field_set
 
     def _on_repairBtnClick(self):
