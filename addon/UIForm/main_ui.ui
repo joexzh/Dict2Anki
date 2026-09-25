@@ -467,6 +467,48 @@
        <string>修复</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_6">
+       <item row="7" column="0" colspan="2">
+        <widget class="QPushButton" name="repairBtn">
+         <property name="text">
+          <string>开始修复</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0" colspan="2">
+        <widget class="QGroupBox" name="repairProgressGroupBox">
+         <property name="title">
+          <string>进度</string>
+         </property>
+         <property name="flat">
+          <bool>false</bool>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_7">
+          <item row="0" column="0">
+           <widget class="QLabel" name="repairProgressNoteLabel"/>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="repairProgressQueryLabel"/>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="repairProgressAudioLabel"/>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="0" column="0" colspan="2">
+        <widget class="QLabel" name="repairIntroLabel">
+         <property name="text">
+          <string>### 修复笔记中的字段
+
+- 若字段在【设置-默认设置】未勾选，并在【修复字段】勾选，则字段内容会被**清空**，请谨慎使用
+- 字段会被忽略的情况：①没有在【修复字段】勾选；②没有应用最新模板；③查询结果为空
+- 数量较多时可能触发API限流，导致查询失败或返回错误结果</string>
+         </property>
+         <property name="textFormat">
+          <enum>Qt::TextFormat::MarkdownText</enum>
+         </property>
+        </widget>
+       </item>
        <item row="4" column="0" rowspan="2" colspan="2">
         <widget class="QGroupBox" name="repairCBGroupBox">
          <property name="title">
@@ -516,67 +558,40 @@
            </widget>
           </item>
           <item row="1" column="2">
-           <widget class="QCheckBox" name="repairPronCB">
+           <widget class="QCheckBox" name="repairBrEPronCB">
             <property name="text">
-             <string>发音</string>
+             <string>英式发音</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="3">
+           <widget class="QCheckBox" name="repairAmEPronCB">
+            <property name="text">
+             <string>美式发音</string>
             </property>
            </widget>
           </item>
          </layout>
         </widget>
        </item>
-       <item row="6" column="0" colspan="2">
-        <widget class="QPushButton" name="repairBtn">
+       <item row="6" column="0">
+        <widget class="QLineEdit" name="repairFilterLineEdit">
+         <property name="inputMask">
+          <string/>
+         </property>
          <property name="text">
-          <string>开始修复</string>
+          <string/>
+         </property>
+         <property name="placeholderText">
+          <string>本地笔记筛选，按回车预览数量</string>
          </property>
         </widget>
        </item>
-       <item row="0" column="0" colspan="2">
-        <widget class="QLabel" name="repairIntroLabel">
+       <item row="6" column="1">
+        <widget class="QLabel" name="repairFilterLabel">
          <property name="text">
-          <string>### 修复笔记中的字段
-
-- 若字段在【设置-默认设置】未勾选，并在【修复字段】勾选，则字段内容会被**清空**，请谨慎使用
-- 字段会被忽略的情况：①没有在【修复字段】勾选；②没有应用最新模板；③查询结果为空
-- 数量较多时可能触发API限流，导致查询失败或返回错误结果</string>
+          <string/>
          </property>
-         <property name="textFormat">
-          <enum>Qt::TextFormat::MarkdownText</enum>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="0" colspan="2">
-        <widget class="QGroupBox" name="repairProgressGroupBox">
-         <property name="title">
-          <string>进度信息</string>
-         </property>
-         <property name="flat">
-          <bool>false</bool>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_7">
-          <item row="0" column="0">
-           <widget class="QLabel" name="repairProgressNoteLabel">
-            <property name="text">
-             <string>本地笔记更新进度</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="repairProgressQueryLabel">
-            <property name="text">
-             <string>API 查询进度</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="repairProgressAudioLabel">
-            <property name="text">
-             <string>发音下载进度</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
         </widget>
        </item>
       </layout>

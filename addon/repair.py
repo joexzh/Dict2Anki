@@ -88,6 +88,16 @@ class Repair:
         self._query_cache_list: list[dict[str, T.Optional[_T.QueryWordData]]] = []
         'same length as self._notes'
         self._ensured_selected_dict: dict[str, adv_conf.FConfAST] = {}
+        self._listen_ui_events()
+
+    def _listen_ui_events(self):
+
+        def on_enter_pressed():
+            text = self._w.repairFilterLineEdit.text()
+            note_ids = noteManager.get_note_ids(self._w.conf.deck, text)
+            self._w.repairFilterLabel.setText(str(len(note_ids)))
+
+        self._w.repairFilterLineEdit.returnPressed.connect(on_enter_pressed)
         self._w.repairBtn.clicked.connect(self._on_repairBtnClick)
 
     def _register_model_events(self, model: RepairModel):
@@ -123,17 +133,17 @@ class Repair:
 
         return rf"""默认设置:
 
-Deck：{conf.deck}
-线上单词本：{self._w.get_current_dict().name}{conf.current_selected_groups}
-查词API：{self._w.get_current_api().name}
-释义：{conf.advanced_definition if conf.advanced_enabled else conf.definition}
-例句：{conf.advanced_sentence if conf.advanced_enabled else conf.sentence}
-短语：{conf.advanced_phrase if conf.advanced_enabled else conf.phrase}
-图片：{conf.advanced_image if conf.advanced_enabled else conf.image}
-英式音标：{conf.advanced_BrEPhonetic if conf.advanced_enabled else conf.bre_phonetic}
-美式音标：{conf.advanced_AmEPhonetic if conf.advanced_enabled else conf.ame_phonetic}
-英式发音：{conf.advanced_BrEPron if conf.advanced_enabled else conf.bre_pron}
-美式发音：{conf.advanced_AmEPron if conf.advanced_enabled else conf.ame_pron}"""
+Deck：          {conf.deck}
+线上单词本：    {self._w.get_current_dict().name}{conf.current_selected_groups}
+查词API：       {self._w.get_current_api().name}
+释义：          {conf.advanced_definition if conf.advanced_enabled else conf.definition}
+例句：          {conf.advanced_sentence if conf.advanced_enabled else conf.sentence}
+短语：          {conf.advanced_phrase if conf.advanced_enabled else conf.phrase}
+图片：          {conf.advanced_image if conf.advanced_enabled else conf.image}
+英式音标：      {conf.advanced_BrEPhonetic if conf.advanced_enabled else conf.bre_phonetic}
+美式音标：      {conf.advanced_AmEPhonetic if conf.advanced_enabled else conf.ame_phonetic}
+英式发音：      {conf.advanced_BrEPron if conf.advanced_enabled else conf.bre_pron}
+美式发音：      {conf.advanced_AmEPron if conf.advanced_enabled else conf.ame_pron}"""
 
     def _writeLogAndLabel(self, msg: str, label: aqt.QLabel):
         _logger.info(msg)
@@ -165,10 +175,12 @@ Deck：{conf.deck}
         if self._w.repairAmEPhoneticCB.isChecked():
             selected_field_set.add(C.F_AMEPHONETIC)
 
-        # TODO: create checkbox for en and us pron
-        if self._w.repairPronCB.isChecked():
-            selected_field_set.add(C.F_AMEPRON)
+        if self._w.repairBrEPronCB.isChecked():
             selected_field_set.add(C.F_BREPRON)
+
+        if self._w.repairAmEPronCB.isChecked():
+            selected_field_set.add(C.F_AMEPRON)
+
         return selected_field_set
 
     def _on_repairBtnClick(self):
@@ -178,11 +190,11 @@ Deck：{conf.deck}
             aqt.utils.showInfo('请选择要修复的字段', parent=self._w)
             return
 
-        selected_ast_dict_raw = {
+        selected_ast_dict_tuple = {
             field: ast_tuple for field, ast_tuple in self._w.conf.get_ast_dict().items() if field in selected_field_set
         }
 
-        ast_dict, errmsg = adv_conf.ensure_ast_dict_errmsg_for_ui(selected_ast_dict_raw)
+        ast_dict, errmsg = adv_conf.ensure_ast_dict_errmsg_for_ui(selected_ast_dict_tuple)
         if errmsg:
             aqt.utils.show_critical(errmsg)
             return
@@ -224,8 +236,7 @@ Deck：{conf.deck}
         self._w.repairProgressQueryLabel.clear()
         self._w.repairProgressAudioLabel.clear()
 
-        # TODO: allow custom note filter
-        self._notes = list(noteManager.getNotesByDeckName(self._w.conf.deck))
+        self._notes = list(noteManager.getNotesByDeckName(self._w.conf.deck, self._w.repairFilterLineEdit.text()))
         if len(self._notes) == 0:
             self._writeLogAndLabel('没有要更新的笔记', self._w.repairProgressNoteLabel)
             return self._complete(None, None)
