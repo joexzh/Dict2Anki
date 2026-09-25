@@ -46,9 +46,10 @@ def parse(vcom_word: VCOMWord) -> Optional[_T.QueryWordData]:
 
     if funny_def_short := vcom_word['funny_def_short']:
         chunks.append(f'<p>{funny_def_short}</p>')
-    if funny_def_long := vcom_word['funny_def_long']:
-        chunks.append(f'<p>{funny_def_long}</p>')
-    definition.append(''.join(chunks))
+        if funny_def_long := vcom_word['funny_def_long']:
+            chunks.append(f'<p>{funny_def_long}</p>')
+        # append only if exist funny definition
+        definition.append(''.join(chunks))
 
     # sentence
 
@@ -114,4 +115,5 @@ class API(_T.AbstractQueryAPI):
             logger.exception(e)
         finally:
             logger.debug(queryResult)
+        logger.info(f'{API.name}: {word}, {queryResult}')
         return queryResult

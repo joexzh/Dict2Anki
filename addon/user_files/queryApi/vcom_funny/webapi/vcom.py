@@ -253,8 +253,11 @@ def parse_word_family(soup: BeautifulSoup) -> list[WordFamily]:
 
         for wf_obj in wf_arr:
             word: str = wf_obj['word']
-            ffreq: int = wf_obj['ffreq']
-            freq = 1 + int((1 / (ffreq / 4000)))  # see [[README.md###calculate freq]]
+            ffreq: float = wf_obj['ffreq']
+            if ffreq == 0.0:
+                # don't know how to calculate it, skip for now
+                continue
+            freq = 1 + int((1.0 / (ffreq / 4000.0)))  # see [[README.md###calculate freq]]
             parent = wf_obj.get('parent', '')
             ret.append({'word': word, 'freq': freq, 'parent': parent})
 

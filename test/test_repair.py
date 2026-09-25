@@ -202,14 +202,17 @@ def test_query(
     qtbot.waitUntil(check_tooltip)
 
     if case == 1:
-        # notes should be modified, pick the first note to check
-        assert (
-            notes_[0][C.F_DEFINITION]
-            == f'<div class="definition">{mock_helper.query_data_mock[C.F_DEFINITION][0]}</div>'
-        )
+        # notes should be modified, pick the first note, check the definition, image and AmEPhonetic field (random)
+        note = notes_[0]
+        assert note[C.F_DEFINITION] == noteManager.to_field_definition(mock_helper.query_data_mock[C.F_DEFINITION])
+        assert note[C.F_IMAGE] == noteManager.to_field_image(mock_helper.query_data_mock[C.F_IMAGE])
+        assert note[C.F_AMEPRON] == noteManager.make_pron_field(C.F_AMEPRON, mock_helper.query_data_mock[C.F_TERM])
     elif case == 2:
         # notes should not be modified, pick the first note to check
-        assert notes_[0][C.F_DEFINITION] == field_val
+        note = notes_[0]
+        assert note[C.F_DEFINITION] == field_val
+        assert note[C.F_IMAGE] == field_val
+        assert note[C.F_AMEPRON] == field_val
 
         # all notes are flagged
         assert model.note_stats.fail_cnt == n_notes

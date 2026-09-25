@@ -163,21 +163,24 @@ class ApiASTWorker(AbstractWorker):
         self.fconf_ast_dict = fconf_ast_dict
 
     def run(self):
-        try:
-            congestGen = misc.congestGenerator(self.congest)
-            for row, word in self.row_words:
+
+        def fetch_word(row: int, word: str):
+            query_cache: dict[str, T.Optional[QueryWordData]] = {}
+            ret_eval = False
+
+            for field, ast in self.fconf_ast_dict.items():
                 if self.interrupted:
                     break
-                next(congestGen)
+                ret_eval = ast.eval(adv_conf.ApiFConfVisitor(word, field, query_cache)) or ret_eval
+            self.rowSuccess.emit(row, word, query_cache) if ret_eval else self.rowFail.emit(row, word, query_cache)
 
-                query_cache: dict[str, T.Optional[QueryWordData]] = {}
-                ret_eval = False
-
-                for field, ast in self.fconf_ast_dict.items():
+        try:
+            congestGen = misc.congestGenerator(self.congest)
+            with misc.ThreadPool(max_workers=3) as pool:
+                for row, word in self.row_words:
                     if self.interrupted:
                         break
-                    ret_eval = ret_eval or ast.eval(adv_conf.ApiFConfVisitor(word, field, query_cache))
-
-                self.rowSuccess.emit(row, word, query_cache) if ret_eval else self.rowFail.emit(row, word, query_cache)
+                    next(congestGen)
+                    pool.submit(fetch_word, row, word)
         finally:
             self.done.emit(self)

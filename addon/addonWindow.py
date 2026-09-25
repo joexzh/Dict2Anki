@@ -326,7 +326,6 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         failedWordItem.setIcon(failedIcon)  # type: ignore
         failedWordItem.setData(Qt.ItemDataRole.UserRole, query_cache)  # type: ignore
 
-    @pyqtSlot(list)
     def on_queryDone(self, _worker):
         self.pullRemoteWordsBtn.setEnabled(True)
         self.queryBtn.setEnabled(True)

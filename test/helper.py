@@ -70,7 +70,7 @@ _CONFIG_V2 = f"""{{
 """
 
 _CONFIG_V3 = """{
-  "version": 4,
+  "version": 3,
   "deck": "",
   "selected_dict": "欧路词典",
   "dict_saved_groups": {},

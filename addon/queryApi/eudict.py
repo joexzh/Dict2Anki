@@ -187,4 +187,5 @@ class API(AbstractQueryAPI):
             logger.exception(e)
         finally:
             logger.debug(queryResult)
-            return queryResult
+        logger.info(f'{API.name}: {word}, {queryResult}')
+        return queryResult

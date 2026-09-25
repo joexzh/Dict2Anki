@@ -187,11 +187,13 @@ def set_flag(notes: T.Iterable[notes.Note], flag: int):
         aqt.mw.col.set_user_flag_for_cards(flag, card_ids)
 
 
+def to_field_definition(api_definition: list[str]) -> str:
+    return ''.join((f'<div class="definition">{definition.strip()}</div>' for definition in api_definition))
+
+
 def set_field_definition(note: notes.Note, query_data: QueryWordData) -> bool:
-    if query_data[C.F_DEFINITION]:
-        note[C.F_DEFINITION] = ''.join(
-            (f'<div class="definition">{definition.strip()}</div>' for definition in query_data[C.F_DEFINITION])
-        )
+    if api_definition := query_data[C.F_DEFINITION]:
+        note[C.F_DEFINITION] = to_field_definition(api_definition)
         return True
     return False
 
@@ -200,17 +202,23 @@ def empty_field_definition(note: notes.Note):
     note[C.F_DEFINITION] = ''
 
 
-def set_field_phrase(note: notes.Note, query_data: QueryWordData) -> bool:
-    if query_data[C.F_PHRASE]:
-        note[C.F_PHRASE_FRONT] = ''.join(
-            [f'<div class="phrase-front">{front.strip()}</div>' for front, _ in query_data[C.F_PHRASE]]
-        )
-        note[C.F_PHRASE_BACK] = ''.join(
+def to_field_phrase(api_phrase: list[tuple[str, str]]) -> tuple[str, str]:
+    return (
+        ''.join([f'<div class="phrase-front">{front.strip()}</div>' for front, _ in api_phrase]),
+        ''.join(
             [
                 f'<div><span class="phrase-front">{front.strip()}</span> <span class="phrase-back">{back.strip()}</span></div>'
-                for front, back in query_data[C.F_PHRASE]
+                for front, back in api_phrase
             ]
-        )
+        ),
+    )
+
+
+def set_field_phrase(note: notes.Note, query_data: QueryWordData) -> bool:
+    if api_data_phrase := query_data[C.F_PHRASE]:
+        field_tuple = to_field_phrase(api_data_phrase)
+        note[C.F_PHRASE_FRONT] = field_tuple[0]
+        note[C.F_PHRASE_BACK] = field_tuple[1]
         return True
     return False
 
@@ -220,32 +228,33 @@ def empty_field_phrase(note: notes.Note):
     clear_field(note, C.F_PHRASE_BACK)
 
 
+def to_field_sentence(api_sentence: list[tuple[str, str]]) -> tuple[str, str]:
+    field_front = ''
+    field_back = ''
+    s_front_backs = [(front.strip(), back.strip()) for front, back in api_sentence if front.strip() or back.strip()]
+
+    if s_fronts := [front for front, _ in s_front_backs if front]:
+        field_front = (
+            ''.join((f'<div class="sentence-front">{front}</div>' for front in s_fronts))
+        )
+
+    if s_front_backs:
+        chunks = []
+        for front, back in s_front_backs:
+            if front:
+                chunks.append(f'<div class="sentence-front">{front}</div>')
+            if back:
+                chunks.append(f'<div class="sentence-back">{back}</div>')
+        field_back = ''.join(chunks)
+
+    return (field_front, field_back)
+
+
 def set_field_sentence(note: notes.Note, query_data: QueryWordData) -> bool:
-    if query_data[C.F_SENTENCE]:
-        s_front_backs = [
-            (front.strip(), back.strip()) for front, back in query_data[C.F_SENTENCE] if front.strip() or back.strip()
-        ]
-
-        if s_fronts := [front for front, _ in s_front_backs if front]:
-            note[C.F_SENTENCE_FRONT] = (
-                '<ul>'
-                + ''.join((f'<li><div class="sentence-front">{front}</div></li>' for front in s_fronts))
-                + '</ul>'
-            )
-
-        if s_front_backs:
-            chunks = []
-            chunks.append('<ul>')
-            for front, back in s_front_backs:
-                chunks.append('<li>')
-                if front:
-                    chunks.append(f'<div class="sentence-front">{front}</div>')
-                if back:
-                    chunks.append(f'<div class="sentence-back">{back}</div>')
-                chunks.append('</li>')
-            chunks.append('</ul>')
-            note[C.F_SENTENCE_BACK] = ''.join(chunks)
-
+    if api_sentence := query_data[C.F_SENTENCE]:
+        field_tuple = to_field_sentence(api_sentence)
+        note[C.F_SENTENCE_FRONT] = field_tuple[0]
+        note[C.F_SENTENCE_BACK] = field_tuple[1]
         return True
     return False
 
@@ -255,9 +264,13 @@ def empty_field_sentence(note: notes.Note):
     clear_field(note, C.F_SENTENCE_BACK)
 
 
+def to_field_image(api_image: str) -> str:
+    return f'<img class="image" src="{api_image}">'
+
+
 def set_field_image(note: notes.Note, query_data: QueryWordData) -> bool:
-    if query_data[C.F_IMAGE]:
-        note[C.F_IMAGE] = f'<img class="image" src="{query_data[C.F_IMAGE]}">'
+    if api_image := query_data[C.F_IMAGE]:
+        note[C.F_IMAGE] = to_field_image(api_image)
         return True
     return False
 

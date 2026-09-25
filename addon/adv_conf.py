@@ -52,7 +52,11 @@ class ApiFConfVisitor(FConfVisitor):
         if query_api is None:
             return False
 
-        api_data = self.query_cache.setdefault(api, query_api.query(self.word))
+        api_data = None
+        if api not in self.query_cache:
+            api_data = self.query_cache[api] = query_api.query(self.word)
+        else:
+            api_data = self.query_cache[api]
 
         if api_data is None:
             return False
