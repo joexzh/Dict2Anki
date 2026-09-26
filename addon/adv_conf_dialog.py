@@ -63,7 +63,9 @@ class AdvConfDialog(QDialog, adv_conf_dialog.Ui_Dialog):
 
 api 或 flag（标记笔记）以操作符 `|`（OR）分隔，从左到右执行，成功则停止，失败则继续，直到成功为止。注意，flag 视作失败，一般用于重要字段并且应放在最后。在一条笔记中（一个单词），多个字段触发的 flag 会被最后一次执行的 flag 覆盖。
 
-例如： `api:"Vocabulary.com API" | api:"有道 API" | flag:1`"""
+空值代表清空字段。
+
+例： `api:"funny Vocabulary.com API" | api:"有道 API" | flag:1`"""
         label.setText(text)
         layout.addWidget(label)
         dialog.exec()
