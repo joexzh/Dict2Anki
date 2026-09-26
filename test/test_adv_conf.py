@@ -1,11 +1,11 @@
 from addon.adv_conf import (
-    AndFConfAST,
-    ApiFConfAST,
-    CallbackFConfVisitor,
-    EmptyFConfAST,
+    AndAst,
+    ApiAst,
+    CallbackVisitor,
+    EmptyAst,
+    FlagAst,
     Lexer,
-    NoteFlagFConfAST,
-    OrFConfAST,
+    OrAst,
     Parser,
 )
 
@@ -105,7 +105,7 @@ def test_parser_api():
     parser = Parser(Lexer(s))
     ast, err = parser.parse()
 
-    assert isinstance(ast, ApiFConfAST)
+    assert isinstance(ast, ApiAst)
     assert str(ast) == s
 
 
@@ -114,7 +114,7 @@ def test_parser_api_quoted():
     parser = Parser(Lexer(s))
     ast, err = parser.parse()
 
-    assert isinstance(ast, ApiFConfAST)
+    assert isinstance(ast, ApiAst)
     assert str(ast) == 'api:hello world'
 
 
@@ -131,7 +131,7 @@ def test_parser_flag():
     parser = Parser(Lexer(s))
     ast, err = parser.parse()
 
-    assert isinstance(ast, NoteFlagFConfAST)
+    assert isinstance(ast, FlagAst)
     assert str(ast) == s
 
 
@@ -148,7 +148,7 @@ def test_parser_empty():
     parser = Parser(Lexer(s))
     ast, err = parser.parse()
 
-    assert isinstance(ast, EmptyFConfAST)
+    assert isinstance(ast, EmptyAst)
 
 
 def test_parser_paren():
@@ -157,7 +157,7 @@ def test_parser_paren():
     parser = Parser(Lexer(paren_s))
     ast, err = parser.parse()
 
-    assert isinstance(ast, ApiFConfAST)
+    assert isinstance(ast, ApiAst)
     assert str(ast) == s
 
 
@@ -166,7 +166,7 @@ def test_parser_and_or():
     parser = Parser(Lexer(s))
     ast, err = parser.parse()
 
-    assert isinstance(ast, OrFConfAST)
+    assert isinstance(ast, OrAst)
     assert str(ast) == '(((api:hello world & api:meow) | flag:123) | (flag:321 | api:hello_world))'
 
 
@@ -193,8 +193,8 @@ def test_ast_empty():
         nonlocal called
         called = 1
 
-    visitor = CallbackFConfVisitor(empty_callback=callback)
-    ast = EmptyFConfAST()
+    visitor = CallbackVisitor(empty_callback=callback)
+    ast = EmptyAst()
     ast.eval(visitor)
 
     assert called == 1
@@ -208,8 +208,8 @@ def test_ast_eval_api():
         api_ = api
         return True
 
-    visitor = CallbackFConfVisitor(api_callback=callback)
-    ast = ApiFConfAST('test')
+    visitor = CallbackVisitor(api_callback=callback)
+    ast = ApiAst('test')
     ast.eval(visitor)
 
     assert api_ == 'test'
@@ -222,8 +222,8 @@ def test_ast_eval_flag():
         nonlocal flag_
         flag_ = flag
 
-    visitor = CallbackFConfVisitor(note_flag_callback=callback)
-    ast = NoteFlagFConfAST(1)
+    visitor = CallbackVisitor(note_flag_callback=callback)
+    ast = FlagAst(1)
     ast.eval(visitor)
 
     assert flag_ == 1
@@ -241,10 +241,10 @@ def test_ast_eval_l_or_r():
         api_1 += api
         return True
 
-    ast_l = ApiFConfAST('l_')
-    ast_r = ApiFConfAST('r_')
-    ast_or = OrFConfAST(ast_l, ast_r)
-    b = ast_or.eval(CallbackFConfVisitor(api_callback=callback_1))
+    ast_l = ApiAst('l_')
+    ast_r = ApiAst('r_')
+    ast_or = OrAst(ast_l, ast_r)
+    b = ast_or.eval(CallbackVisitor(api_callback=callback_1))
 
     assert b is True
     assert api_1 == 'l_'
@@ -259,10 +259,10 @@ def test_ast_eval_l_or_r():
         api_2 += api
         return False
 
-    ast_l = ApiFConfAST('l_')
-    ast_r = ApiFConfAST('r_')
-    ast_or = OrFConfAST(ast_l, ast_r)
-    b = ast_or.eval(CallbackFConfVisitor(api_callback=callback_2))
+    ast_l = ApiAst('l_')
+    ast_r = ApiAst('r_')
+    ast_or = OrAst(ast_l, ast_r)
+    b = ast_or.eval(CallbackVisitor(api_callback=callback_2))
 
     assert b is False
     assert api_2 == 'l_r_'
@@ -277,11 +277,11 @@ def test_ast_eval_ll_or_lr_or_r():
     api_1 = ''
 
     def make_ast_():
-        ast_ll = ApiFConfAST('ll_')
-        ast_lr = ApiFConfAST('lr_')
-        ast_or_l = OrFConfAST(ast_ll, ast_lr)
-        ast_r = ApiFConfAST('r_')
-        ast_or = OrFConfAST(ast_or_l, ast_r)
+        ast_ll = ApiAst('ll_')
+        ast_lr = ApiAst('lr_')
+        ast_or_l = OrAst(ast_ll, ast_lr)
+        ast_r = ApiAst('r_')
+        ast_or = OrAst(ast_or_l, ast_r)
         return ast_or
 
     def callback_1(api: str) -> bool:
@@ -290,7 +290,7 @@ def test_ast_eval_ll_or_lr_or_r():
         return True
 
     ast_or = make_ast_()
-    b = ast_or.eval(CallbackFConfVisitor(api_callback=callback_1))
+    b = ast_or.eval(CallbackVisitor(api_callback=callback_1))
 
     assert b is True
     assert api_1 == 'll_'
@@ -306,7 +306,7 @@ def test_ast_eval_ll_or_lr_or_r():
         return False
 
     ast_or = make_ast_()
-    b = ast_or.eval(CallbackFConfVisitor(api_callback=callback_2))
+    b = ast_or.eval(CallbackVisitor(api_callback=callback_2))
 
     assert b is False
     assert api_2 == 'll_lr_r_'
@@ -321,11 +321,11 @@ def test_ast_eval_l_and_rl_or_rr():
     api_1 = ''
 
     def make_ast_():
-        ast_l = ApiFConfAST('l_')
-        ast_rl = ApiFConfAST('rl_')
-        ast_rr = ApiFConfAST('rr_')
-        ast_or_r = OrFConfAST(ast_rl, ast_rr)
-        ast_and = AndFConfAST(ast_l, ast_or_r)
+        ast_l = ApiAst('l_')
+        ast_rl = ApiAst('rl_')
+        ast_rr = ApiAst('rr_')
+        ast_or_r = OrAst(ast_rl, ast_rr)
+        ast_and = AndAst(ast_l, ast_or_r)
         return ast_and
 
     def callback_1(api: str) -> bool:
@@ -334,7 +334,7 @@ def test_ast_eval_l_and_rl_or_rr():
         return True
 
     ast_and = make_ast_()
-    b = ast_and.eval(CallbackFConfVisitor(api_callback=callback_1))
+    b = ast_and.eval(CallbackVisitor(api_callback=callback_1))
 
     assert b is True
     assert api_1 == 'l_rl_'
@@ -350,7 +350,7 @@ def test_ast_eval_l_and_rl_or_rr():
         return False
 
     ast_and = make_ast_()
-    b = ast_and.eval(CallbackFConfVisitor(api_callback=callback_2))
+    b = ast_and.eval(CallbackVisitor(api_callback=callback_2))
 
     assert b is False
     assert api_2 == 'l_'

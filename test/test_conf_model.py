@@ -29,14 +29,14 @@ def test_ast_old_at_init():
     # test make ast from old config at init
     conf = new_conf()
 
-    assert isinstance(conf._ast_dict[C.F_DEFINITION][0], adv_conf.ApiFConfAST)
-    assert isinstance(conf._ast_dict[C.F_PHRASE][0], adv_conf.ApiFConfAST)
-    assert isinstance(conf._ast_dict[C.F_SENTENCE][0], adv_conf.ApiFConfAST)
-    assert isinstance(conf._ast_dict[C.F_IMAGE][0], adv_conf.ApiFConfAST)
-    assert isinstance(conf._ast_dict[C.F_AMEPHONETIC][0], adv_conf.ApiFConfAST)
-    assert isinstance(conf._ast_dict[C.F_BREPHONETIC][0], adv_conf.ApiFConfAST)
-    assert isinstance(conf._ast_dict[C.F_AMEPRON][0], adv_conf.ApiFConfAST)
-    assert isinstance(conf._ast_dict[C.F_BREPRON][0], adv_conf.EmptyFConfAST)
+    assert isinstance(conf._ast_dict[C.F_DEFINITION][0], adv_conf.ApiAst)
+    assert isinstance(conf._ast_dict[C.F_PHRASE][0], adv_conf.ApiAst)
+    assert isinstance(conf._ast_dict[C.F_SENTENCE][0], adv_conf.ApiAst)
+    assert isinstance(conf._ast_dict[C.F_IMAGE][0], adv_conf.ApiAst)
+    assert isinstance(conf._ast_dict[C.F_AMEPHONETIC][0], adv_conf.ApiAst)
+    assert isinstance(conf._ast_dict[C.F_BREPHONETIC][0], adv_conf.ApiAst)
+    assert isinstance(conf._ast_dict[C.F_AMEPRON][0], adv_conf.ApiAst)
+    assert isinstance(conf._ast_dict[C.F_BREPRON][0], adv_conf.EmptyAst)
     assert conf.is_dirty() is False
 
 
@@ -81,7 +81,7 @@ def test_selected_api():
 
     ast = conf._ast_dict[C.F_DEFINITION][0]
 
-    assert isinstance(ast, adv_conf.ApiFConfAST)
+    assert isinstance(ast, adv_conf.ApiAst)
     assert ast.api == '1'
 
 
@@ -146,11 +146,11 @@ def test_definition():
 
     # test AST can be made, should be `EmptyFConfAST`
 
-    assert isinstance(conf._ast_dict[C.F_DEFINITION][0], adv_conf.EmptyFConfAST)
+    assert isinstance(conf._ast_dict[C.F_DEFINITION][0], adv_conf.EmptyAst)
 
     # test AST should not change because default `advanced_enabled` is False
     conf.advanced_definition = 'api:hello'
-    assert isinstance(conf._ast_dict[C.F_DEFINITION][0], adv_conf.EmptyFConfAST)
+    assert isinstance(conf._ast_dict[C.F_DEFINITION][0], adv_conf.EmptyAst)
 
 
 def test_definition_dirty():
@@ -167,11 +167,11 @@ def test_image():
 
     # test AST can be made, should be `EmptyFConfAST`.
 
-    assert isinstance(conf._ast_dict[C.F_IMAGE][0], adv_conf.EmptyFConfAST)
+    assert isinstance(conf._ast_dict[C.F_IMAGE][0], adv_conf.EmptyAst)
 
     # test AST should not change because default `advanced_enabled` is False
     conf.advanced_image = 'api:hello'
-    assert isinstance(conf._ast_dict[C.F_IMAGE][0], adv_conf.EmptyFConfAST)
+    assert isinstance(conf._ast_dict[C.F_IMAGE][0], adv_conf.EmptyAst)
 
 
 def test_image_dirty():
@@ -189,11 +189,11 @@ def test_sentence():
 
     # test AST can be made, should be `EmptyFConfAST`.
 
-    assert isinstance(conf._ast_dict[C.F_SENTENCE][0], adv_conf.EmptyFConfAST)
+    assert isinstance(conf._ast_dict[C.F_SENTENCE][0], adv_conf.EmptyAst)
 
     # test AST should not change because default `advanced_enabled` is False
     conf.advanced_sentence = 'api:hello'
-    assert isinstance(conf._ast_dict[C.F_SENTENCE][0], adv_conf.EmptyFConfAST)
+    assert isinstance(conf._ast_dict[C.F_SENTENCE][0], adv_conf.EmptyAst)
 
 
 def test_sentence_dirty():
@@ -211,11 +211,11 @@ def test_phrase():
 
     # test AST can be made, should be `EmptyFConfAST`.
 
-    assert isinstance(conf._ast_dict[C.F_PHRASE][0], adv_conf.EmptyFConfAST)
+    assert isinstance(conf._ast_dict[C.F_PHRASE][0], adv_conf.EmptyAst)
 
     # test AST should not change because default `advanced_enabled` is False
     conf.advanced_phrase = 'api:hello'
-    assert isinstance(conf._ast_dict[C.F_PHRASE][0], adv_conf.EmptyFConfAST)
+    assert isinstance(conf._ast_dict[C.F_PHRASE][0], adv_conf.EmptyAst)
 
 
 def test_phrase_dirty():
@@ -233,11 +233,11 @@ def test_ame_phonetic():
 
     # test AST can be made, should be `EmptyConfAST`.
 
-    assert isinstance(conf._ast_dict[C.F_AMEPHONETIC][0], adv_conf.EmptyFConfAST)
+    assert isinstance(conf._ast_dict[C.F_AMEPHONETIC][0], adv_conf.EmptyAst)
 
     # test AST should not change because default `advanced_enabled` is False
     conf.advanced_AmEPhonetic = 'api:hello'
-    assert isinstance(conf._ast_dict[C.F_AMEPHONETIC][0], adv_conf.EmptyFConfAST)
+    assert isinstance(conf._ast_dict[C.F_AMEPHONETIC][0], adv_conf.EmptyAst)
 
 
 def test_ame_phonetic_dirty():
@@ -255,11 +255,11 @@ def test_bre_phonetic():
 
     # test AST can be made, should be `EmptyConfAST`.
 
-    assert isinstance(conf._ast_dict[C.F_BREPHONETIC][0], adv_conf.EmptyFConfAST)
+    assert isinstance(conf._ast_dict[C.F_BREPHONETIC][0], adv_conf.EmptyAst)
 
     # test AST should not change because default `advanced_enabled` is False
     conf.advanced_BrEPhonetic = 'api:hello'
-    assert isinstance(conf._ast_dict[C.F_BREPHONETIC][0], adv_conf.EmptyFConfAST)
+    assert isinstance(conf._ast_dict[C.F_BREPHONETIC][0], adv_conf.EmptyAst)
 
 
 def test_bre_phonetic_dirty():
@@ -279,11 +279,11 @@ def test_bre_pron():
 
     # test AST can be made, should be `ApiFConfAST`
 
-    assert isinstance(conf._ast_dict[C.F_BREPRON][0], adv_conf.ApiFConfAST)
+    assert isinstance(conf._ast_dict[C.F_BREPRON][0], adv_conf.ApiAst)
 
     # test AST should not change because `advanced_enabled` is False
     conf.advanced_BrEPron = 'flag:1'
-    assert isinstance(conf._ast_dict[C.F_BREPRON][0], adv_conf.ApiFConfAST)
+    assert isinstance(conf._ast_dict[C.F_BREPRON][0], adv_conf.ApiAst)
 
 
 def test_bre_pron_dirty():
@@ -309,11 +309,11 @@ def test_ame_pron():
 
     # test AST can be made, should be `ApiFConfAST`
 
-    assert isinstance(conf._ast_dict[C.F_AMEPRON][0], adv_conf.ApiFConfAST)
+    assert isinstance(conf._ast_dict[C.F_AMEPRON][0], adv_conf.ApiAst)
 
     # test AST should not change because default `advanced_enabled` is False
     conf.advanced_AmEPron = 'flag:1'
-    assert isinstance(conf._ast_dict[C.F_AMEPRON][0], adv_conf.ApiFConfAST)
+    assert isinstance(conf._ast_dict[C.F_AMEPRON][0], adv_conf.ApiAst)
 
 
 def test_ame_pron_dirty():
@@ -339,8 +339,8 @@ def test_no_pron():
 
     # test AST can be made, both 'AmEPron' and 'BrEPron's' should be `EmptyFConfAST`
 
-    assert isinstance(conf._ast_dict[C.F_AMEPRON][0], adv_conf.EmptyFConfAST)
-    assert isinstance(conf._ast_dict[C.F_BREPRON][0], adv_conf.EmptyFConfAST)
+    assert isinstance(conf._ast_dict[C.F_AMEPRON][0], adv_conf.EmptyAst)
+    assert isinstance(conf._ast_dict[C.F_BREPRON][0], adv_conf.EmptyAst)
 
 
 def test_no_pron_dirty():
@@ -380,14 +380,14 @@ def test_adv_ast_at_init():
 
     conf = new_conf_adv()
 
-    assert isinstance(conf._ast_dict[C.F_DEFINITION][0], adv_conf.OrFConfAST)
-    assert isinstance(conf._ast_dict[C.F_SENTENCE][0], adv_conf.OrFConfAST)
-    assert isinstance(conf._ast_dict[C.F_PHRASE][0], adv_conf.OrFConfAST)
-    assert isinstance(conf._ast_dict[C.F_IMAGE][0], adv_conf.OrFConfAST)
-    assert isinstance(conf._ast_dict[C.F_AMEPHONETIC][0], adv_conf.OrFConfAST)
-    assert isinstance(conf._ast_dict[C.F_BREPHONETIC][0], adv_conf.OrFConfAST)
-    assert isinstance(conf._ast_dict[C.F_AMEPRON][0], adv_conf.OrFConfAST)
-    assert isinstance(conf._ast_dict[C.F_BREPRON][0], adv_conf.OrFConfAST)
+    assert isinstance(conf._ast_dict[C.F_DEFINITION][0], adv_conf.OrAst)
+    assert isinstance(conf._ast_dict[C.F_SENTENCE][0], adv_conf.OrAst)
+    assert isinstance(conf._ast_dict[C.F_PHRASE][0], adv_conf.OrAst)
+    assert isinstance(conf._ast_dict[C.F_IMAGE][0], adv_conf.OrAst)
+    assert isinstance(conf._ast_dict[C.F_AMEPHONETIC][0], adv_conf.OrAst)
+    assert isinstance(conf._ast_dict[C.F_BREPHONETIC][0], adv_conf.OrAst)
+    assert isinstance(conf._ast_dict[C.F_AMEPRON][0], adv_conf.OrAst)
+    assert isinstance(conf._ast_dict[C.F_BREPRON][0], adv_conf.OrAst)
     assert conf.is_dirty() is False
 
 
@@ -401,12 +401,12 @@ def test_adv_enabled():
     assert conf.is_dirty() is True
 
     # test ASTs are changed to Api from old config
-    assert isinstance(conf._ast_dict[C.F_DEFINITION][0], adv_conf.ApiFConfAST)
+    assert isinstance(conf._ast_dict[C.F_DEFINITION][0], adv_conf.ApiAst)
 
     conf.advanced_enabled = True
 
     # test ASTs are changed back to OR
-    assert isinstance(conf._ast_dict[C.F_DEFINITION][0], adv_conf.OrFConfAST)
+    assert isinstance(conf._ast_dict[C.F_DEFINITION][0], adv_conf.OrAst)
 
 
 def test_adv_enable_user_modules():
@@ -427,12 +427,12 @@ def test_adv_definition():
 
     assert conf.advanced_definition == 'flag:1'
     # test AST is changed
-    assert isinstance(conf._ast_dict[C.F_DEFINITION][0], adv_conf.NoteFlagFConfAST)
+    assert isinstance(conf._ast_dict[C.F_DEFINITION][0], adv_conf.FlagAst)
     assert conf.is_dirty() is True
 
     # test AST should not change because `advanced_enabled` is True
     conf.definition = True
-    assert isinstance(conf._ast_dict[C.F_DEFINITION][0], adv_conf.NoteFlagFConfAST)
+    assert isinstance(conf._ast_dict[C.F_DEFINITION][0], adv_conf.FlagAst)
 
 
 def test_adv_sentence():
@@ -443,12 +443,12 @@ def test_adv_sentence():
 
     assert conf.advanced_sentence == 'flag:1'
     # test AST is changed
-    assert isinstance(conf._ast_dict[C.F_SENTENCE][0], adv_conf.NoteFlagFConfAST)
+    assert isinstance(conf._ast_dict[C.F_SENTENCE][0], adv_conf.FlagAst)
     assert conf.is_dirty() is True
 
     # test AST should not change because `advanced_enabled` is True
     conf.sentence = True
-    assert isinstance(conf._ast_dict[C.F_SENTENCE][0], adv_conf.NoteFlagFConfAST)
+    assert isinstance(conf._ast_dict[C.F_SENTENCE][0], adv_conf.FlagAst)
 
 
 def test_adv_phrase():
@@ -459,12 +459,12 @@ def test_adv_phrase():
 
     assert conf.advanced_phrase == 'flag:1'
     # test AST is changed
-    assert isinstance(conf._ast_dict[C.F_PHRASE][0], adv_conf.NoteFlagFConfAST)
+    assert isinstance(conf._ast_dict[C.F_PHRASE][0], adv_conf.FlagAst)
     assert conf.is_dirty() is True
 
     # test AST should not change because `advanced_enabled` is True
     conf.phrase = True
-    assert isinstance(conf._ast_dict[C.F_PHRASE][0], adv_conf.NoteFlagFConfAST)
+    assert isinstance(conf._ast_dict[C.F_PHRASE][0], adv_conf.FlagAst)
 
 
 def test_adv_image():
@@ -475,12 +475,12 @@ def test_adv_image():
 
     assert conf.advanced_image == 'flag:1'
     # test AST is changed
-    assert isinstance(conf._ast_dict[C.F_IMAGE][0], adv_conf.NoteFlagFConfAST)
+    assert isinstance(conf._ast_dict[C.F_IMAGE][0], adv_conf.FlagAst)
     assert conf.is_dirty() is True
 
     # test AST should not change because `advanced_enabled` is True
     conf.image = True
-    assert isinstance(conf._ast_dict[C.F_IMAGE][0], adv_conf.NoteFlagFConfAST)
+    assert isinstance(conf._ast_dict[C.F_IMAGE][0], adv_conf.FlagAst)
 
 
 def test_adv_ame_phonetic():
@@ -491,12 +491,12 @@ def test_adv_ame_phonetic():
 
     assert conf.advanced_AmEPhonetic == 'flag:1'
     # test AST is changed
-    assert isinstance(conf._ast_dict[C.F_AMEPHONETIC][0], adv_conf.NoteFlagFConfAST)
+    assert isinstance(conf._ast_dict[C.F_AMEPHONETIC][0], adv_conf.FlagAst)
     assert conf.is_dirty() is True
 
     # test AST should not change because `advanced_enabled` is True
     conf.ame_phonetic = True
-    assert isinstance(conf._ast_dict[C.F_AMEPHONETIC][0], adv_conf.NoteFlagFConfAST)
+    assert isinstance(conf._ast_dict[C.F_AMEPHONETIC][0], adv_conf.FlagAst)
 
 
 def test_adv_bre_phonetic():
@@ -507,12 +507,12 @@ def test_adv_bre_phonetic():
 
     assert conf.advanced_BrEPhonetic == 'flag:1'
     # test AST is changed
-    assert isinstance(conf._ast_dict[C.F_BREPHONETIC][0], adv_conf.NoteFlagFConfAST)
+    assert isinstance(conf._ast_dict[C.F_BREPHONETIC][0], adv_conf.FlagAst)
     assert conf.is_dirty() is True
 
     # test AST should not change because `advanced_enabled` is True
     conf.bre_phonetic = True
-    assert isinstance(conf._ast_dict[C.F_BREPHONETIC][0], adv_conf.NoteFlagFConfAST)
+    assert isinstance(conf._ast_dict[C.F_BREPHONETIC][0], adv_conf.FlagAst)
 
 
 def test_adv_ame_pron():
@@ -523,12 +523,12 @@ def test_adv_ame_pron():
 
     assert conf.advanced_AmEPron == 'flag:1'
     # test AST is changed
-    assert isinstance(conf._ast_dict[C.F_AMEPRON][0], adv_conf.NoteFlagFConfAST)
+    assert isinstance(conf._ast_dict[C.F_AMEPRON][0], adv_conf.FlagAst)
     assert conf.is_dirty() is True
 
     # test AST should not change because `advanced_enabled` is True
     conf.ame_pron = True
-    assert isinstance(conf._ast_dict[C.F_AMEPRON][0], adv_conf.NoteFlagFConfAST)
+    assert isinstance(conf._ast_dict[C.F_AMEPRON][0], adv_conf.FlagAst)
 
 
 def test_adv_bre_pron():
@@ -539,12 +539,12 @@ def test_adv_bre_pron():
 
     assert conf.advanced_BrEPron == 'flag:1'
     # test AST is changed
-    assert isinstance(conf._ast_dict[C.F_BREPRON][0], adv_conf.NoteFlagFConfAST)
+    assert isinstance(conf._ast_dict[C.F_BREPRON][0], adv_conf.FlagAst)
     assert conf.is_dirty() is True
 
     # test AST should not change because `advanced_enabled` is True
     conf.bre_pron = True
-    assert isinstance(conf._ast_dict[C.F_BREPRON][0], adv_conf.NoteFlagFConfAST)
+    assert isinstance(conf._ast_dict[C.F_BREPRON][0], adv_conf.FlagAst)
 
 
 def test_user_agent_has_instance():

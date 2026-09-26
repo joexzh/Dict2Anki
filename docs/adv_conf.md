@@ -22,7 +22,7 @@ In this example, "有道 API" is first to evaluate, if it fails, fallback to "�
 
 Parser supports `api` and `flag` expression, parenthesis expression, and two binary expressions: OR and AND with operators of `|` and `&` respectively. API name should be double-quoted if contains spaces or either of the characters `:()&|"`, since these characters are special delimiters. `"` should follow a backslash (`\"`) inside a double-quoted-string. API name cannot be exact `api` or `flag` unless it's quoted: `api:"api"`.
 
-When evaluating the AST, specific visitor function is called so that corresponding action is made. For example, `ApiFConfVisitor` is implemented for API query, `NoteFConfVisitor` for saving and flagging note in database, `MoveAudioFConfVisitor` for moving downloaded audios to Anki media folder when saving notes.
+When evaluating the AST, specific visitor function is called so that corresponding action is made. For example, `ApiVisitor` is implemented for API query, `NoteVisitor` for saving and flagging note in database, `MoveAudioVisitor` for moving downloaded audios to Anki media folder when saving notes.
 
 ## UML class diagram
 
@@ -35,88 +35,88 @@ classDiagram
         +str word
         +Note note
         +dict~str api, QueryData~ query_cache
-        +dict~str field_name, FConfAST~ ast_dict
+        +dict~str field_name, Ast~ ast_dict
     }
 
     note for client "this is a function"
 
-    client "1" o-- "*" FConfAST
+    client "1" o-- "*" Ast
 
-    class FConfVisitor{
+    class Visitor{
         +visit_api(str api) bool
         +visit_empty() bool
         +visit_note_flag(str flag) bool
     }
 
-    class ApiFConfVisitor{
+    class ApiVisitor{
         +str word
         +str field
         +dict~str api, QueryData~ query_cache
     }
 
-    FConfVisitor <|.. ApiFConfVisitor
+    Visitor <|.. ApiVisitor
 
-    class NoteFConfVisitor{
+    class NoteVisitor{
         +str word
         +str field
         +dict~str api, QueryData~ query_cache
         +Note note
     }
 
-    FConfVisitor <|.. NoteFConfVisitor
+    Visitor <|.. NoteVisitor
 
-    class FConfAST{
-        +eval(FConfVisitor) bool
+    class Ast{
+        +eval(Visitor) bool
         +\_\_str\_\_() str
         +\_\_repr\_\_() str
     }
 
-    FConfAST <-- FConfVisitor
+    Ast <-- Visitor
 
-    class EmptyFConfAST{
+    class EmptyAst{
 
     }
 
-    FConfAST <|-- EmptyFConfAST
+    Ast <|-- EmptyAst
 
-    note for EmptyFConfAST "eval(FConfVisitor visitor):
+    note for EmptyAst "eval(Visitor visitor):
     return visitor.visit_empty()"
 
-    class AndFConfAST{
-        -FConfAST left
-        -FConfAST right
+    class AndAst{
+        -Ast left
+        -Ast right
     }
 
-    note for AndFConfAST "eval(FConfVisitor visitor):
+    note for AndAst "eval(Visitor visitor):
     return left.eval(visitor) and right.eval(visitor)"
 
-    FConfAST <|.. AndFConfAST
+    Ast <|.. AndAst
 
-    class OrFConfAST{
-        -FConfAST left
-        -FConfAST right
+    class OrAst{
+        -Ast left
+        -Ast right
     }
 
-    note for OrFConfAST "eval(FConfVisitor visitor):
+    note for OrAst "eval(Visitor visitor):
     return left.eval(visitor) or right.eval(visitor)"
 
-    FConfAST <|.. OrFConfAST
+    Ast <|.. OrAst
 
-    class ApiFConfAST{
+    class ApiAst{
         -str api
     }
 
-    note for ApiFConfAST "eval(FConfVisitor visitor):
+    note for ApiAst "eval(Visitor visitor):
     return visitor.set_field(api)"
 
-    FConfAST <|.. ApiFConfAST
+    Ast <|.. ApiAst
 
-    class NoteFlagFConfAST{
+    class FlagAst{
         -str flag
     }
 
-    note for NoteFlagFConfAST "eval(FConfVisitor visitor):
+    note for FlagAst "eval(Visitor visitor):
     return visitor.visit_note_flag(flag)"
 
-    FConfAST <|.. NoteFlagFConfAST
+    Ast <|.. FlagAst
 ```

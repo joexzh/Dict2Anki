@@ -54,16 +54,16 @@ class Conf(_T.ListenableModel):
         super().__init__()
         # require valid `config` returned from `mw.addonManager.getConfig`
         self._map: _T.ConfigMap = conf
-        self._ast_dict: dict[str, tuple[T.Optional[adv_conf.FConfAST], str]] = self._make_ast_dict()
+        self._ast_dict: dict[str, tuple[T.Optional[adv_conf.Ast], str]] = self._make_ast_dict()
         self._dirty = False
 
         migrate_version(self)
 
-    def _make_ast_from_bool(self, val: bool) -> adv_conf.FConfAST:
-        return adv_conf.ApiFConfAST(self.selected_api) if val else adv_conf.EmptyFConfAST()
+    def _make_ast_from_bool(self, val: bool) -> adv_conf.Ast:
+        return adv_conf.ApiAst(self.selected_api) if val else adv_conf.EmptyAst()
 
     def _make_ast_dict_old(self):
-        ast_dict: dict[str, tuple[T.Optional[adv_conf.FConfAST], str]] = {}
+        ast_dict: dict[str, tuple[T.Optional[adv_conf.Ast], str]] = {}
         ast_dict[C.F_DEFINITION] = (self._make_ast_from_bool(self.definition), '')
         ast_dict[C.F_SENTENCE] = (self._make_ast_from_bool(self.sentence), '')
         ast_dict[C.F_IMAGE] = (self._make_ast_from_bool(self.image), '')
@@ -75,7 +75,7 @@ class Conf(_T.ListenableModel):
         return ast_dict
 
     def _make_ast_dict_advanced(self):
-        ast_dict: dict[str, tuple[T.Optional[adv_conf.FConfAST], str]] = {}
+        ast_dict: dict[str, tuple[T.Optional[adv_conf.Ast], str]] = {}
         ast_dict[C.F_DEFINITION] = adv_conf.make_ast(self.advanced_definition)
         ast_dict[C.F_SENTENCE] = adv_conf.make_ast(self.advanced_sentence)
         ast_dict[C.F_IMAGE] = adv_conf.make_ast(self.advanced_image)
@@ -86,7 +86,7 @@ class Conf(_T.ListenableModel):
         ast_dict[C.F_BREPRON] = adv_conf.make_ast(self.advanced_BrEPron)
         return ast_dict
 
-    def _make_ast_dict(self) -> dict[str, tuple[T.Optional[adv_conf.FConfAST], str]]:
+    def _make_ast_dict(self) -> dict[str, tuple[T.Optional[adv_conf.Ast], str]]:
         if self.advanced_enabled:
             return self._make_ast_dict_advanced()
         return self._make_ast_dict_old()

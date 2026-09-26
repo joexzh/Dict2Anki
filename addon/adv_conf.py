@@ -19,7 +19,7 @@ from . import misc, noteManager, queryApi
 logger = logging.getLogger('dict2Anki.adv_conf')
 
 
-class FConfVisitor(ABC):
+class Visitor(ABC):
     """Called by field config AST to do varias things based on different
     implementations.
     """
@@ -37,7 +37,7 @@ class FConfVisitor(ABC):
         pass
 
 
-class ApiFConfVisitor(FConfVisitor):
+class ApiVisitor(Visitor):
     """Fetching query APIs, store results in `query_cache`. also download audios
     to temp folder.
     """
@@ -102,7 +102,7 @@ class ApiFConfVisitor(FConfVisitor):
         return ret
 
 
-class NoteFConfVisitor(FConfVisitor):
+class NoteVisitor(Visitor):
     """update note field value"""
 
     def __init__(
@@ -143,7 +143,7 @@ class NoteFConfVisitor(FConfVisitor):
         return False
 
 
-class MoveAudioFConfVisitor(FConfVisitor):
+class MoveAudioVisitor(Visitor):
     """Only for *Pron field to move mp3 files"""
 
     def __init__(self, word: str, field: str):
@@ -166,7 +166,7 @@ class MoveAudioFConfVisitor(FConfVisitor):
         return False
 
 
-class CallbackFConfVisitor(FConfVisitor):
+class CallbackVisitor(Visitor):
     def __init__(
         self,
         api_callback: T.Optional[T.Callable[[str], bool]] = None,
@@ -193,9 +193,9 @@ class CallbackFConfVisitor(FConfVisitor):
         return False
 
 
-class FConfAST(ABC):
+class Ast(ABC):
     @abstractmethod
-    def eval(self, visitor: FConfVisitor) -> bool:
+    def eval(self, visitor: Visitor) -> bool:
         pass
 
     @abstractmethod
@@ -207,8 +207,8 @@ class FConfAST(ABC):
         return self.__str__()
 
 
-class EmptyFConfAST(FConfAST):
-    def eval(self, visitor: FConfVisitor) -> bool:
+class EmptyAst(Ast):
+    def eval(self, visitor: Visitor) -> bool:
         return visitor.visit_empty()
 
     def __str__(self):
@@ -218,12 +218,12 @@ class EmptyFConfAST(FConfAST):
         return super().__repr__()
 
 
-class AndFConfAST(FConfAST):
-    def __init__(self, left: FConfAST, right: FConfAST):
+class AndAst(Ast):
+    def __init__(self, left: Ast, right: Ast):
         self.left = left
         self.right = right
 
-    def eval(self, visitor: FConfVisitor) -> bool:
+    def eval(self, visitor: Visitor) -> bool:
         return self.left.eval(visitor) and self.right.eval(visitor)
 
     def __str__(self):
@@ -233,12 +233,12 @@ class AndFConfAST(FConfAST):
         return self.__str__()
 
 
-class OrFConfAST(FConfAST):
-    def __init__(self, left: FConfAST, right: FConfAST):
+class OrAst(Ast):
+    def __init__(self, left: Ast, right: Ast):
         self.left = left
         self.right = right
 
-    def eval(self, visitor: FConfVisitor) -> bool:
+    def eval(self, visitor: Visitor) -> bool:
         return self.left.eval(visitor) or self.right.eval(visitor)
 
     def __str__(self):
@@ -248,11 +248,11 @@ class OrFConfAST(FConfAST):
         return self.__str__()
 
 
-class ApiFConfAST(FConfAST):
+class ApiAst(Ast):
     def __init__(self, api: str):
         self.api = api
 
-    def eval(self, visitor: FConfVisitor) -> bool:
+    def eval(self, visitor: Visitor) -> bool:
         return visitor.visit_api(self.api)
 
     def __str__(self):
@@ -262,11 +262,11 @@ class ApiFConfAST(FConfAST):
         return self.__str__()
 
 
-class NoteFlagFConfAST(FConfAST):
+class FlagAst(Ast):
     def __init__(self, flag: int):
         self.flag = flag
 
-    def eval(self, visitor: FConfVisitor) -> bool:
+    def eval(self, visitor: Visitor) -> bool:
         """always return False"""
         visitor.visit_note_flag(self.flag)
         return False
@@ -389,7 +389,7 @@ class Parser:
     def __init__(self, lexer: Lexer):
         self.lexer = lexer
 
-    def parse_api_expr(self) -> tuple[T.Optional[ApiFConfAST], str]:
+    def parse_api_expr(self) -> tuple[T.Optional[ApiAst], str]:
         """
         'api' ':' (string | '"' string '"')
         """
@@ -402,11 +402,11 @@ class Parser:
         if next_tok == Lexer.Token.StrVal:
             api = self.lexer.str_val
             self.lexer.get_next_tok()  # eat
-            return ApiFConfAST(api), ''
+            return ApiAst(api), ''
 
         return None, 'Error: expect (quoted-)string after `api:`'
 
-    def parse_flag_expr(self) -> tuple[T.Optional[NoteFlagFConfAST], str]:
+    def parse_flag_expr(self) -> tuple[T.Optional[FlagAst], str]:
         """
         'flag' ':' number
         """
@@ -418,11 +418,11 @@ class Parser:
         next_tok = self.lexer.get_next_tok()
         if next_tok == Lexer.Token.NumVal:
             self.lexer.get_next_tok()  # eat number
-            return NoteFlagFConfAST(self.lexer.num_val), ''
+            return FlagAst(self.lexer.num_val), ''
 
         return None, 'Error: expect number after `flag:`'
 
-    def parse_paren_expr(self) -> tuple[T.Optional[FConfAST], str]:
+    def parse_paren_expr(self) -> tuple[T.Optional[Ast], str]:
         """
         '(' expr ')'
         """
@@ -438,7 +438,7 @@ class Parser:
         self.lexer.get_next_tok()  # eat ')'
         return ast, err
 
-    def parse_primary(self) -> tuple[T.Optional[FConfAST], str]:
+    def parse_primary(self) -> tuple[T.Optional[Ast], str]:
         """
         paren_expr
         api_expr
@@ -454,14 +454,14 @@ class Parser:
         else:
             return None, 'Error: unknown token when expecting an expression'
 
-    def parse_expr(self) -> tuple[T.Optional[FConfAST], str]:
+    def parse_expr(self) -> tuple[T.Optional[Ast], str]:
         lhs, err = self.parse_primary()
         if lhs is None:
             return lhs, err
 
         return self.parse_rhs(lhs)
 
-    def parse_rhs(self, lhs: FConfAST) -> tuple[T.Optional[FConfAST], str]:
+    def parse_rhs(self, lhs: Ast) -> tuple[T.Optional[Ast], str]:
         while True:
             op = self.lexer.curr_tok
             if op != ord('&') and op != ord('|'):
@@ -473,15 +473,15 @@ class Parser:
                 return rhs, err
 
             if op == ord('&'):
-                lhs = AndFConfAST(lhs, rhs)
+                lhs = AndAst(lhs, rhs)
             else:
-                lhs = OrFConfAST(lhs, rhs)
+                lhs = OrAst(lhs, rhs)
 
-    def parse(self) -> tuple[T.Optional[FConfAST], str]:
+    def parse(self) -> tuple[T.Optional[Ast], str]:
         with self.lexer:
             next_tok = self.lexer.get_next_tok()
             if next_tok == Lexer.Token.EOF:
-                return EmptyFConfAST(), ''
+                return EmptyAst(), ''
 
             # unknown suffix guard
             ast, err = self.parse_expr()
@@ -490,7 +490,7 @@ class Parser:
             return ast, err
 
 
-def make_ast(fc_str: str) -> tuple[T.Optional[FConfAST], str]:
+def make_ast(fc_str: str) -> tuple[T.Optional[Ast], str]:
     """Make AST from field config str.
 
     Returns: If parse succeed, tuple[0] is not None. If fail, tuple[0] is None,
@@ -501,7 +501,7 @@ def make_ast(fc_str: str) -> tuple[T.Optional[FConfAST], str]:
     return parser.parse()
 
 
-def get_api_set(asts: T.Iterable[FConfAST]) -> set[str]:
+def get_api_set(asts: T.Iterable[Ast]) -> set[str]:
     api_set: set[str] = set()
 
     def api_callback(api: str) -> bool:
@@ -509,11 +509,11 @@ def get_api_set(asts: T.Iterable[FConfAST]) -> set[str]:
         return False
 
     for ast in asts:
-        ast.eval(CallbackFConfVisitor(api_callback))
+        ast.eval(CallbackVisitor(api_callback))
     return api_set
 
 
-def get_invalid_api_set(asts: T.Iterable[FConfAST]) -> set[str]:
+def get_invalid_api_set(asts: T.Iterable[Ast]) -> set[str]:
     invalid_api_set: set[str] = set()
 
     for api in get_api_set(asts):
@@ -523,8 +523,8 @@ def get_invalid_api_set(asts: T.Iterable[FConfAST]) -> set[str]:
 
 
 def ensure_ast_dict_errmsg_for_ui(
-    ast_dict: dict[str, tuple[T.Optional[FConfAST], str]],
-) -> tuple[dict[str, FConfAST], str]:
+    ast_dict: dict[str, tuple[T.Optional[Ast], str]],
+) -> tuple[dict[str, Ast], str]:
     """ensure ASTs are valid (not None and all API valid), Otherwise, return
     empty dict and error message
 
@@ -546,8 +546,8 @@ def eval_asts_set_note(
     word: str,
     note: anki.notes.Note,
     query_cache: dict[str, T.Optional[_T.QueryWordData]],
-    ast_dict: dict[str, FConfAST],
+    ast_dict: dict[str, Ast],
     flag_ref: T.Optional[list[int]] = None,
 ):
     for field, ast in ast_dict.items():
-        ast.eval(NoteFConfVisitor(word, field, note, query_cache, flag_ref))
+        ast.eval(NoteVisitor(word, field, note, query_cache, flag_ref))

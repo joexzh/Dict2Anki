@@ -153,7 +153,7 @@ class ApiASTWorker(AbstractWorker):
     def __init__(
         self,
         row_words: list[tuple[int, str]],  # e.g. (0, 'hello')
-        fconf_ast_dict: dict[str, adv_conf.FConfAST],
+        fconf_ast_dict: dict[str, adv_conf.Ast],
         congest: int = 120,
         parent=None,
     ):
@@ -171,7 +171,7 @@ class ApiASTWorker(AbstractWorker):
             for field, ast in self.fconf_ast_dict.items():
                 if self.interrupted:
                     break
-                ret_eval = ast.eval(adv_conf.ApiFConfVisitor(word, field, query_cache)) or ret_eval
+                ret_eval = ast.eval(adv_conf.ApiVisitor(word, field, query_cache)) or ret_eval
             self.rowSuccess.emit(row, word, query_cache) if ret_eval else self.rowFail.emit(row, word, query_cache)
 
         try:

@@ -394,8 +394,8 @@ class Windows(QDialog, mainUI.Ui_Dialog):
             adv_conf.eval_asts_set_note(word, note, query_cache, ast_dict)
 
             # move audio file
-            ast_dict[C.F_AMEPRON].eval(adv_conf.MoveAudioFConfVisitor(word, C.F_AMEPRON))
-            ast_dict[C.F_BREPRON].eval(adv_conf.MoveAudioFConfVisitor(word, C.F_BREPRON))
+            ast_dict[C.F_AMEPRON].eval(adv_conf.MoveAudioVisitor(word, C.F_AMEPRON))
+            ast_dict[C.F_BREPRON].eval(adv_conf.MoveAudioVisitor(word, C.F_BREPRON))
 
             added += 1
 

@@ -87,7 +87,7 @@ class Repair:
         self._notes = []
         self._query_cache_list: list[dict[str, T.Optional[_T.QueryWordData]]] = []
         'same length as self._notes'
-        self._ensured_selected_dict: dict[str, adv_conf.FConfAST] = {}
+        self._ensured_selected_dict: dict[str, adv_conf.Ast] = {}
         self._listen_ui_events()
 
     def _listen_ui_events(self):
@@ -286,7 +286,7 @@ Deck：          {conf.deck}
 
             def move_audio(word: str, field: str):
                 if ast := self._ensured_selected_dict.get(field):
-                    if ast.eval(adv_conf.MoveAudioFConfVisitor(word, field)):
+                    if ast.eval(adv_conf.MoveAudioVisitor(word, field)):
                         self._model.audio_stats.incSuccessCnt()
                     else:
                         self._model.audio_stats.incFailCnt()
