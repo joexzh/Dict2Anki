@@ -1,11 +1,9 @@
-import os
-
 import aqt.utils
 import pytest
 from pytest import MonkeyPatch as MP
 
 from addon import constants as C
-from addon import misc, noteManager, queryApi, repair, workers
+from addon import misc, noteManager, queryApi, repair
 from addon.addonWindow import Windows
 
 from . import helper, mock_helper
@@ -184,19 +182,20 @@ def test_query(
     w.repairImgCB.setChecked(True)
     w.repairAmEPhoneticCB.setChecked(True)
     w.repairBrEPhoneticCB.setChecked(True)
-    w.repairPronCB.setChecked(True)
+    w.repairAmEPronCB.setChecked(True)
+    w.repairBrEPronCB.setChecked(True)
 
     w.repairBtn.click()
 
     def check_show_critical():
-        assert aqt.utils.show_critical.called
+        assert aqt.utils.show_critical.called  # type: ignore
 
     if case == 3:
         qtbot.waitUntil(check_show_critical)
         return
 
     def check_tooltip():
-        assert aqt.utils.tooltip.called_with == (('修复完成',), {})
+        assert aqt.utils.tooltip.called_with == (('修复完成',), {})  # type: ignore
 
     # wait until finish tooltip
     qtbot.waitUntil(check_tooltip)
@@ -222,5 +221,5 @@ def test_query(
         # notes should be wiped, pick the first to check
         assert notes_[0][C.F_DEFINITION] == ''
 
-    assert misc.mv_file.called == expected_mv_file_called
+    assert misc.mv_file.called == expected_mv_file_called  # type: ignore
     assert model.note_stats.total == n_notes

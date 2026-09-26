@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Dialog</class>
+ <widget class="QDialog" name="Dialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>416</width>
+    <height>343</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Dialog</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="1" column="2">
+    <widget class="QScrollArea" name="flagScrollArea">
+     <property name="widgetResizable">
+      <bool>true</bool>
+     </property>
+     <widget class="QWidget" name="flagScrollAreaWidgetContents">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>194</width>
+        <height>263</height>
+       </rect>
+      </property>
+      <layout class="QVBoxLayout" name="flagScrollLayout">
+       <item>
+        <widget class="QPushButton" name="flag_0_btn">
+         <property name="text">
+          <string>flag:0</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="flag_1_btn">
+         <property name="styleSheet">
+          <string notr="true">QPushButton {
+    background-color: #ef4444;
+}</string>
+         </property>
+         <property name="text">
+          <string>flag:1</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="flag_2_btn">
+         <property name="styleSheet">
+          <string notr="true">QPushButton {
+    background-color: #fb923c;
+}</string>
+         </property>
+         <property name="text">
+          <string>flag:2</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="flag_3_btn">
+         <property name="styleSheet">
+          <string notr="true">QPushButton {
+    background-color: #4ade80;
+}</string>
+         </property>
+         <property name="text">
+          <string>flag:3</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="flag_4_btn">
+         <property name="styleSheet">
+          <string notr="true">QPushButton {
+    background-color: #3b82f6;
+}</string>
+         </property>
+         <property name="text">
+          <string>flag:4</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="flag_5_btn">
+         <property name="styleSheet">
+          <string notr="true">QPushButton {
+    background-color: #e879f9;
+}</string>
+         </property>
+         <property name="text">
+          <string>flag:5</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="flag_6_btn">
+         <property name="styleSheet">
+          <string notr="true">QPushButton {
+    background-color: #2dd4bf;
+}</string>
+         </property>
+         <property name="text">
+          <string>flag:6</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="flag_7_btn">
+         <property name="styleSheet">
+          <string notr="true">QPushButton {
+    background-color: #a855f7;
+}</string>
+         </property>
+         <property name="text">
+          <string>flag:7</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+   <item row="2" column="1" colspan="2">
+    <widget class="QLineEdit" name="lineEdit"/>
+   </item>
+   <item row="3" column="2">
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="orientation">
+      <enum>Qt::Orientation::Horizontal</enum>
+     </property>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::StandardButton::Cancel|QDialogButtonBox::StandardButton::Ok</set>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="1">
+    <widget class="QScrollArea" name="apiScrollArea">
+     <property name="widgetResizable">
+      <bool>true</bool>
+     </property>
+     <widget class="QWidget" name="apiScrollAreaWidgetContents">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>194</width>
+        <height>263</height>
+       </rect>
+      </property>
+      <layout class="QVBoxLayout" name="apiScrollLayout"/>
+     </widget>
+    </widget>
+   </item>
+   <item row="3" column="1">
+    <widget class="QPushButton" name="descBtn">
+     <property name="text">
+      <string>查看说明</string>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <tabstops>
+  <tabstop>lineEdit</tabstop>
+  <tabstop>apiScrollArea</tabstop>
+  <tabstop>flagScrollArea</tabstop>
+  <tabstop>flag_0_btn</tabstop>
+  <tabstop>flag_1_btn</tabstop>
+  <tabstop>flag_2_btn</tabstop>
+  <tabstop>flag_3_btn</tabstop>
+  <tabstop>flag_4_btn</tabstop>
+  <tabstop>flag_5_btn</tabstop>
+  <tabstop>flag_6_btn</tabstop>
+  <tabstop>flag_7_btn</tabstop>
+  <tabstop>descBtn</tabstop>
+ </tabstops>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>accepted()</signal>
+   <receiver>Dialog</receiver>
+   <slot>accept()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>374</x>
+     <y>313</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>157</x>
+     <y>274</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>rejected()</signal>
+   <receiver>Dialog</receiver>
+   <slot>reject()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>374</x>
+     <y>319</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>286</x>
+     <y>274</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>

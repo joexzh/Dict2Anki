@@ -70,7 +70,7 @@ def update(title, tags, desc):
     URL = 'https://ankiweb.net/account/login'
     rsp = s.get(URL)
     soup = BeautifulSoup(rsp.text, features='html.parser')
-    csrf_token = soup.find('input', {'name': 'csrf_token'}).get('value')
+    csrf_token = soup.find('input', {'name': 'csrf_token'}).get('value')  # type: ignore
     s.post(URL, data={'submit': 1, 'csrf_token': csrf_token, 'username': username, 'password': password})
 
     URL = 'https://ankiweb.net/shared/upload'

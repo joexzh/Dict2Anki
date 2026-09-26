@@ -7,8 +7,8 @@ from bs4 import BeautifulSoup
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
+from .. import global_vars as G
 from .._typing import AbstractDictionary
-from .. import global_vars
 
 logger = logging.getLogger('dict2Anki.dictionary.youdao')
 
@@ -17,10 +17,7 @@ class Dict(AbstractDictionary):
     name = '有道词典'
     loginUrl = 'http://account.youdao.com/login?service=dict&back_url=http://dict.youdao.com/wordbook/wordlist%3Fkeyfrom%3Dnull'
     timeout = 10
-    headers = {
-        'Host': 'dict.youdao.com',
-        'User-Agent': global_vars.user_agent()
-    }
+    headers = {'Host': 'dict.youdao.com', 'User-Agent': G.user_agent()}
     retries = Retry(total=5, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
     session = requests.Session()
     session.mount('http://', HTTPAdapter(max_retries=retries))
@@ -38,7 +35,7 @@ class Dict(AbstractDictionary):
         """
         rsp = requests.get('http://dict.youdao.com/login/acc/query/accountinfo', cookies=cookie, headers=cls.headers)
         if rsp.json().get('code', None) == 0:
-            cls._indexSoup = BeautifulSoup(rsp.text, features="html.parser")
+            cls._indexSoup = BeautifulSoup(rsp.text, features='html.parser')
             logger.info('Cookie有效')
             cookiesJar = requests.utils.cookiejar_from_dict(cookie, cookiejar=None, overwrite=True)
             cls.session.cookies = cookiesJar
@@ -80,7 +77,7 @@ class Dict(AbstractDictionary):
             r = cls.session.get(
                 url='http://dict.youdao.com/wordbook/webapi/words',
                 timeout=cls.timeout,
-                params={'bookId': groupId, 'limit': 1, 'offset': 0}
+                params={'bookId': groupId, 'limit': 1, 'offset': 0},
             )
             totalWords = r.json()['data']['total']
             totalPages = ceil(totalWords / 15)  # 这里按网页默认每页取15个
@@ -105,7 +102,7 @@ class Dict(AbstractDictionary):
             r = cls.session.get(
                 'http://dict.youdao.com/wordbook/webapi/words',
                 timeout=cls.timeout,
-                params={'bookId': groupId, 'limit': 15, 'offset': pageNo * 15}
+                params={'bookId': groupId, 'limit': 15, 'offset': pageNo * 15},
             )
             wordList = [item['word'] for item in r.json()['data']['itemList']]
         except Exception as e:

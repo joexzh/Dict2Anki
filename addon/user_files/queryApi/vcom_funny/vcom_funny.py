@@ -102,7 +102,8 @@ class API(_T.AbstractQueryAPI):
     - AmEPron
     """
 
-    name = 'Vocabulary.com API'
+    name = 'funny Vocabulary.com API'
+    desc = '不适合所有人；释义摘取两段趣味解释，有可能为空；只有释义、英式音标、美式音标、美式发音有数据，其他字段为空'
     session = session
 
     @classmethod
@@ -115,5 +116,5 @@ class API(_T.AbstractQueryAPI):
             logger.exception(e)
         finally:
             logger.debug(queryResult)
-        logger.info(f'{API.name}: {word}, {queryResult}')
+            logger.info(f'{API.name}: {word}, {queryResult}')
         return queryResult

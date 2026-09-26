@@ -7,8 +7,8 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
+from .. import global_vars as G
 from .._typing import AbstractQueryAPI, QueryWordData
-from ..conf_model import Conf
 
 logger = logging.getLogger('dict2Anki.queryApi.bing')
 __all__ = ['API']
@@ -49,7 +49,13 @@ class Parser:
 
     @property
     def sentence(self) -> list[tuple[str, str]]:
-        return [(s.get('eng'), s.get('chn'),) for s in self._result.get('sams') or []]
+        return [
+            (
+                s.get('eng'),
+                s.get('chn'),
+            )
+            for s in self._result.get('sams') or []
+        ]
 
     @property
     def image(self) -> str:
@@ -66,14 +72,15 @@ class Parser:
             BrEPhonetic=self.BrEPhonetic,
             AmEPhonetic=self.AmEPhonetic,
             BrEPron=self.BrEPron,
-            AmEPron=self.AmEPron
+            AmEPron=self.AmEPron,
         )
 
 
 class API(AbstractQueryAPI):
     name = '必应 API'
+    desc = ''
     timeout = 10
-    headers = {'User-Agent': Conf.user_agent_or_default()}
+    headers = {'User-Agent': G.user_agent()}
     retries = Retry(total=5, backoff_factor=3, status_forcelist=[500, 502, 503, 504])
     session = requests.Session()
     session.mount('http://', HTTPAdapter(max_retries=retries))
@@ -83,7 +90,9 @@ class API(AbstractQueryAPI):
 
     @classmethod
     def query(cls, word) -> Optional[QueryWordData]:
-        validator = str.maketrans(string.punctuation, ' ' * len(string.punctuation))  # 第三方Bing API查询包含标点的单词时有可能会报错，所以用空格替换所有标点
+        validator = str.maketrans(
+            string.punctuation, ' ' * len(string.punctuation)
+        )  # 第三方Bing API查询包含标点的单词时有可能会报错，所以用空格替换所有标点
         query_result = None
         try:
             rsp = cls.session.get(cls.url, params=urlencode({'Word': word.translate(validator)}), timeout=cls.timeout)
@@ -93,4 +102,4 @@ class API(AbstractQueryAPI):
             logger.exception(e)
         finally:
             logger.debug(query_result)
-            return query_result
+        return query_result

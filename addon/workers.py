@@ -8,13 +8,13 @@ from abc import abstractmethod
 from itertools import chain
 
 import requests
-from aqt import QObject, pyqtBoundSignal, pyqtSignal
+from aqt import QObject, pyqtSignal
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
 from . import adv_conf, misc
 from . import constants as C
-from . import global_vars as V
+from . import global_vars as G
 from ._typing import AbstractDictionary, QueryWordData
 
 
@@ -38,7 +38,7 @@ class NetworkWorker(AbstractWorker):
     session = requests.Session()
     session.mount('http://', HTTPAdapter(max_retries=retries))
     session.mount('https://', HTTPAdapter(max_retries=retries))
-    session.headers.update({'User-Agent': V.user_agent()})
+    session.headers.update({'User-Agent': G.user_agent()})
 
     def __init__(self, parent=None):
         super().__init__(parent)

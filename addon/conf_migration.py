@@ -27,13 +27,13 @@ def migrate_v1_v2(confmap: _T.ConfigMap):
         cred.pop('username', None)
         cred.pop('password', None)
 
-        if cred['cookie'] != '':
-            cred[cookie_enc] = enc_cookies(cred['cookie'])
+        if cred['cookie'] != '':  # type: ignore
+            cred[cookie_enc] = enc_cookies(cred['cookie'])  # type: ignore
 
         if cookie_enc not in cred:
             cred[cookie_enc] = ''
 
-        del cred['cookie']
+        del cred['cookie']  # type: ignore
 
 
 def migrate_v2_v3(confmap: _T.ConfigMap):
@@ -60,7 +60,7 @@ def migrate_v2_v3(confmap: _T.ConfigMap):
         # default is youdao
         confmap['selected_dict'] = dictionary.youdao.Dict.name
 
-    del confmap['selectedDict']
+    del confmap['selectedDict']  # type: ignore
 
     if confmap['selectedApi'] == 1:
         confmap['selected_api'] = queryApi.eudict.API.name
@@ -68,7 +68,7 @@ def migrate_v2_v3(confmap: _T.ConfigMap):
         # default is youdao
         confmap['selected_api'] = queryApi.youdao.API.name
 
-    del confmap['selectedApi']
+    del confmap['selectedApi']  # type: ignore
 
     groups = confmap['dict_saved_groups'] = {}
     for i, group in enumerate(confmap['selectedGroup']):
@@ -77,7 +77,7 @@ def migrate_v2_v3(confmap: _T.ConfigMap):
         elif i == 1:
             groups[dictionary.youdao.Dict.name] = group
 
-    del confmap['selectedGroup']
+    del confmap['selectedGroup']  # type: ignore
 
     creds = confmap['credentials'] = {}
     for i, cred in enumerate(confmap['credential']):
@@ -86,7 +86,7 @@ def migrate_v2_v3(confmap: _T.ConfigMap):
         elif i == 1:
             creds[dictionary.youdao.Dict.name] = cred
 
-    del confmap['credential']
+    del confmap['credential']  # type: ignore
 
 
 def migrate_version(conf: Conf):

@@ -147,7 +147,7 @@ def parse_word_area(soup: BeautifulSoup, ret: VCOMWord):
 
             if audio_tag := ipa_tag.find('audio', class_='pron-audio'):
                 # `pron_audio_uk`
-                ret['pron_audio_uk'] = audio_tag.get('src', '')
+                ret['pron_audio_uk'] = audio_tag.get('src', '')  # type: ignore
         else:
             continue
 
@@ -169,7 +169,7 @@ def parse_def_instance(ins_tag: Tag) -> list[DefInstance]:
 
     if dd_tags := ins_tag.select(':scope > .div-replace-dd '):
         # for `types` special case: if expandable, skip the first 2 elements,
-        if len(dd_tags) > 0 and 'more' in dd_tags[0].get('class', []):
+        if len(dd_tags) > 0 and 'more' in dd_tags[0].get('class', []):  # type: ignore
             dd_tags = dd_tags[2:]
 
         for dd_tag in dd_tags:
@@ -201,7 +201,7 @@ def parse_def(soup: BeautifulSoup) -> list[Definition]:
     for li_tag in def_li_tags:
         ret_def = make_empty_definition()
 
-        li_classes: list[str] = li_tag.get('class', [])
+        li_classes: list[str] = li_tag.get('class', [])  # type: ignore
         pos_cls = next(filter(lambda c: c.startswith('pos_'), li_classes), None)
 
         if 'ord1' in li_classes and 'sord1' in li_classes:
@@ -249,7 +249,7 @@ def parse_word_family(soup: BeautifulSoup) -> list[WordFamily]:
     ret: list[WordFamily] = []
 
     if (wf_tag := soup.find('vcom:wordfamily')) and (wf_data := wf_tag.get('data', '[]')):
-        wf_arr = json.loads(wf_data)
+        wf_arr = json.loads(wf_data)  # type: ignore
 
         for wf_obj in wf_arr:
             word: str = wf_obj['word']

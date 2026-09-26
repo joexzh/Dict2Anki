@@ -1,11 +1,13 @@
 import json
 import logging
-from PyQt6.QtCore import QUrl, pyqtSignal, Qt
-from .UIForm import loginDialog
-from PyQt6.QtWidgets import QDialog
-from PyQt6.QtWebEngineWidgets import QWebEngineView
+
+from PyQt6.QtCore import Qt, QUrl, pyqtSignal
 from PyQt6.QtWebEngineCore import QWebEngineProfile
-from .conf_model import Conf
+from PyQt6.QtWebEngineWidgets import QWebEngineView
+from PyQt6.QtWidgets import QDialog
+
+from . import global_vars as G
+from .UIForm import loginDialog
 
 logger = logging.getLogger('dict2Anki')
 
@@ -32,7 +34,7 @@ class LoginDialog(QDialog, loginDialog.Ui_LoginDialog):
 
     def _reload(self):
         logger.debug('Reload page')
-        self.page.cookieStore.deleteAllCookies() # type: ignore
+        self.page.cookieStore.deleteAllCookies()  # type: ignore
         self.page.load(QUrl(self.address.text()))
 
     def checkLoginState(self):
@@ -44,7 +46,7 @@ class LoginDialog(QDialog, loginDialog.Ui_LoginDialog):
                 self.onLoginSucceed()
             logger.info('Login Fail!')
 
-        self.page.page().toHtml(contentLoaded) # type: ignore
+        self.page.page().toHtml(contentLoaded)  # type: ignore
 
     def onLoginSucceed(self):
         logger.info('Destruct login dialog')
@@ -58,11 +60,11 @@ class LoginWebEngineView(QWebEngineView):
         super().__init__(*args, **kwargs)
         # 绑定cookie被添加的信号槽
         self.profile = QWebEngineProfile.defaultProfile()
-        self.profile.setHttpUserAgent( # type: ignore
-            Conf.user_agent_or_default()
+        self.profile.setHttpUserAgent(  # type: ignore
+            G.user_agent()
         )
-        self.cookieStore = self.profile.cookieStore() # type: ignore
-        self.cookieStore.cookieAdded.connect(self.onCookieAdd) # type: ignore
+        self.cookieStore = self.profile.cookieStore()  # type: ignore
+        self.cookieStore.cookieAdded.connect(self.onCookieAdd)  # type: ignore
         self._cookies = {}
         self.show()
 

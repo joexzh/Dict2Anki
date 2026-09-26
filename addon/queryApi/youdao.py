@@ -133,6 +133,7 @@ class Parser:
 
 class API(AbstractQueryAPI):
     name = '有道 API'
+    desc = '有道词典公开 API'
     # 重用 dictionary.Youdao 的 session
     timeout = dictionary.youdao.Dict.timeout
     session = dictionary.youdao.Dict.session

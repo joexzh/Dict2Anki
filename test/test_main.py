@@ -20,26 +20,26 @@ def test_start_up_with_fresh_config(qtbot, w_mock):
 
     assert w.conf.no_pron is False
     assert C.ADDON_FULL_NAME in w.windowTitle()
-    assert aqt.mw.addonManager.getConfig.called > 0
+    assert aqt.mw.addonManager.getConfig.called > 0  # type: ignore
     assert w.cookieLineEdit.text() == ''
 
 
 @pytest.mark.skip(reason='disable temporarily')
 def test_version_check(qtbot, monkeypatch: MP, w_mock):
     new_tag = 'v99999.0.0'
-    monkeypatch.setitem(requests.get('').json.return_value, 'tag_name', new_tag)
+    monkeypatch.setitem(requests.get('').json.return_value, 'tag_name', new_tag)  # type: ignore
 
     w = w_mock()
     qtbot.addWidget(w)
 
     def check_askUser():
-        assert aqt.utils.askUser.called_with == (
-            (f'有新版本:{new_tag.strip()}是否更新？\n\n{requests.get("").json.return_value["body"].strip()}',),
+        assert aqt.utils.askUser.called_with == (  # type: ignore
+            (f'有新版本:{new_tag.strip()}是否更新？\n\n{requests.get("").json.return_value["body"].strip()}',),  # type: ignore
             {},
         )
 
     qtbot.waitUntil(check_askUser)
-    assert requests.get('').json.called > 0
+    assert requests.get('').json.called > 0  # type: ignore
 
 
 @pytest.mark.parametrize('text', [dictionary.youdao.Dict.name, dictionary.eudict.Dict.name])
@@ -50,7 +50,7 @@ def test_dictionary_combobox_change(text: str, monkeypatch: MP, w_mock, qtbot):
     cookie1_enc = misc.enc_cookies(cookie1)
 
     monkeypatch.setitem(
-        aqt.mw.addonManager.getConfig.return_value,
+        aqt.mw.addonManager.getConfig.return_value,  # type: ignore
         'credentials',
         {
             dictionary.youdao.Dict.name: {'cookie_encoded': cookie0_enc},
@@ -66,13 +66,13 @@ def test_dictionary_combobox_change(text: str, monkeypatch: MP, w_mock, qtbot):
     assert w.dictionaryComboBox.currentText() in w.currentDictionaryLabel.text()
     cookie_decoded = w.conf.current_cookies
     assert cookie_decoded == misc.dec_cookies(
-        aqt.mw.addonManager.getConfig.return_value['credentials'][text]['cookie_encoded']
+        aqt.mw.addonManager.getConfig.return_value['credentials'][text]['cookie_encoded']  # type: ignore
     )
     assert w.cookieLineEdit.text() == cookie_decoded
 
 
 def test_get_deck_list(qtbot, monkeypatch: MP, w_mock):
-    monkeypatch.setitem(aqt.mw.addonManager.getConfig.return_value, 'deck', 'b')
+    monkeypatch.setitem(aqt.mw.addonManager.getConfig.return_value, 'deck', 'b')  # type: ignore
     monkeypatch.setattr(noteManager, 'getDeckNames', lambda: ['a', 'b', 'c'])
 
     w: Windows = w_mock()
@@ -111,7 +111,7 @@ def test_fetch_word_and_compare(
     w.getRemoteWordList(w.conf.current_selected_groups)
 
     def check_tooltip():
-        assert aqt.utils.tooltip.called
+        assert aqt.utils.tooltip.called  # type: ignore
 
     qtbot.waitUntil(check_tooltip)
 
@@ -124,14 +124,14 @@ def test_fetch_word_and_compare(
     if test_index == 0:
         assert item_in_list_widget == []
         assert item_in_del_widget == []
-        assert aqt.utils.tooltip.called_with == (('无需同步',), {})
+        assert aqt.utils.tooltip.called_with == (('无需同步',), {})  # type: ignore
     elif test_index == 1:
         assert sorted(words_in_list_widget) == sorted(remote_words)
         assert item_in_del_widget == []
     elif test_index == 2:
         assert item_in_list_widget == []
         assert item_in_del_widget == []
-        assert aqt.utils.tooltip.called_with == (('无需同步',), {})
+        assert aqt.utils.tooltip.called_with == (('无需同步',), {})  # type: ignore
     elif test_index == 3:
         assert words_in_list_widget == ['b']
         assert item_in_del_widget == []

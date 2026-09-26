@@ -8,7 +8,7 @@ import typing as T
 from . import _typing as _T
 from . import adv_conf
 from . import constants as C
-from . import global_vars as V
+from . import global_vars as G
 from .conf_migration import migrate_version
 from .misc import dec_cookies, enc_cookies
 
@@ -38,17 +38,17 @@ class Conf(_T.ListenableModel):
     @classmethod
     def getinstance(cls, confmap: _T.ConfigMap):
         "Thread safe singleton instance"
-        if V.conf_instance is None:
+        if G.conf_instance is None:
             with cls.lock:
-                if V.conf_instance is None:
-                    V.conf_instance = Conf(confmap)
-        return V.conf_instance
+                if G.conf_instance is None:
+                    G.conf_instance = Conf(confmap)
+        return G.conf_instance
 
     @classmethod
     def delinstance(cls):
         "Must call only when closing addon main window"
-        if V.conf_instance is not None:
-            V.conf_instance = None
+        if G.conf_instance is not None:
+            G.conf_instance = None
 
     def __init__(self, conf):
         super().__init__()

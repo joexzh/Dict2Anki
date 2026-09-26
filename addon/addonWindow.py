@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import logging
 import os
@@ -7,11 +9,22 @@ from typing import Iterable, Iterator, Optional
 
 import aqt
 import aqt.utils
-from aqt import QCloseEvent, QDialog, QIcon, QListWidgetItem, QPlainTextEdit, QPushButton, Qt, QVBoxLayout, pyqtSlot
+from aqt import (
+    QCloseEvent,
+    QDialog,
+    QIcon,
+    QListWidgetItem,
+    QPlainTextEdit,
+    QPushButton,
+    Qt,
+    QVBoxLayout,
+    pyqtSlot,
+)
 
-from . import adv_conf, conf_model, dictionary, misc, noteManager, queryApi
+from . import adv_conf, conf_model, misc, noteManager
 from . import constants as C
-from ._typing import AbstractDictionary, AbstractQueryAPI, ConfigMap, QueryWordData
+from ._typing import AbstractDictionary, AbstractQueryAPI, QueryWordData
+from .conf_controller import ConfCtl
 from .dictionary import dictionaries
 from .logger import Handler
 from .loginDialog import LoginDialog
@@ -64,7 +77,6 @@ class Windows(QDialog, mainUI.Ui_Dialog):
     def init_ui(self):
         self.setupUi(self)
         self.setWindowTitle(C.ADDON_FULL_NAME)
-        self.dummyBtn.hide()
         self.deckComboBox.addItems(noteManager.getDeckNames())
         self.needDeleteWordsView = NeedDeleteWordsView(self.needDeleteCheckBox, self.needDeleteWordListWidget)
         ConfCtl.init_ui(self, self.conf)
@@ -352,8 +364,6 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         self.syncBtn.setEnabled(False)
         logger.info('同步点击')
 
-        # TODO: add notes in background thread, use anki's api
-
         # add notes to database
 
         model = noteManager.getOrCreateModel()
@@ -379,7 +389,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
 
             note = noteManager.new_note(word, model)
             notes.append(note)
-            aqt.mw.col.add_note(note, deck['id'])
+            aqt.mw.col.add_note(note, deck['id'])  # type: ignore
 
             adv_conf.eval_asts_set_note(word, note, query_cache, ast_dict)
 
@@ -497,142 +507,3 @@ class NeedDeleteWordsView:
 
     def clear(self):
         self._list_widget.clear()
-
-
-class ConfCtl:
-    @staticmethod
-    def read() -> ConfigMap:
-        if config := aqt.mw.addonManager.getConfig(__name__):
-            return config  # type: ignore
-        else:
-            raise FileNotFoundError('missing config file')
-
-    @staticmethod
-    def write(conf: conf_model.Conf):
-        if conf.is_dirty():
-            aqt.mw.addonManager.writeConfig(__name__, conf.get_saving_map())  # type: ignore
-
-    @staticmethod
-    def init_ui(w: Windows, conf: conf_model.Conf):
-        """Should be called only once!"""
-
-        if conf.advanced_enabled and conf.advanced_enable_user_modules:
-            queryApi.load_usr_mod()
-            dictionary.load_usr_mod()
-
-        # init UI
-
-        w.dictionaryComboBox.addItems((k for k in dictionaries))
-        w.apiComboBox.addItems((k for k in apis))
-
-        if (dictionaries.get(dict_ := conf.selected_dict)) is None:
-            aqt.utils.show_info(f'无法加载模块[{dict_}]，回滚到默认值[{dictionary.default_dict.name}]', parent=w)
-            conf.selected_dict = dictionary.default_dict.name
-
-        if conf.advanced_enabled is False:
-            if (apis.get(api := conf.selected_api)) is None:
-                aqt.utils.show_info(f'无法加载模块[{api}]，回滚到默认值[{queryApi.default_api.name}]', parent=w)
-                conf.selected_api = queryApi.default_api.name
-        else:
-            # warn for any invalid API in user config
-            _ast_dict, errmsg = adv_conf.ensure_ast_dict_errmsg_for_ui(conf.get_ast_dict())
-            if errmsg:
-                aqt.utils.show_warning(errmsg)
-
-        w.deckComboBox.setCurrentText(conf.deck)
-        w.dictionaryComboBox.setCurrentText(conf.selected_dict)
-        w.currentDictionaryLabel.setText(f'当前选择词典: {w.dictionaryComboBox.currentText()}')
-        w.apiComboBox.setCurrentText(conf.selected_api)
-        w.cookieLineEdit.setText(conf.current_cookies)
-        w.definitionCheckBox.setChecked(conf.definition)
-        w.imageCheckBox.setChecked(conf.image)
-        w.sentenceCheckBox.setChecked(conf.sentence)
-        w.phraseCheckBox.setChecked(conf.phrase)
-        w.AmEPhoneticCheckBox.setChecked(conf.ame_phonetic)
-        w.BrEPhoneticCheckBox.setChecked(conf.bre_phonetic)
-        w.BrEPronRadioButton.setChecked(conf.bre_pron)
-        w.AmEPronRadioButton.setChecked(conf.ame_pron)
-        w.noPronRadioButton.setChecked(conf.no_pron)
-        w.congestSpinBox.setValue(conf.congest)
-        w.uaLineEdit.setText(conf.user_agent)
-        undoicon = QIcon.fromTheme(QIcon.ThemeIcon.EditUndo)
-        uaAction = w.uaLineEdit.addAction(undoicon, aqt.QLineEdit.ActionPosition.TrailingPosition)
-        uaAction.setToolTip('回到默认')
-
-        def _on_deck_combobox_change(text):
-            conf.deck = text
-
-        def _on_dict_combobox_change(text):
-            conf.selected_dict = text
-            w.currentDictionaryLabel.setText(f'当前选择词典: {w.dictionaryComboBox.currentText()}')
-            w.cookieLineEdit.blockSignals(True)
-            w.cookieLineEdit.setText(conf.current_cookies)
-            w.cookieLineEdit.blockSignals(False)
-
-        def _on_api_combobox_change(text):
-            conf.selected_api = text
-
-        def _on_cookie_line_edit_change(text):
-            conf.current_cookies = text
-
-        def _on_definition_cb_change(state: int):
-            conf.definition = state == Qt.CheckState.Checked.value
-
-        def _on_sentence_cb_change(state):
-            conf.sentence = state == Qt.CheckState.Checked.value
-
-        def _on_phrase_cb_change(state):
-            conf.phrase = state == Qt.CheckState.Checked.value
-
-        def _on_image_cb_change(state):
-            conf.image = state == Qt.CheckState.Checked.value
-
-        def _on_ame_phonetic_cb_change(state):
-            conf.ame_phonetic = state == Qt.CheckState.Checked.value
-
-        def _on_bre_phonetic_cb_change(state):
-            conf.bre_phonetic = state == Qt.CheckState.Checked.value
-
-        def _on_ame_pron_radio_toggled():
-            if w.AmEPronRadioButton.isChecked():
-                conf.ame_pron = True
-
-        def _on_bre_pron_radio_toggled():
-            if w.BrEPronRadioButton.isChecked():
-                conf.bre_pron = True
-
-        def _on_no_pron_radio_toggled():
-            if w.noPronRadioButton.isChecked():
-                conf.no_pron = True
-
-        def _on_congest_spinbox_change(value: int):
-            conf.congest = value
-
-        def _on_ua_line_edit_changed(text):
-            conf.user_agent = text
-
-        # register events
-        w.deckComboBox.currentTextChanged.connect(_on_deck_combobox_change)
-        w.dictionaryComboBox.currentTextChanged.connect(_on_dict_combobox_change)
-        w.apiComboBox.currentTextChanged.connect(_on_api_combobox_change)
-        w.cookieLineEdit.textChanged.connect(_on_cookie_line_edit_change)
-        w.definitionCheckBox.stateChanged.connect(_on_definition_cb_change)
-        w.sentenceCheckBox.stateChanged.connect(_on_sentence_cb_change)
-        w.phraseCheckBox.stateChanged.connect(_on_phrase_cb_change)
-        w.imageCheckBox.stateChanged.connect(_on_image_cb_change)
-        w.AmEPhoneticCheckBox.stateChanged.connect(_on_ame_phonetic_cb_change)
-        w.BrEPhoneticCheckBox.stateChanged.connect(_on_bre_phonetic_cb_change)
-        w.AmEPronRadioButton.toggled.connect(_on_ame_pron_radio_toggled)
-        w.BrEPronRadioButton.toggled.connect(_on_bre_pron_radio_toggled)
-        w.noPronRadioButton.toggled.connect(_on_no_pron_radio_toggled)
-        w.congestSpinBox.valueChanged.connect(_on_congest_spinbox_change)
-        w.uaLineEdit.textChanged.connect(_on_ua_line_edit_changed)
-        uaAction.triggered.connect(lambda: w.uaLineEdit.setText(C.USER_AGENT))
-
-        def update_cookies_line_edit(val: str):
-            w.cookieLineEdit.blockSignals(True)
-            w.cookieLineEdit.setText(val)
-            w.cookieLineEdit.blockSignals(False)
-
-        # register model events. For now only `current_cookies` is actively modified by code (not by user)
-        conf.listen('current_cookies', update_cookies_line_edit)

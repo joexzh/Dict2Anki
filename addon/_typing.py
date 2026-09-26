@@ -123,6 +123,8 @@ class AbstractQueryAPI(ABC):
     name: str
     '`name` has to be unique and never changes, otherwise may cause unexpected result somewhere'
 
+    desc: str
+
     session: requests.Session
     'mostly for audio download'
 

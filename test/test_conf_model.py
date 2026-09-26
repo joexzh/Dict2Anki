@@ -2,7 +2,7 @@ import typing as T
 
 from addon import adv_conf, conf_migration, dictionary, misc, queryApi
 from addon import constants as C
-from addon import global_vars as V
+from addon import global_vars as G
 from addon.conf_model import Conf
 
 from . import helper
@@ -551,16 +551,16 @@ def test_user_agent_has_instance():
 
     # don't forget to clear the singleton instance before this test ends
     Conf.getinstance(helper.fresh_latest_confmap())
-    assert_ua = V.user_agent()
+    assert_ua = G.user_agent()
 
     assert assert_ua == C.USER_AGENT
 
-    V.conf_instance = None
+    G.conf_instance = None
 
 
 def test_user_agent_no_instance():
-    V.conf_instance = None
-    assert V.user_agent() == C.USER_AGENT
+    G.conf_instance = None
+    assert G.user_agent() == C.USER_AGENT
 
 
 def test_user_agent_dirty():
@@ -582,7 +582,7 @@ def test_current_selected_groups_dirty():
 
 def test_migration_v1_v2():
     confmap = helper.fresh_v1_confmap()
-    confmap['credential'] = [{'cookie': '0'}, {'cookie': '1'}]
+    confmap['credential'] = [{'cookie': '0'}, {'cookie': '1'}]  # type: ignore
     cookie0_encoded = misc.enc_cookies('0')
     cookie1_encoded = misc.enc_cookies('1')
 
@@ -612,7 +612,7 @@ def test_migration_v2_v3():
 
 
 def test_decode_cookies_at_init():
-    cookies = """azAZ09~!@#$%^&*()_+-=[]{}\|;:'",<.>/?~`"""
+    cookies = """azAZ09~!@#$%^&*()_+-=[]{}\\|;:'",<.>/?~`"""
     cookies_enc = misc.enc_cookies(cookies)
 
     confmap = helper.fresh_v3_confmap()
