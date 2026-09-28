@@ -623,6 +623,11 @@
        </item>
       </layout>
      </widget>
+     <widget class="QWidget" name="tplTab">
+      <attribute name="title">
+       <string>模板</string>
+      </attribute>
+     </widget>
      <widget class="QWidget" name="repairTab">
       <attribute name="title">
        <string>修复</string>
@@ -780,7 +785,7 @@
   <customwidget>
    <class>ClickableLineEdit</class>
    <extends>QLineEdit</extends>
-   <header>ClickableLineEdit</header>
+   <header>clickableLineEdit</header>
   </customwidget>
  </customwidgets>
  <resources/>

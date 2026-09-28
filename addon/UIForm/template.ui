@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>tplForm</class>
+ <widget class="QWidget" name="tplForm">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>563</width>
+    <height>516</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <layout class="QHBoxLayout" name="tplSetLayout">
+     <item>
+      <widget class="QRadioButton" name="userTplButton">
+       <property name="text">
+        <string>当前</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+       <attribute name="buttonGroup">
+        <string notr="true">tplButtonGroup</string>
+       </attribute>
+      </widget>
+     </item>
+     <item>
+      <widget class="QRadioButton" name="defaultTplButton">
+       <property name="text">
+        <string>默认</string>
+       </property>
+       <attribute name="buttonGroup">
+        <string notr="true">tplButtonGroup</string>
+       </attribute>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="tplToolLayout">
+     <item>
+      <widget class="QRadioButton" name="frontButton">
+       <property name="text">
+        <string>Front</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+       <attribute name="buttonGroup">
+        <string notr="true">partButtonGroup</string>
+       </attribute>
+      </widget>
+     </item>
+     <item>
+      <widget class="QRadioButton" name="backButton">
+       <property name="text">
+        <string>Back</string>
+       </property>
+       <attribute name="buttonGroup">
+        <string notr="true">partButtonGroup</string>
+       </attribute>
+      </widget>
+     </item>
+     <item>
+      <widget class="QRadioButton" name="cssButton">
+       <property name="text">
+        <string>CSS</string>
+       </property>
+       <attribute name="buttonGroup">
+        <string notr="true">partButtonGroup</string>
+       </attribute>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="saveButton">
+       <property name="text">
+        <string>保存</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="previewButton">
+       <property name="text">
+        <string>预览</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QPlainTextEdit" name="plainEditText"/>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+ <buttongroups>
+  <buttongroup name="tplButtonGroup"/>
+  <buttongroup name="partButtonGroup"/>
+ </buttongroups>
+</ui>

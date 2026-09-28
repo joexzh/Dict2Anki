@@ -21,7 +21,7 @@ from aqt import (
     pyqtSlot,
 )
 
-from . import adv_conf, conf_model, misc, noteManager
+from . import adv_conf, conf_model, misc, noteManager, template
 from . import constants as C
 from ._typing import AbstractDictionary, AbstractQueryAPI, QueryWordData
 from .conf_controller import ConfCtl
@@ -32,7 +32,7 @@ from .queryApi import apis
 from .repair import Repair
 from .UIForm import (
     icons_rc,  # noqa: F401
-    mainUI,
+    main_ui,
     wordGroup,
 )
 from .workers import ApiASTWorker, LoginStateCheckWorker, RemoteWordFetchingWorker, VersionCheckWorker, WorkerManager
@@ -48,11 +48,9 @@ def fatal_error(exc_type, exc_value, exc_traceback):
 # sys.excepthook = fatal_error
 
 
-class Windows(QDialog, mainUI.Ui_Dialog):
-    isRunning = False
-
+class Windows(QDialog, main_ui.Ui_Dialog):
     def __init__(self, parent=None):
-        super(Windows, self).__init__(parent)
+        super().__init__(parent)
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.localWords = []
         self.remoteWords = []
@@ -62,6 +60,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
 
         self.init_ui()
         self.setupLogger()
+        self.listen_ui_events()
         self.repair = Repair(self)
         # self.checkUpdate() # disable temporarily
         # self.__dev() # 以备调试时使用
@@ -80,6 +79,19 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         self.deckComboBox.addItems(noteManager.getDeckNames())
         self.needDeleteWordsView = NeedDeleteWordsView(self.needDeleteCheckBox, self.needDeleteWordListWidget)
         ConfCtl.init_ui(self, self.conf)
+
+    def init_tpl_ui(self):
+        layout = QVBoxLayout(self.tplTab)
+        layout.addWidget(template.Template(self.tplTab))
+        self.tplTab.setLayout(layout)
+
+    def listen_ui_events(self):
+        def on_tab_change(index: int):
+            if index == 2 and not self.tplTab.layout():
+                # lazy load when first click on tplTab
+                self.init_tpl_ui()
+
+        self.tabWidget.currentChanged.connect(on_tab_change)
 
     def closeEvent(self, a0: Optional[QCloseEvent]):
         ConfCtl.write(self.conf)
