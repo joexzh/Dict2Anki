@@ -1,18 +1,16 @@
 from __future__ import annotations
 
 import logging
-import types
 import typing as T
 from abc import ABC, abstractmethod
 
-import anki.notes
 import aqt.utils
 from aqt import QAbstractButton, QEvent, QObject, QRadioButton, QWidget
-from aqt.browser.previewer import Previewer
 
 from . import _typing as _T
 from . import noteManager
 from .UIForm.template import Ui_tplForm
+from .preview import PreviewDialog
 
 logger = logging.getLogger('dict2anki.template')
 
@@ -55,7 +53,7 @@ def create_disk_models(db_model: DbModel, id_after: int = 0) -> list[DiskModel]:
 class Template(QWidget, Ui_tplForm):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._previewer: T.Union[None, EphemeralCardPreviewer] = None
+        self._previewer: T.Union[None, PreviewDialog] = None
         self.setupUi(self)
         self.plainEditText.installEventFilter(self)
 
@@ -189,11 +187,12 @@ class Template(QWidget, Ui_tplForm):
         if self._previewer is None:
             model = self.selected_model()
             note = noteManager.create_sample_note(model.get_front(), model.get_back(), model.get_css())
-            self._previewer = EphemeralCardPreviewer(note, aqt.mw, self._on_previewer_close)
-            self._previewer.open()
+            self._previewer = PreviewDialog(note, self)
+            self._previewer.finished.connect(self._on_previewer_close)
+            self._previewer.show()
         self._previewer.raise_()
 
-    def _on_previewer_close(self):
+    def _on_previewer_close(self, _r: int):
         self._previewer = None
 
     def _update_previewer(self):
@@ -360,56 +359,3 @@ class DiskModel(Model):
     def save(self):
         noteManager.update_db_model_template(self.get_front(), self.get_back(), self.get_css())
         self._db_model.reset(self.get_front(), self.get_back(), self.get_css())
-
-
-class EphemeralCardPreviewer(Previewer):
-    def __init__(self, note, mw, on_close=lambda: None):
-        self._note: anki.notes.Note = note
-        # ord=0 corresponds to the 1st card template, ord=1 for 2nd, etc.
-        self._card = self._patch_card(self._note.ephemeral_card(ord=0))
-        super().__init__(parent=None, mw=mw, on_close=on_close)
-
-    def card(self):
-        return self._card
-
-    def card_changed(self) -> bool:
-        return False
-
-    def _update_flag_and_mark_icons(self, card):
-        # overwrite to prevent crash on querying DB
-        pass
-
-
-    def _state_and_mod(self):
-        # overwrite to prevent crash on querying DB
-        c = self.card()
-        return (self._state, id(c), 0)
-
-    @staticmethod
-    def _patch_card(card):
-        # ephemeral_card() pre-renders and caches question/answer HTML at
-        # creation time, since the card has no id and isn't in the DB.
-        # Previewer._render_scheduled() calls question(reload=True), which
-        # would force a fresh render against a nonexistent card id. Pin
-        # reload to False so it always returns the cached render instead.
-        original_render_output = card.render_output
-
-        def render_output(self, reload: bool = False, browser: bool = False):
-            return original_render_output(reload=False, browser=browser)
-
-        card.render_output = types.MethodType(render_output, card)
-        return card
-
-    def update_content(self, front: str, back: str, css: str):
-        model = self._note.note_type()
-        if model is None:
-            return
-        model['css'] = css
-        template = model['tmpls'][0]
-        template['qfmt'] = front
-        template['afmt'] = back
-        self._card = self._patch_card(self._note.ephemeral_card(ord=0))
-        # Invalidate the (state, card.id, note.mod) cache so _render_scheduled
-        # doesn't think nothing changed and skip the redraw
-        self._last_state = None
-        self.render_card()

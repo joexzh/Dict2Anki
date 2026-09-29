@@ -204,7 +204,16 @@ def create_sample_note(front: str, back: str, css: str):
             'n.a fencing sword with a v-shaped blade and a slightly curved handle',
             'v.cut or injure with a saber',
         ],
-        'phrase': [],
+        'phrase': [
+            ('Saber Marionette', '机械女神；机械女神J；机械女神R'),
+            ('Saber-toothed cat', '剑齿虎'),
+            ('Saber Dance', '剑舞；军刀舞曲；马刀舞曲；马刀舞'),
+            ('Saber saws', '小刀锯'),
+            ('Beat Saber', '节奏光剑；节奏空间'),
+            ('beam saber', '光束剑；光剑；雷射剑'),
+            ('royal saber', '皇家救星；皇家圣枪；皇家枪击；皇家之剑'),
+            ('saber-toothed tiger', '剑齿虎'),
+        ],
         'image': 'https://ydlunacommon.nosdn.127.net/55f362d2a08ab991487661dead0c1514.png?',
         'sentence': [
             ('We dig up in France and there is the saber, right?', '我们在法国进行挖掘，然后就发现了那把军刀，是吧？'),
