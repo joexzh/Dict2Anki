@@ -1,0 +1,65 @@
+.card {
+  font-family: 'Roboto', 'Noto Sans', arial, sans-serif;
+  font-size: 20px;
+  text-align: left;
+  color: black;
+  background-color: white;
+}
+
+.term {
+  font-size : 35px;
+}
+
+.field-container:has(.field:empty) {
+  display: none;
+}
+
+.image {
+  max-height:300px;
+}
+
+/* for vocabulary.com */
+.definition .pos-n {
+  color:#0FA646
+}
+.definition .pos-v {
+  color:#CD4D03
+}
+.definition .pos-adj {
+  color:#007BC4
+}
+.definition .pos-adv {
+  color:#7B61FF
+}
+.definition .pos-pron {
+  color:#44AA02
+}
+.definition .pos-prep {
+  color:#BE6DCF
+}
+.definition .pos-conj {
+  color:#CF8300
+}
+.definition .pos-interj {
+  color:#FA52B7
+}
+.definition .pos-art {
+  color:#ED5362
+}
+.definition .pos-idm {
+  color:#00A886
+}
+.definition .pos-abbr {
+  color:#EB7302
+}
+
+.phrase-back {
+  color:grey
+}
+
+.sentence-front {
+  padding-top:0.5em;
+}
+.sentence-back {
+  color:grey
+}

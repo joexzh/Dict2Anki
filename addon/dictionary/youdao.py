@@ -3,6 +3,7 @@ from math import ceil
 from typing import Optional
 
 import requests
+import requests.cookies
 from bs4 import BeautifulSoup
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
@@ -37,7 +38,7 @@ class Dict(AbstractDictionary):
         if rsp.json().get('code', None) == 0:
             cls._indexSoup = BeautifulSoup(rsp.text, features='html.parser')
             logger.info('Cookie有效')
-            cookiesJar = requests.utils.cookiejar_from_dict(cookie, cookiejar=None, overwrite=True)
+            cookiesJar = requests.cookies.cookiejar_from_dict(cookie, cookiejar=None, overwrite=True)
             cls.session.cookies = cookiesJar
             return True
         logger.info('Cookie失效')
@@ -109,4 +110,4 @@ class Dict(AbstractDictionary):
             logger.exception(f'网络异常{e}')
         finally:
             logger.info(wordList)
-            return wordList
+        return wordList

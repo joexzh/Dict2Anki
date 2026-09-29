@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import os
 import typing as T
+from pathlib import Path
 
 import aqt
 from anki import models, notes
@@ -13,7 +14,7 @@ from ._typing import QueryWordData
 
 logger = logging.getLogger('dict2Anki.noteManager')
 
-__TEMPLATE_NAME = 'default'
+TEMPLATE_NAME = 'default'
 
 
 def getDeckNames():
@@ -107,64 +108,71 @@ def getOrCreateModel() -> models.NoteType:
 
 def getOrCreateModelCardTemplate(modelObject: models.NoteType):
     assert aqt.mw.col
-    logger.info(f'添加卡片类型:{__TEMPLATE_NAME}')
-    existingCardTemplate = modelObject['tmpls']
-    if __TEMPLATE_NAME in [t.get('name') for t in existingCardTemplate]:
-        return
-    cardTemplate = aqt.mw.col.models.new_template(__TEMPLATE_NAME)
-    cardTemplate['qfmt'] = """<table>
-    <tr>
-        <td>
-            <h1 class="term">{{term}}</h1>
-            <div>英[{{BrEPhonetic}}] 美[{{AmEPhonetic}}]{{BrEPron}}{{AmEPron}}</div>
-        </td>
-        <td>{{image}}</td>
-    </tr>
-</table>
-<hr>
-释义：
-<div>Tap to View</div>
-<hr>
-短语：
-<div>{{phraseFront}}</div>
-<hr>
-例句：
-<div>{{sentenceFront}}</div>
-    """
-    cardTemplate['afmt'] = """
-<table>
-    <tr>
-        <td>
-            <h1 class="term">{{term}}</h1>
-            <div>英[{{BrEPhonetic}}] 美[{{AmEPhonetic}}]{{BrEPron}}{{AmEPron}}</div>
-        </td>
-        <td>{{image}}</td>
-    </tr>
-</table>
-<hr>
-释义：
-<div>{{definition}}</div>
-<hr>
-短语：
-<div>{{phraseBack}}</div>
-<hr>
-例句：
-<div>{{sentenceBack}}</div>
-    """
-    modelObject['css'] = """
-.card {
-    font-family: 'Noto Sans', arial, sans-serif;
-    font-size: 20px;
-    text-align: left;
-    color: black;
-    background-color: white;
-}
-.term {
-    font-size : 35px;
-}
-    """
-    aqt.mw.col.models.addTemplate(modelObject, cardTemplate)
+    templates = modelObject['tmpls']
+    for template in templates:
+        if TEMPLATE_NAME == template.get('name'):
+            return template
+
+    logger.info(f'添加卡片类型:{TEMPLATE_NAME}')
+    template = aqt.mw.col.models.new_template(TEMPLATE_NAME)
+    front, back, css = template_from_folder(templates_folder(), TEMPLATE_NAME)
+    template['qfmt'] = front
+    template['afmt'] = back
+    modelObject['css'] = css
+    aqt.mw.col.models.addTemplate(modelObject, template)
     aqt.mw.col.models.add(modelObject)
+    return template
+
+
+def update_db_model_template(front: T.Optional[str], back: T.Optional[str], css: T.Optional[str]):
+    assert aqt.mw.col
+
+    model = getOrCreateModel()
+    template = getOrCreateModelCardTemplate(model)
+    if front is not None:
+        template['qfmt'] = front
+    if back is not None:
+        template['afmt'] = back
+    if css is not None:
+        model['css'] = css
+    aqt.mw.col.models.save(model)
+
+
+def template_from_db() -> tuple[str, str, str]:
+    model = getOrCreateModel()
+    template = getOrCreateModelCardTemplate(model)
+    return template['qfmt'], template['afmt'], model['css']  # type: ignore
+
+
+def templates_folder() -> Path:
+    "addon/templates"
+    folder = Path(__file__).parent / 'templates'
+    return folder
+
+
+def template_from_folder(folder: T.Union[Path, str], template_name: str) -> tuple[str, str, str]:
+    """Get front, back, css content from {folder}/{tpl_name}/{front.html,back.html,css.css}
+
+    Raises:
+        FileNotFoundError
+    """
+    tpl_d = Path(folder) / template_name
+    front_f = tpl_d / 'front.html'
+    back_f = tpl_d / 'back.html'
+    css_f = tpl_d / 'css.css'
+
+    if not front_f.is_file():
+        raise FileNotFoundError(f'{front_f} not exist')
+    if not back_f.is_file():
+        raise FileNotFoundError(f'{back_f} not exist')
+    if not css_f.is_file():
+        raise FileNotFoundError(f'{css_f} not exist')
+
+    back = back_f.read_text(encoding='utf-8')
+    front = front_f.read_text(encoding='utf-8')
+    css = css_f.read_text(encoding='utf-8')
+
+    return (front, back, css)
 
 
 def new_note(word: str, model: T.Optional[models.NotetypeDict] = None):
@@ -176,6 +184,52 @@ def new_note(word: str, model: T.Optional[models.NotetypeDict] = None):
 
     note = aqt.mw.col.new_note(model)
     note[C.F_TERM] = word
+    return note
+
+
+def create_sample_note(front: str, back: str, css: str):
+    "create a sample note with term:'saber'"
+    model = getOrCreateModel()
+    template = getOrCreateModelCardTemplate(model)
+    note = new_note('saber', model)
+    template['qfmt'] = front
+    template['afmt'] = back
+    model['css'] = css
+    api_data: QueryWordData = {
+        'term': 'saber',
+        'definition': [
+            'n. 军刀；佩剑；骑兵',
+            'vt. 用马刀砍或杀',
+            'n. （Saber）人名；（法）萨贝；（阿拉伯）萨比尔',
+            'n.a fencing sword with a v-shaped blade and a slightly curved handle',
+            'v.cut or injure with a saber',
+        ],
+        'phrase': [],
+        'image': 'https://ydlunacommon.nosdn.127.net/55f362d2a08ab991487661dead0c1514.png?',
+        'sentence': [
+            ('We dig up in France and there is the saber, right?', '我们在法国进行挖掘，然后就发现了那把军刀，是吧？'),
+            (
+                'Smilodon is an extinct genus of machairodont felid. It is perhaps one of the most famous prehistoric mammals and the best known saber-toothed cat.',
+                '剑齿虎，是已经灭绝的剑形齿类动物的一种，这也许是史前哺乳动物中最出名的一种了，也是最有名的剑齿类猫科动物。',
+            ),
+            (
+                'I remember playing as a lad in France burying my little toy saber.',
+                '我记得年轻时在法国埋了我的玩具剑。',
+            ),
+        ],
+        'BrEPhonetic': 'ˈseɪbə(r)',
+        'AmEPhonetic': 'ˈseɪbər',
+        'BrEPron': 'http://dict.youdao.com/dictvoice?audio=saber&type=1',
+        'AmEPron': 'http://dict.youdao.com/dictvoice?audio=saber&type=2',
+    }
+    set_field_definition(note, api_data)
+    set_field_phrase(note, api_data)
+    set_field_sentence(note, api_data)
+    set_field_image(note, api_data)
+    set_field_BrEPhonetic(note, api_data)
+    set_field_AmEPhonetic(note, api_data)
+    set_field_BrEPron(note, api_data)
+    set_field_AmEPron(note, api_data)
     return note
 
 
@@ -234,9 +288,7 @@ def to_field_sentence(api_sentence: list[tuple[str, str]]) -> tuple[str, str]:
     s_front_backs = [(front.strip(), back.strip()) for front, back in api_sentence if front.strip() or back.strip()]
 
     if s_fronts := [front for front, _ in s_front_backs if front]:
-        field_front = (
-            ''.join((f'<div class="sentence-front">{front}</div>' for front in s_fronts))
-        )
+        field_front = ''.join((f'<div class="sentence-front">{front}</div>' for front in s_fronts))
 
     if s_front_backs:
         chunks = []

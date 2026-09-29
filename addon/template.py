@@ -1,13 +1,20 @@
 from __future__ import annotations
 
+import logging
+import types
+import typing as T
 from abc import ABC, abstractmethod
 
+import anki.notes
 import aqt.utils
-from aqt import QAbstractButton, QWidget
+from aqt import QAbstractButton, QEvent, QObject, QRadioButton, QWidget
+from aqt.browser.previewer import Previewer
 
 from . import _typing as _T
 from . import noteManager
 from .UIForm.template import Ui_tplForm
+
+logger = logging.getLogger('dict2anki.template')
 
 
 def add_modified_hint(text: str) -> str:
@@ -22,34 +29,73 @@ def remove_modified_hint(text: str) -> str:
     return text
 
 
-def save(front: str, back: str, css: str):
-    # TODO
-    pass
+def create_disk_models(db_model: DbModel, id_after: int = 0) -> list[DiskModel]:
+    tpls_folder = noteManager.templates_folder()
+    models = []
+    for tpl_d in tpls_folder.iterdir():
+        if not tpl_d.is_dir():
+            continue
+        try:
+            name = tpl_d.name
+            # ensure model.load_template() no error
+            front, back, css = noteManager.template_from_folder(tpls_folder, name)
+            id_after += 1
+            model = DiskModel(id_after, name, db_model)
+            model._front = front
+            model._back = back
+            model._css = css
+            model._cached = True
+            models.append(model)
+        except FileNotFoundError as e:
+            logger.warning(str(e))
+
+    return models
 
 
 class Template(QWidget, Ui_tplForm):
     def __init__(self, parent=None):
         super().__init__(parent)
+        self._previewer: T.Union[None, EphemeralCardPreviewer] = None
         self.setupUi(self)
+        self.plainEditText.installEventFilter(self)
 
-        self.user_model = UserModel()
-        self.default_model = DefaultModel(self.user_model)
+        self._db_model = DbModel(0)
 
-        self.tplButtonGroup.setId(self.userTplButton, self.user_model.id())
-        self.tplButtonGroup.setId(self.defaultTplButton, self.default_model.id())
+        self.tplButtonGroup.setId(self.dbTplButton, self._db_model.id())
 
         self.partButtonGroup.setId(self.frontButton, 0)
         self.partButtonGroup.setId(self.backButton, 1)
         self.partButtonGroup.setId(self.cssButton, 2)
+        self._part_id_name_map: dict[int, str] = {0: 'front', 1: 'back', 2: 'css'}
 
-        self.tpl_id_model_map: dict[int, Model] = {
-            self.user_model.id(): self.user_model,
-            self.default_model.id(): self.default_model,
+        self._tpl_id_model_map: dict[int, Model] = {
+            self._db_model.id(): self._db_model,
         }
-        self.part_id_name_map: dict[int, str] = {0: 'front', 1: 'back', 2: 'css'}
+
+        index = self.tplSetLayout.indexOf(self.dbTplButton)
+        for model in create_disk_models(self._db_model):
+            self._tpl_id_model_map[model.id()] = model
+            # create radio button for disk template model
+            index += 1
+            btn = QRadioButton(model.name(), self)
+            self.tplSetLayout.insertWidget(index, btn)
+            self.tplButtonGroup.addButton(btn, model.id())
 
         self._listen_events()
         self._on_tpl_id_change(0)
+
+    def eventFilter(self, a0: T.Optional[QObject], a1: T.Optional[QEvent]) -> bool:
+        """Listen to plainEditText focus out event for text change. It's a
+        replacement to textChanged for better performance.
+        """
+        if (
+            a0 == self.plainEditText
+            and a1
+            and a1.type() == QEvent.Type.FocusOut
+            and self.selected_model() == self._db_model
+        ):
+            self._on_edit_text_focus_out()
+        return super().eventFilter(a0, a1)
 
     def _listen_events(self):
         self._listen_ui_events()
@@ -60,7 +106,6 @@ class Template(QWidget, Ui_tplForm):
         self.partButtonGroup.idClicked.connect(self._on_part_id_change)
         self.saveButton.clicked.connect(self.save)
         self.previewButton.clicked.connect(self.preview)
-        self.plainEditText.textChanged.connect(self._on_edit_text_change)
 
     def _listen_model_events(self):
         def front_modified(model):
@@ -72,13 +117,14 @@ class Template(QWidget, Ui_tplForm):
         def css_modified(model):
             self._update_ui_when_part_modified('css', model)
 
-        self.user_model.listen('front_modified', front_modified)
-        self.user_model.listen('back_modified', back_modified)
-        self.user_model.listen('css_modified', css_modified)
+        self._db_model.listen('front_modified', front_modified)
+        self._db_model.listen('back_modified', back_modified)
+        self._db_model.listen('css_modified', css_modified)
 
-    def _on_edit_text_change(self):
-        part = self.part_id_name_map[self.partButtonGroup.checkedId()]
+    def _on_edit_text_focus_out(self):
+        part = self._part_id_name_map[self.partButtonGroup.checkedId()]
         self.selected_model().set_part(part, self.plainEditText.toPlainText())
+        self._update_previewer()
 
     def _update_ui_when_part_modified(self, part: str, model: Model):
         if model == self.selected_model():
@@ -88,20 +134,21 @@ class Template(QWidget, Ui_tplForm):
 
     def _on_tpl_id_change(self, id: int):
         "after tpl button change selection"
-        model: Model = self.tpl_id_model_map[id]
+        model: Model = self._tpl_id_model_map[id]
         part_id = self.partButtonGroup.checkedId()
 
         self.plainEditText.setReadOnly(model.readonly())
-        self._update_ui_edit_text(part_id, model)
+        self._set_ui_edit_text(part_id, model)
         self._update_ui_modified_hint(model)
+        self._update_previewer()
 
     def _on_part_id_change(self, id: int):
         "after part button change selection"
         model = self.selected_model()
-        self._update_ui_edit_text(id, model)
+        self._set_ui_edit_text(id, model)
 
-    def _update_ui_edit_text(self, part_id: int, model: Model):
-        part = self.part_id_name_map[part_id]
+    def _set_ui_edit_text(self, part_id: int, model: Model):
+        part = self._part_id_name_map[part_id]
         self.plainEditText.blockSignals(True)
         self.plainEditText.setPlainText(model.get_part(part))
         self.plainEditText.blockSignals(False)
@@ -132,15 +179,28 @@ class Template(QWidget, Ui_tplForm):
             btn.setText(remove_modified_hint(btn.text()))
 
     def selected_model(self) -> Model:
-        return self.tpl_id_model_map[self.tplButtonGroup.checkedId()]
+        return self._tpl_id_model_map[self.tplButtonGroup.checkedId()]
 
     def save(self):
         self.selected_model().save()
         aqt.utils.tooltip('保存成功', parent=self)
 
     def preview(self):
-        # TODO
-        pass
+        if self._previewer is None:
+            model = self.selected_model()
+            note = noteManager.create_sample_note(model.get_front(), model.get_back(), model.get_css())
+            self._previewer = EphemeralCardPreviewer(note, aqt.mw, self._on_previewer_close)
+            self._previewer.open()
+        self._previewer.raise_()
+
+    def _on_previewer_close(self):
+        self._previewer = None
+
+    def _update_previewer(self):
+        if self._previewer is None:
+            return
+        model = self.selected_model()
+        self._previewer.update_content(model.get_front(), model.get_back(), model.get_css())
 
 
 class Model(ABC, _T.ListenableModel):
@@ -150,37 +210,27 @@ class Model(ABC, _T.ListenableModel):
     """
 
     @abstractmethod
-    def __init__(self):
+    def __init__(self, id: int):
         super().__init__()
+        self._id = id
         self._front = ''
         self._back = ''
         self._css = ''
         self._front_modified = False
         self._back_modified = False
         self._css_modified = False
-        self._front_cached = False
-        self._back_cached = False
-        self._css_cached = False
+        self._cached = False
 
-    @abstractmethod
     def id(self) -> int:
         "Unique id across all models"
-        pass
+        return self._id
 
     @abstractmethod
     def readonly(self) -> bool:
         pass
 
     @abstractmethod
-    def load_front(self) -> str:
-        pass
-
-    @abstractmethod
-    def load_back(self) -> str:
-        pass
-
-    @abstractmethod
-    def load_css(self) -> str:
+    def load_template(self):
         pass
 
     @abstractmethod
@@ -191,9 +241,7 @@ class Model(ABC, _T.ListenableModel):
         self._front = front
         self._back = back
         self._css = css
-        self._front_cached = True
-        self._back_cached = True
-        self._css_cached = True
+        self._cached = True
         self.set_part_modified('front', False)
         self.set_part_modified('back', False)
         self.set_part_modified('css', False)
@@ -207,12 +255,18 @@ class Model(ABC, _T.ListenableModel):
         Args:
             part: front, back or css
         """
-        cached = getattr(self, f'_{part}_cached')
-        if not cached:
-            load_fn = getattr(self, f'load_{part}')
-            load_fn()
-            setattr(self, f'_{part}_cached', True)
+        if not self._cached:
+            self.load_template()
         return getattr(self, f'_{part}')
+
+    def get_front(self) -> str:
+        return self.get_part('front')
+
+    def get_back(self) -> str:
+        return self.get_part('back')
+
+    def get_css(self) -> str:
+        return self.get_part('css')
 
     def set_part(self, part: str, val: str):
         """Set front/back/css
@@ -225,6 +279,15 @@ class Model(ABC, _T.ListenableModel):
             return
         setattr(self, attr_name, val)
         self.set_part_modified(part, True)
+
+    def set_front(self, val: str):
+        self.set_part('front', val)
+
+    def set_back(self, val: str):
+        self.set_part('back', val)
+
+    def set_css(self, val: str):
+        self.set_part('css', val)
 
     def get_part_modified(self, part: str) -> bool:
         """Get {front,back,css}_modified
@@ -250,64 +313,103 @@ class Model(ABC, _T.ListenableModel):
         return self._front_modified or self._back_modified or self._css_modified
 
 
-class UserModel(Model):
-    def __init__(self):
-        super().__init__()
+class DbModel(Model):
+    "model for template from database"
 
-    def id(self) -> int:
-        return 0
+    def __init__(self, id: int):
+        super().__init__(id)
 
     def readonly(self) -> bool:
         return False
 
-    def load_front(self) -> str:
-        # TODO
-        self._front = 'user model front'
-        return self._front
-
-    def load_back(self) -> str:
-        # TODO
-        self._back = 'user model back'
-        return self._back
-
-    def load_css(self) -> str:
-        # TODO
-        self._css = 'user model css'
-        return self._css
+    def load_template(self):
+        front, back, css = noteManager.template_from_db()
+        self._front = front
+        self._back = back
+        self._css = css
+        self._cached = True
 
     def save(self):
-        save(self.get_part('front'), self.get_part('back'), self.get_part('css'))
+        noteManager.update_db_model_template(self.get_front(), self.get_back(), self.get_css())
         self.set_part_modified('front', False)
         self.set_part_modified('back', False)
         self.set_part_modified('css', False)
 
 
-class DefaultModel(Model):
-    def __init__(self, user_model: Model):
-        super().__init__()
-        self.user_model = user_model
+class DiskModel(Model):
+    "model for template from disk"
 
-    def id(self) -> int:
-        return 1
+    def __init__(self, id: int, name: str, db_model: Model):
+        super().__init__(id)
+        self._name = name
+        self._db_model = db_model
+
+    def name(self) -> str:
+        return self._name
 
     def readonly(self) -> bool:
         return True
 
-    def load_front(self) -> str:
-        # TODO
-        self._front = 'default model front'
-        return self._front
-
-    def load_back(self) -> str:
-        # TODO
-        self._back = 'default model back'
-        return self._back
-
-    def load_css(self) -> str:
-        # TODO
-        self._css = 'default model css'
-        return self._css
+    def load_template(self):
+        front, back, css = noteManager.template_from_folder(noteManager.templates_folder(), self._name)
+        self._front = front
+        self._back = back
+        self._css = css
+        self._cached = True
 
     def save(self):
-        save(self.get_part('front'), self.get_part('back'), self.get_part('css'))
-        self.user_model.reset(self.get_part('front'), self.get_part('back'), self.get_part('css'))
+        noteManager.update_db_model_template(self.get_front(), self.get_back(), self.get_css())
+        self._db_model.reset(self.get_front(), self.get_back(), self.get_css())
+
+
+class EphemeralCardPreviewer(Previewer):
+    def __init__(self, note, mw, on_close=lambda: None):
+        self._note: anki.notes.Note = note
+        # ord=0 corresponds to the 1st card template, ord=1 for 2nd, etc.
+        self._card = self._patch_card(self._note.ephemeral_card(ord=0))
+        super().__init__(parent=None, mw=mw, on_close=on_close)
+
+    def card(self):
+        return self._card
+
+    def card_changed(self) -> bool:
+        return False
+
+    def _update_flag_and_mark_icons(self, card):
+        # overwrite to prevent crash on querying DB
+        pass
+
+
+    def _state_and_mod(self):
+        # overwrite to prevent crash on querying DB
+        c = self.card()
+        return (self._state, id(c), 0)
+
+    @staticmethod
+    def _patch_card(card):
+        # ephemeral_card() pre-renders and caches question/answer HTML at
+        # creation time, since the card has no id and isn't in the DB.
+        # Previewer._render_scheduled() calls question(reload=True), which
+        # would force a fresh render against a nonexistent card id. Pin
+        # reload to False so it always returns the cached render instead.
+        original_render_output = card.render_output
+
+        def render_output(self, reload: bool = False, browser: bool = False):
+            return original_render_output(reload=False, browser=browser)
+
+        card.render_output = types.MethodType(render_output, card)
+        return card
+
+    def update_content(self, front: str, back: str, css: str):
+        model = self._note.note_type()
+        if model is None:
+            return
+        model['css'] = css
+        template = model['tmpls'][0]
+        template['qfmt'] = front
+        template['afmt'] = back
+        self._card = self._patch_card(self._note.ephemeral_card(ord=0))
+        # Invalidate the (state, card.id, note.mod) cache so _render_scheduled
+        # doesn't think nothing changed and skip the redraw
+        self._last_state = None
+        self.render_card()

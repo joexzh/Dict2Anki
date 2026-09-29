@@ -30,28 +30,6 @@
        <string>同步</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_4">
-       <item row="4" column="4">
-        <widget class="QPushButton" name="syncBtn">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Fixed" vsizetype="Minimum">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="minimumSize">
-          <size>
-           <width>100</width>
-           <height>0</height>
-          </size>
-         </property>
-         <property name="text">
-          <string>开始同步</string>
-         </property>
-        </widget>
-       </item>
        <item row="0" column="0" colspan="5">
         <layout class="QHBoxLayout" name="deckLayout">
          <item>
@@ -77,6 +55,79 @@
            </property>
            <property name="editable">
             <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="4" column="0">
+        <widget class="QPushButton" name="pullRemoteWordsBtn">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Fixed" vsizetype="Minimum">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>100</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>获取单词</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0" colspan="5">
+        <layout class="QHBoxLayout" name="dictionaryLayout">
+         <item>
+          <widget class="QLabel" name="dictionaryLabel">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="text">
+            <string>词典</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="dictionaryComboBox">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="2" column="0" colspan="5">
+        <layout class="QHBoxLayout" name="apiLayout">
+         <item>
+          <widget class="QLabel" name="apiLabel">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="text">
+            <string>查询</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="apiComboBox">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
            </property>
           </widget>
          </item>
@@ -134,62 +185,11 @@
          </item>
         </layout>
        </item>
-       <item row="2" column="0" colspan="5">
-        <layout class="QHBoxLayout" name="apiLayout">
-         <item>
-          <widget class="QLabel" name="apiLabel">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="text">
-            <string>查询</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QComboBox" name="apiComboBox">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item row="1" column="0" colspan="5">
-        <layout class="QHBoxLayout" name="dictionaryLayout">
-         <item>
-          <widget class="QLabel" name="dictionaryLabel">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="text">
-            <string>词典</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QComboBox" name="dictionaryComboBox">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item row="4" column="0">
-        <widget class="QPushButton" name="pullRemoteWordsBtn">
+       <item row="4" column="4">
+        <widget class="QPushButton" name="syncBtn">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
          <property name="sizePolicy">
           <sizepolicy hsizetype="Fixed" vsizetype="Minimum">
            <horstretch>0</horstretch>
@@ -203,7 +203,7 @@
           </size>
          </property>
          <property name="text">
-          <string>获取单词</string>
+          <string>开始同步</string>
          </property>
         </widget>
        </item>
@@ -596,6 +596,19 @@
        </item>
        <item row="4" column="0">
         <layout class="QHBoxLayout" name="congestLayout">
+         <item>
+          <spacer name="horizontalSpacer">
+           <property name="orientation">
+            <enum>Qt::Orientation::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
          <item>
           <widget class="QLabel" name="congestLabel">
            <property name="enabled">

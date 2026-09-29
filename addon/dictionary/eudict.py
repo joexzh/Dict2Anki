@@ -4,12 +4,13 @@ from math import ceil
 from typing import Optional
 
 import requests
+import requests.cookies
 from bs4 import BeautifulSoup
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from .._typing import AbstractDictionary
 from .. import global_vars
+from .._typing import AbstractDictionary
 
 logger = logging.getLogger('dict2Anki.dictionary.eudict')
 
@@ -39,7 +40,7 @@ class Dict(AbstractDictionary):
         if 'dict.eudic.net/account/login' not in rsp.url:
             cls._indexSoup = BeautifulSoup(rsp.text, features='html.parser')
             logger.info('Cookie有效')
-            cookiesJar = requests.utils.cookiejar_from_dict(cookie, cookiejar=None, overwrite=True)
+            cookiesJar = requests.cookies.cookiejar_from_dict(cookie, cookiejar=None, overwrite=True)
             cls.session.cookies = cookiesJar
             return True
         logger.info('Cookie失效')
@@ -107,4 +108,4 @@ class Dict(AbstractDictionary):
             logger.exception(f'网络异常{error}')
         finally:
             logger.info(wordList)
-            return wordList
+        return wordList

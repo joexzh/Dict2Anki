@@ -6,20 +6,46 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>563</width>
-    <height>516</height>
+    <width>600</width>
+    <height>520</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
+  <property name="styleSheet">
+   <string notr="true">QPlainTextEdit#plainEditText {
+    font-family: Consolas, 'Fira Code', 'Courier New', monospace;
+}
+QPlainTextEdit#plainEditText:read-only {
+    background-color: #f1f3f5;
+}</string>
+  </property>
   <layout class="QVBoxLayout" name="verticalLayout">
+   <property name="spacing">
+    <number>10</number>
+   </property>
+   <property name="leftMargin">
+    <number>12</number>
+   </property>
+   <property name="topMargin">
+    <number>12</number>
+   </property>
+   <property name="rightMargin">
+    <number>12</number>
+   </property>
+   <property name="bottomMargin">
+    <number>12</number>
+   </property>
    <item>
     <layout class="QHBoxLayout" name="tplSetLayout">
+     <property name="spacing">
+      <number>12</number>
+     </property>
      <item>
-      <widget class="QRadioButton" name="userTplButton">
+      <widget class="QRadioButton" name="dbTplButton">
        <property name="text">
-        <string>当前</string>
+        <string>当前模板</string>
        </property>
        <property name="checked">
         <bool>true</bool>
@@ -30,19 +56,57 @@
       </widget>
      </item>
      <item>
-      <widget class="QRadioButton" name="defaultTplButton">
-       <property name="text">
-        <string>默认</string>
+      <spacer name="topSpacer">
+       <property name="orientation">
+        <enum>Qt::Orientation::Horizontal</enum>
        </property>
-       <attribute name="buttonGroup">
-        <string notr="true">tplButtonGroup</string>
-       </attribute>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="previewButton">
+       <property name="toolTip">
+        <string>预览插件内置固定样本，非真实数据</string>
+       </property>
+       <property name="text">
+        <string>预览</string>
+       </property>
+       <property name="icon">
+        <iconset theme="QIcon::ThemeIcon::HelpAbout"/>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="saveButton">
+       <property name="toolTip">
+        <string>将所选模板保存成当前模板。注意，新增笔记的字段值新增了 class 用以控制样式，但已保存的字段值不会改变</string>
+       </property>
+       <property name="text">
+        <string>保存</string>
+       </property>
+       <property name="icon">
+        <iconset theme="QIcon::ThemeIcon::HelpAbout"/>
+       </property>
+       <property name="iconSize">
+        <size>
+         <width>16</width>
+         <height>16</height>
+        </size>
+       </property>
       </widget>
      </item>
     </layout>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="tplToolLayout">
+    <layout class="QHBoxLayout" name="tplPartLayout">
+     <property name="spacing">
+      <number>16</number>
+     </property>
      <item>
       <widget class="QRadioButton" name="frontButton">
        <property name="text">
@@ -77,18 +141,17 @@
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="saveButton">
-       <property name="text">
-        <string>保存</string>
+      <spacer name="partSpacer">
+       <property name="orientation">
+        <enum>Qt::Orientation::Horizontal</enum>
        </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="previewButton">
-       <property name="text">
-        <string>预览</string>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
        </property>
-      </widget>
+      </spacer>
      </item>
     </layout>
    </item>
