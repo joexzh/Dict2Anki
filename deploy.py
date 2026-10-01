@@ -22,6 +22,7 @@ def create_zip():
         '.github',
         '.idea',
         '.pytest_cache',
+        '.ruff_cache',
         '.venv',
         '.vscode',
         '__pycache__',
@@ -44,9 +45,11 @@ def create_zip():
         'ruff.toml',
         'runanki.py',
         'test.sh',
+        'uv.lock',
     ]
     exclude_ext = ['.png', '.ui', '.qrc', '.log', '.zip', '.tpl', '.md']
-    for dirname, sub_dirs, files in os.walk('./addon'):
+    os.chdir('./addon')
+    for dirname, sub_dirs, files in os.walk('.'):
         for d in exclude_dirs:
             if d in sub_dirs:
                 sub_dirs.remove(d)
@@ -60,9 +63,11 @@ def create_zip():
         for filename in files:
             file_paths.append(os.path.join(dirname, filename))
 
-    with ZipFile(f'{ADDON_FULL_NAME}.zip', 'w') as zf:
+    with ZipFile(f'../{ADDON_FULL_NAME}.zip', 'w') as zf:
         for file in file_paths:
             zf.write(file)
+
+    os.chdir('..')
 
 
 def update(title, tags, desc):

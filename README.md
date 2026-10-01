@@ -31,6 +31,14 @@ Anki --> 工具 --> 附加组件 --> 获取插件
 
 ## Change log
 
+* v7.4.2
+  * 最低支持 Python 版本 3.10，最低支持 Anki 版本 [26.05](https://github.com/ankitects/anki/releases/tag/26.05)
+  * 【修复】页面支持筛选
+  * 增加【模板】和预览页面，方便查看、应用默认模板的更新
+  * 更新默认模板：自动隐藏空字段；新增字段值对应的 class 样式
+  * 更新字段值：新增 class 方便控制样式
+  * 支持加载 user_files 文件夹中的第三方词典和 API 模块
+  * 增加【高级配置】，支持每个字段查询不同的 API
 * v7.3.1
   * 修复“新单词”列表查询成功、失败图标
 * v7.3.0
@@ -92,7 +100,7 @@ Anki --> 工具 --> 附加组件 --> 获取插件
 
 ## Development Guide
 
-Python version: 3.9
+Python version: 3.10
 
 ### 安装依赖
 
