@@ -5,14 +5,15 @@ import typing as T
 from abc import ABC, abstractmethod
 
 import aqt.utils
-from aqt import QAbstractButton, QEvent, QObject, QRadioButton, QWidget
+from anki.errors import CardTypeError
+from aqt import QAbstractButton, QEvent, QObject, QRadioButton, Qt, QWidget
 
 from . import _typing as _T
 from . import noteManager
-from .UIForm.template import Ui_tplForm
 from .preview import PreviewDialog
+from .UIForm.template import Ui_tplForm
 
-logger = logging.getLogger('dict2anki.template')
+logger = logging.getLogger('dict2Anki.template')
 
 
 def add_modified_hint(text: str) -> str:
@@ -60,15 +61,14 @@ class Template(QWidget, Ui_tplForm):
         self._db_model = DbModel(0)
 
         self.tplButtonGroup.setId(self.dbTplButton, self._db_model.id())
+        self._tpl_id_model_map: dict[int, Model] = {
+            self._db_model.id(): self._db_model,
+        }
 
         self.partButtonGroup.setId(self.frontButton, 0)
         self.partButtonGroup.setId(self.backButton, 1)
         self.partButtonGroup.setId(self.cssButton, 2)
         self._part_id_name_map: dict[int, str] = {0: 'front', 1: 'back', 2: 'css'}
-
-        self._tpl_id_model_map: dict[int, Model] = {
-            self._db_model.id(): self._db_model,
-        }
 
         index = self.tplSetLayout.indexOf(self.dbTplButton)
         for model in create_disk_models(self._db_model):
@@ -79,7 +79,8 @@ class Template(QWidget, Ui_tplForm):
             self.tplSetLayout.insertWidget(index, btn)
             self.tplButtonGroup.addButton(btn, model.id())
 
-        self._listen_events()
+        self._listen_ui_events()
+        self._listen_model_events()
         self._on_tpl_id_change(0)
 
     def eventFilter(self, a0: T.Optional[QObject], a1: T.Optional[QEvent]) -> bool:
@@ -95,12 +96,10 @@ class Template(QWidget, Ui_tplForm):
             self._on_edit_text_focus_out()
         return super().eventFilter(a0, a1)
 
-    def _listen_events(self):
-        self._listen_ui_events()
-        self._listen_model_events()
-
     def _listen_ui_events(self):
+        self.tplButtonGroup.idPressed.connect(self._on_tplbtn_id_press)  # before click, id not yet changed
         self.tplButtonGroup.idClicked.connect(self._on_tpl_id_change)
+        self.partButtonGroup.idPressed.connect(self._on_partbtn_id_press)  # before click, id not yet changed
         self.partButtonGroup.idClicked.connect(self._on_part_id_change)
         self.saveButton.clicked.connect(self.save)
         self.previewButton.clicked.connect(self.preview)
@@ -120,15 +119,21 @@ class Template(QWidget, Ui_tplForm):
         self._db_model.listen('css_modified', css_modified)
 
     def _on_edit_text_focus_out(self):
-        part = self._part_id_name_map[self.partButtonGroup.checkedId()]
-        self.selected_model().set_part(part, self.plainEditText.toPlainText())
+        self._update_model_part()
         self._update_previewer()
+
+    def _update_model_part(self):
+        part = self.selected_part()
+        self.selected_model().set_part(part, self.plainEditText.toPlainText())
 
     def _update_ui_when_part_modified(self, part: str, model: Model):
         if model == self.selected_model():
             self._update_ui_part_modified_hint(part, model.get_part_modified(part))
         # update tpl button regardless of selection
         self._update_ui_tpl_modified_hint(model)
+
+    def _on_tplbtn_id_press(self, _id: int):
+        self._update_model_part()
 
     def _on_tpl_id_change(self, id: int):
         "after tpl button change selection"
@@ -139,6 +144,9 @@ class Template(QWidget, Ui_tplForm):
         self._set_ui_edit_text(part_id, model)
         self._update_ui_modified_hint(model)
         self._update_previewer()
+
+    def _on_partbtn_id_press(self, _id: int):
+        self._update_model_part()
 
     def _on_part_id_change(self, id: int):
         "after part button change selection"
@@ -179,9 +187,17 @@ class Template(QWidget, Ui_tplForm):
     def selected_model(self) -> Model:
         return self._tpl_id_model_map[self.tplButtonGroup.checkedId()]
 
+    def selected_part(self) -> str:
+        return self._part_id_name_map[self.partButtonGroup.checkedId()]
+
     def save(self):
-        self.selected_model().save()
-        aqt.utils.tooltip('保存成功', parent=self)
+        self._update_model_part()
+        try:
+            self.selected_model().save()
+            aqt.utils.tooltip('保存成功', parent=self)
+        except CardTypeError as e:
+            logger.exception('Fail to save card!')
+            aqt.utils.show_critical(str(e), parent=self, textFormat=Qt.TextFormat.AutoText)
 
     def preview(self):
         if self._previewer is None:

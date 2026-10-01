@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import functools
 import logging
 import os
 import typing as T
@@ -150,6 +151,7 @@ def templates_folder() -> Path:
     return folder
 
 
+@functools.cache
 def template_from_folder(folder: T.Union[Path, str], template_name: str) -> tuple[str, str, str]:
     """Get front, back, css content from {folder}/{tpl_name}/{front.html,back.html,css.css}
 

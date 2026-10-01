@@ -83,7 +83,6 @@ class Windows(QDialog, main_ui.Ui_Dialog):
     def init_tpl_ui(self):
         layout = QVBoxLayout(self.tplTab)
         layout.addWidget(template.Template(self.tplTab))
-        self.tplTab.setLayout(layout)
 
     def listen_ui_events(self):
         def on_tab_change(index: int):
