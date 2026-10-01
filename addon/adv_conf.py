@@ -10,7 +10,6 @@ from abc import ABC, abstractmethod
 from enum import IntEnum
 
 import anki.notes
-import requests
 
 from . import _typing as _T
 from . import constants as C
@@ -52,54 +51,43 @@ class ApiVisitor(Visitor):
         if query_api is None:
             return False
 
-        api_data = None
         if api not in self.query_cache:
             api_data = self.query_cache[api] = query_api.query(self.word)
         else:
             api_data = self.query_cache[api]
-
         if api_data is None:
             return False
 
-        def download_audio() -> bool:
-            if url := api_data[self.field]:
-                return self._download_audio(query_api.session, url)
+        if self.field != C.F_AMEPRON and self.field != C.F_BREPRON:
+            return True
 
+        # download audio to tmp folder
+
+        url = api_data[self.field]
+        if not url:
             logger.warning(
                 f'Cannot download audio: URL is empty! word: {self.word}, field: {self.field}, API data: (next line)\n{api_data}'
             )
             return False
 
-        if self.field == C.F_AMEPRON or self.field == C.F_BREPRON:
-            return download_audio()
+        dst_dir = misc.tmp_audio_dir()
+        os.makedirs(dst_dir, exist_ok=True)
+        fpath = os.path.join(dst_dir, misc.audio_fname(self.field, self.word))
 
-        return True
+        try:
+            misc.download_file(query_api.session, fpath, url)
+            logger.info(f'发音下载完成：{fpath}, {url}')
+            return True
+        except Exception as e:
+            logger.warning(f'下载{fpath}，{url} 异常：{e}')
+            misc.rm_file(fpath)
+            return False
 
     def visit_empty(self) -> bool:
         return True
 
     def visit_note_flag(self, flag: int) -> bool:
         return False
-
-    def _download_audio(self, session: requests.Session, url: str) -> bool:
-        ret = True
-
-        dst_dir = misc.tmp_audio_dir()
-        os.makedirs(dst_dir, exist_ok=True)
-
-        fpath = os.path.join(
-            dst_dir,
-            misc.audio_fname(self.field, self.word),
-        )
-        try:
-            misc.download_file(session, fpath, url)
-            logger.info(f'发音下载完成：{fpath}, {url}')
-        except Exception as e:
-            ret = False
-            logger.warning(f'下载{fpath}, {url}，异常: {e}')
-            misc.rm_file(fpath)
-
-        return ret
 
 
 class NoteVisitor(Visitor):
