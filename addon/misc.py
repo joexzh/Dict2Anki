@@ -129,7 +129,7 @@ def dec_cookies(cookies_enc: str) -> str:
     return byts.decode('utf-8')
 
 
-def load_all_modules(rel_package: str, package: T.Optional[str]):
+def load_all_modules(rel_package: str, package: T.Optional[str]) -> list[ModuleType]:
     """
     Load and return all modules found in package path `rel_package`, relative to
     caller's `__package__`.
@@ -141,7 +141,10 @@ def load_all_modules(rel_package: str, package: T.Optional[str]):
     ```
     """
     mods: list[ModuleType] = []
-    pkg = importlib.import_module(rel_package, package)
+    try:
+        pkg = importlib.import_module(rel_package, package)
+    except ModuleNotFoundError:
+        return mods
 
     for _finder, mod_name, _ispkg in pkgutil.iter_modules(pkg.__path__):
         full_name = f'{pkg.__name__}.{mod_name}'
