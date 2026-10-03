@@ -1,6 +1,6 @@
 # Dict2Anki-ng
 
-**Dict2Anki-ng** is a fork of [Dict2Anki](https://github.com/megachweng/Dict2Anki)（原作者：[@megachweng](https://github.com/megachweng)），迁移到 Qt 6 和新版 anki，主要功能与原版一致。
+**Dict2Anki-ng** is a fork of [Dict2Anki](https://github.com/megachweng/Dict2Anki)（原作者：[@megachweng](https://github.com/megachweng)），迁移到 Qt 6 和新版 Anki，主要功能与原版一致。
 
 **Dict2Anki** 是一款方便[有道词典](http://cidian.youdao.com/multi.html)、[欧路词典](https://www.eudic.net/)用户同步生成单词本卡片至[Anki](https://apps.ankiweb.net/#download)的插件
 
@@ -10,7 +10,7 @@
 ## Features
 
 * 导入有道词典、欧路词典生词本
-* 检测词典软件的生词变化,并在Anki中相应的添加或删除删除卡片
+* 检测词典软件的生词变化,并在Anki中相应的添加或删除卡片
 * 获取图片、发音、注解、音标、短语、例句
 
 ## How to install
@@ -123,7 +123,7 @@ pip install -r requirements.txt
    - Linux:
 
      ```sh
-     ln -s full/path/to/project_root "$HOME/.local/share/Anki2/addons21/Dict2Anki-ng-debug"
+     ln -s full/path/to/project_root/addon "$HOME/.local/share/Anki2/addons21/Dict2Anki-ng-debug"
      ```
 
    - macOS: TODO
