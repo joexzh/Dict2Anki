@@ -372,7 +372,6 @@ class Windows(QDialog, main_ui.Ui_Dialog):
                     return
                 break
 
-        self.syncBtn.setEnabled(False)
         logger.info('同步点击')
 
         # add notes to database
@@ -380,6 +379,11 @@ class Windows(QDialog, main_ui.Ui_Dialog):
         model = noteManager.getOrCreateModel()
         noteManager.getOrCreateModelCardTemplate(model)
         deck = noteManager.getOrCreateDeck(self.conf.deck, model)
+        if deck is None:
+            aqt.utils.show_warning(f'Deck 不存在: {self.conf.deck}', parent=self)
+            return
+
+        self.syncBtn.setEnabled(False)
 
         added = 0
         notes = []
@@ -400,7 +404,7 @@ class Windows(QDialog, main_ui.Ui_Dialog):
 
             note = noteManager.new_note(word, model)
             notes.append(note)
-            aqt.mw.col.add_note(note, deck['id'])  # type: ignore
+            aqt.mw.col.add_note(note, deck['id'])
 
             adv_conf.eval_asts_set_note(word, note, query_cache, ast_dict)
 

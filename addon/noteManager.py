@@ -82,10 +82,14 @@ def updateNotes(notes: T.Sequence[notes.Note]):
 def getOrCreateDeck(deckName, model):
     assert aqt.mw.col
     deck_id = aqt.mw.col.decks.id(deckName)
-    deck = aqt.mw.col.decks.get(deck_id)  # type: ignore
-    aqt.mw.col.decks.select(deck['id'])  # type: ignore
+    if deck_id is None:
+        return None
+    deck = aqt.mw.col.decks.get(deck_id)
+    if deck is None:
+        return None
+    aqt.mw.col.decks.select(deck['id'])
     aqt.mw.col.decks.save(deck)
-    model['did'] = deck['id']  # type: ignore
+    model['did'] = deck['id']
     aqt.mw.col.models.save(model)
     return deck
 
