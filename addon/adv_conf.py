@@ -55,7 +55,8 @@ class ApiVisitor(Visitor):
             api_data = self.query_cache[api] = query_api.query(self.word)
         else:
             api_data = self.query_cache[api]
-        if api_data is None:
+
+        if api_data is None or not api_data[self.field]:
             return False
 
         if self.field != C.F_AMEPRON and self.field != C.F_BREPRON:
