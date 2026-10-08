@@ -31,6 +31,8 @@ Anki --> 工具 --> 附加组件 --> 获取插件
 
 ## Change log
 
+* v7.4.3
+  * 修复高级配置字段可能不会获取下一个 API 的问题
 * v7.4.2
   * 最低支持 Python 版本 3.10，最低支持 Anki 版本 [26.05](https://github.com/ankitects/anki/releases/tag/26.05)
   * 【修复】页面支持筛选
